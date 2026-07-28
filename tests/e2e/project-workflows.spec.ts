@@ -81,3 +81,28 @@ test("imports a valid project JSON", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Projeto importado E2E" })).toBeVisible();
   await expect(page.getByText("TH-2099-999", { exact: true }).first()).toBeVisible();
 });
+
+test("exports the versioned project envelope", async ({ page }) => {
+  const pilot = page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" });
+  await pilot.locator("button.project-card__open").click();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Exportar JSON" }).click();
+  const download = await downloadPromise;
+  const stream = await download.createReadStream();
+  let contents = "";
+  for await (const chunk of stream) contents += chunk.toString();
+  const envelope = JSON.parse(contents);
+  expect(envelope.application).toBe("TH-OS-CMP-001");
+  expect(envelope.schemaVersion).toBe(2);
+  expect(envelope.project.code).toBe("TH-2026-001");
+});
+
+test("keeps functional content available on tablet and mobile", async ({ page }) => {
+  await page.setViewportSize({ width: 820, height: 1000 });
+  await expect(page.getByRole("heading", { name: "Cadastro Mestre do Projeto" })).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  const pilot = page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" });
+  await pilot.locator("button.project-card__open").click();
+  await expect(page.getByRole("heading", { name: "1. Identificação" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "14. Histórico" })).toBeAttached();
+});
