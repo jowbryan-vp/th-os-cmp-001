@@ -20,6 +20,8 @@
 
 # misc
 .DS_Store
+Thumbs.db
+*.local
 *.pem
 
 # debug
