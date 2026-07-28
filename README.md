@@ -1,65 +1,55 @@
 # TH OS — Cadastro Mestre do Projeto
 
-**Código do produto:** CMP-001
+**Produto:** CMP-001 · **Fase:** piloto interno
 
-Aplicação local da TH Arquitetura para centralizar as informações essenciais de
-cada projeto. O Cadastro Mestre registra identificação, clientes, imóvel,
-contexto, síntese, escopo preliminar, programa de necessidades, prazos,
-orçamento de referência, visitas, documentos, equipe, decisões, pendências e
-histórico.
+Aplicação local da TH Arquitetura para manter uma fonte única de identificação,
+clientes, imóvel, contexto, escopo, programa, planejamento, orçamento de
+referência, visitas, documentos, equipe, decisões, pendências e histórico.
 
-O CMP não emite contratos, não calcula honorários, não gera propostas e não
-possui sistema financeiro, login, upload real ou integrações externas. Módulos
-futuros poderão consumir os dados versionados do `ProjectMasterRecord`.
+O CMP não cria propostas ou contratos, não calcula honorários, não possui
+financeiro, login ou upload real.
 
-## Funcionalidades
+## Arquitetura
 
-- listagem de projetos ativos e arquivados;
-- criação com código sequencial `TH-AAAA-NNN`;
-- edição com salvamento automático no IndexedDB;
-- duplicação, arquivamento, restauração e exclusão confirmada;
-- importação e exportação JSON com `schemaVersion`;
-- validações para rascunho, reunião e proposta;
-- cálculo de completude do cadastro;
-- resumo institucional para impressão;
-- projeto piloto `TH-2026-001`.
+- `src/domain`: modelo v2, schemas Zod, migrações, validação e progresso;
+- `src/data`: contrato de repositório e implementação IndexedDB;
+- `src/services`: importação/exportação e ciclo de vida;
+- `src/hooks`: carregamento e autosave serializado;
+- `src/components`: lista, filtros e workspace das 14 seções;
+- `tests`: unitários, integração, smoke e Playwright.
 
-## Identidade visual
+## Uso
 
-Foram preservados somente os ativos oficiais utilizados, os tokens e as
-decisões visuais compatíveis com o novo sistema:
-
-- `src/assets/brand/th-logo-horizontal-positive.png`;
-- `src/assets/brand/th-logo-vertical-positive.png`;
-- `src/styles/tokens.css`;
-- padrões genéricos de cabeçalho, botões, formulários, cartões,
-  responsividade e impressão.
-
-A fonte institucional Organetto não foi incorporada porque o arquivo e sua
-licença digital não foram fornecidos. A aplicação usa Aptos, Helvetica Neue e
-Arial como substitutas de sistema, sem baixar ou incorporar arquivos de fonte.
-Consulte `BRAND_IMPLEMENTATION.md`.
-
-## Persistência
-
-Os dados permanecem no dispositivo, no banco IndexedDB `th-os`, store
-`project-master-records`. A exportação JSON deve ser usada como cópia portátil.
-O modelo e as regras de versão estão em `DATA_MODEL.md`.
-
-## Uso local
-
-Requer Node.js 22.13 ou superior.
+Requer Node.js 22.13+ e pnpm 11.
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 pnpm dev
-pnpm build
+pnpm lint
+pnpm typecheck
 pnpm test
+pnpm test:e2e
+pnpm build
+pnpm verify
 ```
 
-## Documentação
+Na lista, use **Novo projeto**. O código `TH-AAAA-NNN` é gerado localmente.
+Preencha as seções e aguarde “Salvo neste dispositivo”. O piloto correto é
+`TH-2026-001`, em Cacoal/RO.
 
-- `DATA_MODEL.md`: modelo, persistência e validações;
-- `BRAND_IMPLEMENTATION.md`: identidade e reaproveitamento visual;
-- `NEXT_STEPS.md`: evolução segura do CMP e módulos futuros;
-- `CHANGELOG.md`: histórico desta reestruturação.
+## Persistência e backup
+
+Os dados ficam no IndexedDB `th-os`, store `project-master-records`. Não há
+sincronização externa. Use **Exportar JSON** para backup. O envelope contém
+aplicação, versão, data da exportação e projeto. A importação valida tipos e
+enums, migra v1, rejeita versões futuras e trata conflitos.
+
+## Limitações do piloto
+
+- dados restritos ao navegador/dispositivo;
+- sem colaboração simultânea ou upload;
+- catálogo editável no registro, sem administração global;
+- reordenação avançada e agrupamento visual ficam para evolução;
+- não substitui proposta, contrato, financeiro ou gestão completa de obra.
+
+Consulte `DATA_MODEL.md`, `AUDIT_RESOLUTION.md` e `NEXT_STEPS.md`.

@@ -1,5 +1,12 @@
 # Implementação da identidade visual - TH Arquitetura
 
+## Consolidação CMP-001 v2
+
+A consolidação preserva os arquivos oficiais, o verde `#677048`, os tokens e
+as proporções das marcas. As mudanças limitam-se à densidade dos formulários,
+hierarquia das 14 seções, foco visível, feedback semântico, responsividade e
+impressão. Nenhum logo foi redesenhado ou substituído.
+
 ## 1. Materiais analisados
 
 ### Manual e documento funcional

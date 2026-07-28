@@ -1,23 +1,18 @@
 # Próximos passos — CMP-001
 
-## Antes de ampliar o produto
+## Antes de ampliar o piloto
 
-1. Anexar ao repositório a especificação integral e canônica do CMP-001.
-2. Confirmar com a equipe os campos obrigatórios de cada nível de validação.
-3. Validar o cálculo de completude com projetos reais.
-4. Definir política de retenção e exclusão de registros.
+1. Validar campos e pesos com três projetos reais.
+2. Definir política formal de retenção e exclusão.
+3. Realizar auditoria assistiva com leitor de tela.
+4. Treinar a equipe no fluxo de exportação e restauração.
 
-## Evolução recomendada
+## Evoluções seguras
 
-1. Ampliar os testes de navegador para variações de validação, responsividade e acessibilidade.
-2. Introduzir migrações adicionais somente quando o schema mudar.
-3. Melhorar filtros e busca quando houver volume suficiente de projetos.
-4. Avaliar exportação consolidada de todos os cadastros para backup.
-5. Rever acessibilidade com teclado e leitores de tela.
+1. Reordenação por arrastar e soltar no escopo e programa.
+2. Agrupamento visual por setor/pavimento e filtros do programa.
+3. Backup consolidado de todos os cadastros.
+4. Testes de componentes e variações de conflito de importação.
 
-## Módulos futuros
-
-A ferramenta de contratos deverá ser um módulo separado. Ela poderá consumir
-uma projeção somente de leitura do `ProjectMasterRecord`, sem incorporar lógica
-contratual ao CMP. O mesmo princípio vale para proposta, financeiro, upload,
-login e integrações externas.
+Proposta, contratos, financeiro, login e integrações permanecem módulos
+separados e fora do CMP-001.
