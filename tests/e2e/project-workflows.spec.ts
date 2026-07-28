@@ -6,14 +6,19 @@ async function resetDatabase(page: import("@playwright/test").Page) {
   await page.evaluate(
     () =>
       new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase("th-os");
-        request.onsuccess = () => resolve();
+        const request = indexedDB.open("th-os");
+        request.onsuccess = () => {
+          const transaction = request.result.transaction("project-master-records", "readwrite");
+          transaction.objectStore("project-master-records").clear();
+          transaction.oncomplete = () => resolve();
+          transaction.onerror = () => reject(transaction.error);
+        };
         request.onerror = () => reject(request.error);
-        request.onblocked = () => reject(new Error("IndexedDB deletion was blocked"));
       }),
   );
   await page.reload();
   await expect(page.getByText("TH-2026-001", { exact: true })).toBeVisible();
+  await expect(page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" }).getByText(/Cacoal/)).toBeVisible();
 }
 
 test.beforeEach(async ({ page }) => {
@@ -24,10 +29,10 @@ test("creates, autosaves, and restores a project after reload", async ({ page })
   await page.getByRole("button", { name: "Novo projeto" }).click();
   await expect(page.getByText(/TH-\d{4}-002/, { exact: true }).first()).toBeVisible();
 
-  await page.getByLabel("Nome do projeto").fill("Casa Rio Negro");
+  await page.getByLabel("Nome interno").fill("Casa Rio Negro");
   await expect(page.getByText("Salvo neste dispositivo")).toBeVisible();
 
-  await page.getByRole("button", { name: /Todos os projetos/ }).click();
+  await page.getByRole("button", { name: /Projetos/ }).click();
   await expect(page.getByRole("heading", { name: "Casa Rio Negro" })).toBeVisible();
 
   await page.reload();
@@ -35,14 +40,14 @@ test("creates, autosaves, and restores a project after reload", async ({ page })
 });
 
 test("archives, restores, and permanently deletes a project", async ({ page }) => {
-  const pilot = page.locator("article").filter({ hasText: "Residência Piloto TH" });
+  const pilot = page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" });
 
   await pilot.getByRole("button", { name: "Arquivar" }).click();
   await expect(page.getByText("Projeto arquivado.")).toBeVisible();
   await expect(pilot).toBeHidden();
 
-  await page.getByLabel("Mostrar arquivados").check();
-  await expect(pilot.getByText("Arquivado", { exact: true })).toBeVisible();
+  await page.getByLabel("Status").selectOption("all");
+  await expect(pilot.getByText("Arquivado", { exact: true }).first()).toBeVisible();
 
   await pilot.getByRole("button", { name: "Restaurar" }).click();
   await expect(page.getByText("Projeto restaurado.")).toBeVisible();
