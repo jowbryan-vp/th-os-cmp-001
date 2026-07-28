@@ -9,7 +9,7 @@
 
 ## Evolução recomendada
 
-1. Criar testes de navegador para CRUD, autosave, arquivamento e importação.
+1. Ampliar os testes de navegador para variações de validação, responsividade e acessibilidade.
 2. Introduzir migrações adicionais somente quando o schema mudar.
 3. Melhorar filtros e busca quando houver volume suficiente de projetos.
 4. Avaliar exportação consolidada de todos os cadastros para backup.
