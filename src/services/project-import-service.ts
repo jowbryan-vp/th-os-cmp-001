@@ -1,4 +1,4 @@
-import { APPLICATION_ID, ProjectMasterRecord, createHistoryEvent, createId } from "../domain/project-master-record";
+import { APPLICATION_ID, PROJECT_SCHEMA_VERSION, ProjectMasterRecord, createHistoryEvent, createId } from "../domain/project-master-record";
 import { migrateProject } from "../domain/project-migrations";
 import { importEnvelopeSchema } from "../domain/project-schemas";
 
@@ -16,6 +16,9 @@ export function exportProject(project: ProjectMasterRecord): ExportEnvelope {
 }
 export function parseProjectImport(input: unknown) {
   const envelope = importEnvelopeSchema.safeParse(input);
+  if (envelope.success && envelope.data.schemaVersion > PROJECT_SCHEMA_VERSION) {
+    throw new Error("O arquivo foi criado por uma versão futura do CMP.");
+  }
   return migrateProject(envelope.success ? envelope.data.project : input);
 }
 export function detectImportConflict(project: ProjectMasterRecord, existing: ProjectMasterRecord[]): ImportConflict {

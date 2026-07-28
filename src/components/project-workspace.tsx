@@ -79,7 +79,10 @@ export function ProjectWorkspace() {
       const conflict = detectImportConflict(imported, projects);
       if (conflict !== "none") {
         const replace = window.confirm("Há conflito de ID ou código. OK: substituir existente. Cancelar: escolher importar como novo.");
-        if (!replace) {
+        if (replace) {
+          const target = projects.find((item) => item.id === imported.id || item.code === imported.code);
+          if (target) imported = { ...imported, id: target.id, code: target.code };
+        } else {
           if (!window.confirm("Importar como novo projeto? Cancelar interrompe a importação.")) return;
           imported = importAsNew(imported, await repository.nextCode());
         }
