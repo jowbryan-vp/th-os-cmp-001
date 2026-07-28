@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 async function render() {
@@ -22,17 +23,36 @@ async function render() {
   );
 }
 
-test("server-renders the TH Arquitetura contract interface", async () => {
+test("server-renders the TH OS Cadastro Mestre interface", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /<title>TH Arquitetura \| Contratos<\/title>/i);
-  assert.match(html, /Projeto residencial/);
-  assert.match(html, /Contratante e projeto/);
-  assert.match(html, /Escopo contratado/);
-  assert.match(html, /Etapas e prazos/);
-  assert.match(html, /Honorários/);
-  assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
+  assert.match(html, /<title>Cadastro Mestre do Projeto \| TH OS<\/title>/i);
+  assert.match(html, /Cadastro Mestre do Projeto/);
+  assert.match(html, /CMP-001/);
+  assert.match(html, /TH-2026-001/);
+  assert.match(html, /Novo projeto/);
+  assert.doesNotMatch(html, /Emitir contrato|Honorários|TH-2026-014/i);
+});
+
+test("domain and repository expose the required CMP contracts", async () => {
+  const domain = await readFile(
+    new URL("../src/domain/project-master-record.ts", import.meta.url),
+    "utf8",
+  );
+  const repository = await readFile(
+    new URL("../src/data/project-repository.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(domain, /interface ProjectMasterRecord/);
+  assert.match(domain, /PROJECT_SCHEMA_VERSION/);
+  assert.match(domain, /TH-2026-001/);
+  assert.match(domain, /validateProject/);
+  assert.match(domain, /calculateProjectProgress/);
+  assert.match(repository, /interface ProjectRepository/);
+  assert.match(repository, /class IndexedDbProjectRepository/);
+  assert.match(repository, /project-master-records/);
 });

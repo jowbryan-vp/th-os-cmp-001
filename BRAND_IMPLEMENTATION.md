@@ -7,7 +7,7 @@
 | Arquivo | Formato | Leitura realizada | Finalidade |
 |---|---|---|---|
 | `MANUAL-DA-MARCA-TH-ARQUITETURA_074417.pdf` | PDF, 20 páginas | Todas as páginas renderizadas e verificadas visualmente | Fonte normativa da identidade |
-| `Contrato TH ARQ.docx` | DOCX | Conteúdo e estrutura extraídos; a renderização visual não foi possível por ausência do LibreOffice no ambiente | Referência funcional para campos, etapas, escopo e honorários |
+| `Contrato TH ARQ.docx` | DOCX | Conteúdo e estrutura extraídos na entrega anterior | Material histórico; não utilizado como referência funcional do CMP-001 |
 
 O manual é composto por imagens e não possui camada de texto selecionável. A análise foi feita sobre a renderização integral das 20 páginas.
 
@@ -69,7 +69,8 @@ O manual identifica **Organetto**, com pesos Regular, Bold e Light. Também info
 Nenhum arquivo de fonte ou licença foi fornecido na pasta. Por isso:
 
 - Organetto não foi incorporada ao repositório;
-- a interface usa **Geist Sans**, já presente na base técnica e com desenho geométrico contemporâneo;
+- a interface usa **Aptos**, com Helvetica Neue e Arial como alternativas de
+  sistema visualmente compatíveis;
 - Aptos, Helvetica Neue e Arial são alternativas de sistema;
 - a arte tipográfica do logotipo permanece preservada dentro dos PNGs oficiais.
 
@@ -120,9 +121,9 @@ O verde militar é usado com parcimônia. Fundos principais são claros para evi
 - formulários com rótulos persistentes e foco visível;
 - resumo lateral fixo no desktop e reposicionado no fluxo em telas menores;
 - mensagem de confirmação discreta após salvar;
-- estado de conclusão antes da emissão;
+- painel de validação para rascunho, reunião e proposta;
 - tela de impressão em fundo branco, com logotipo positivo e sem navegação;
-- botão de emissão que abre a impressão do navegador, permitindo salvar em PDF;
+- botão de resumo que abre a impressão institucional do Cadastro Mestre;
 - conteúdo preservado em desktop, tablet e celular sem ocultar informações funcionais.
 
 ## 9. Componentes com identidade implementada
@@ -134,11 +135,27 @@ O verde militar é usado com parcimônia. Fundos principais são claros para evi
 - estados de foco, seleção e confirmação;
 - cartões;
 - campos, seletores, áreas de texto e checkboxes;
-- etapas e prazos;
+- listagem de projetos, etapas e prazos;
 - resumo lateral;
-- estado de conclusão;
+- estados de completude e validação;
 - notificação de salvamento;
 - tela de impressão e saída para PDF.
+
+## 9.1 Reaproveitamento na reestruturação CMP-001
+
+A aplicação anterior “TH Arquitetura - Contratos” não foi mantida como conceito
+ou estrutura funcional. Foram reaproveitados somente:
+
+- os dois PNGs oficiais listados na seção 6;
+- os tokens de cor, tipografia, espaçamento, raios e sombras;
+- proporções e recortes CSS das assinaturas;
+- padrões visuais genéricos de botões, cartões, campos e foco;
+- regras responsivas e a base de impressão institucional.
+
+Foram substituídos integralmente a página funcional, navegação, textos, estado,
+resumo, dados fictícios e ações de emissão. O novo domínio é
+`ProjectMasterRecord`, persistido em IndexedDB. A ferramenta de contratos será
+um módulo futuro separado e consumidor dos dados do CMP.
 
 ## 10. Limitações registradas
 
@@ -148,5 +165,7 @@ O verde militar é usado com parcimônia. Fundos principais são claros para evi
 - os PNGs têm tela de 2000 x 2000 px e margens transparentes extensas; a aplicação usa recorte visual por CSS sem alterar os arquivos;
 - os PDFs de logotipo são arquivos de impressão grandes e não foram convertidos para SVG;
 - Organetto não foi incorporada por ausência de arquivo e licença;
-- o contrato em Word foi usado como referência funcional, sem modificar o original;
-- a verificação visual do DOCX não pôde ser concluída porque o renderizador LibreOffice não está disponível; isso não afeta a leitura estrutural usada na interface.
+- o contrato em Word permanece apenas como material histórico e não orienta o
+  modelo funcional do CMP-001;
+- a verificação visual do DOCX não pôde ser concluída porque o renderizador
+  LibreOffice não está disponível; essa limitação não afeta a aplicação atual.

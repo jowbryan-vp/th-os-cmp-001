@@ -1,21 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "TH Arquitetura | Contratos",
+  title: "Cadastro Mestre do Projeto | TH OS",
   description:
-    "Organize o escopo, os prazos e os honorários dos projetos da TH Arquitetura.",
+    "Cadastro Mestre do Projeto da TH Arquitetura — fonte central de informações do TH OS.",
 };
 
 export default function RootLayout({
@@ -25,11 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

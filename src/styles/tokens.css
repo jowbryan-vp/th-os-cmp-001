@@ -17,8 +17,8 @@
   --color-success-bg: #eef3e7;
   --color-success-text: #45502f;
 
-  --font-ui: var(--font-geist-sans), "Aptos", "Helvetica Neue", Arial, sans-serif;
-  --font-mono: var(--font-geist-mono), "SFMono-Regular", Consolas, monospace;
+  --font-ui: "Aptos", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, monospace;
   --weight-regular: 400;
   --weight-medium: 520;
   --weight-semibold: 650;
