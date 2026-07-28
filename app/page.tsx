@@ -53,7 +53,7 @@ function BrandLogo({ compact = false }: { compact?: boolean }) {
   const source = compact ? logoVerticalPositive : logoHorizontalPositive;
   return (
     <span className={`brand-crop brand-crop--${compact ? "vertical" : "horizontal"}`}>
-      <Image src={source} alt="TH Arquitetura" priority />
+      <Image src={source} alt="TH Arquitetura" priority unoptimized />
     </span>
   );
 }

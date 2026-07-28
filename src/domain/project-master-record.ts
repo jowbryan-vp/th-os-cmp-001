@@ -197,6 +197,8 @@ export function createEmptyProject(code: string): ProjectMasterRecord {
 export const pilotProject: ProjectMasterRecord = {
   ...createEmptyProject("TH-2026-001"),
   id: "project-th-2026-001",
+  createdAt: "2026-01-01T12:00:00.000Z",
+  updatedAt: "2026-01-01T12:00:00.000Z",
   status: "active",
   title: "Residência Piloto TH",
   projectType: "Arquitetura residencial",
@@ -249,6 +251,14 @@ export const pilotProject: ProjectMasterRecord = {
       dueDate: "",
       priority: "high",
       status: "open",
+    },
+  ],
+  history: [
+    {
+      id: "history-pilot-created",
+      at: "2026-01-01T12:00:00.000Z",
+      action: "Cadastro criado",
+      detail: "Registro mestre piloto iniciado.",
     },
   ],
 };
