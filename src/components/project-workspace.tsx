@@ -132,7 +132,9 @@ function Header({ record, autosave, onHome, onNew, onImport, onExport }: {
     : autosave.state === "error" ? "Erro ao salvar" : autosave.state === "saved" ? "Salvo neste dispositivo" : "";
   return <header className="topbar">
     <button className="brand-link brand-button" aria-label="Voltar para projetos" onClick={onHome}>
-      <Image src={logo} alt="TH Arquitetura" priority unoptimized />
+      <span className="brand-crop brand-crop--horizontal" aria-hidden="true">
+        <Image src={logo} alt="" priority unoptimized />
+      </span>
     </button>
     <div className="product-signature"><strong>TH OS</strong><span>Cadastro Mestre do Projeto · CMP-001</span></div>
     <div className="topbar-actions">

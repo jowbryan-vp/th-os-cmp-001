@@ -47,6 +47,25 @@ test("loads the pilot without browser or framework errors", async ({ page }) => 
   }
 });
 
+test("keeps the logo header compact and the page scrollable", async ({ page }) => {
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport);
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Cadastro Mestre do Projeto" })).toBeVisible();
+
+    const header = page.locator("header.topbar");
+    const headerBox = await header.boundingBox();
+    expect(headerBox?.height).toBeLessThanOrEqual(96);
+
+    const logoBox = await page.getByRole("button", { name: "Voltar para projetos" }).boundingBox();
+    expect(logoBox).not.toBeNull();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.mouse.move((logoBox?.x ?? 0) + 10, (logoBox?.y ?? 0) + 10);
+    await page.mouse.wheel(0, 700);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+  }
+});
+
 test("creates, autosaves, and restores a project after reload", async ({ page }) => {
   await page.getByRole("button", { name: "Novo projeto" }).click();
   await expect(page.getByText(/TH-\d{4}-002/, { exact: true }).first()).toBeVisible();

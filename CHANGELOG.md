@@ -1,5 +1,12 @@
 # Changelog
 
+## Não lançado — Correções do piloto
+
+- corrige o recorte da logo de 2000×2000 no cabeçalho sticky para impedir que
+  sua área bloqueie a rolagem;
+- adiciona regressão E2E para altura do cabeçalho e scroll sobre a logo em
+  desktop e mobile.
+
 ## v0.2.0-pilot — 2026-07-28
 
 - configuração do Worker `th-os-cmp-001-pilot` para Vinext/Vite e Wrangler 4;
