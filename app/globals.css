@@ -54,6 +54,22 @@ button {
   min-height: 100vh;
 }
 
+.pilot-notice {
+  width: min(calc(100% - 4rem), var(--content-max));
+  margin: var(--space-4) auto 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--brand-military) 28%, var(--color-border));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--brand-military) 7%, var(--brand-white));
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.pilot-notice strong {
+  color: var(--brand-military-dark);
+}
+
 .topbar {
   position: sticky;
   top: 0;
@@ -1141,9 +1157,17 @@ button {
     display: none;
   }
 
+  .topbar-actions .record-export {
+    display: inline-flex;
+  }
+
   .topbar-actions .button {
     min-height: 2.45rem;
     padding: 0 var(--space-4);
+  }
+
+  .pilot-notice {
+    width: calc(100% - 2rem);
   }
 
   .projects-page {
@@ -1265,6 +1289,7 @@ button {
   }
 
   .topbar,
+  .pilot-notice,
   .summary-column,
   .text-action,
   .row-remove,
