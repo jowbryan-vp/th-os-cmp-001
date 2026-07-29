@@ -60,7 +60,7 @@ Implantação piloto validada em 2026-07-28:
 
 - URL: <https://th-os-cmp-001-pilot.jowbryan.workers.dev>
 - Worker: `th-os-cmp-001-pilot`
-- versão Cloudflare: `62e728d4-c11e-4bd8-8f55-0d7db68ad09f`
+- versão Cloudflare atual: `df768bc4-bbe5-42c0-bfc4-d47a529b1cfa`
 
 Para executar os mesmos cenários E2E diretamente contra a implantação:
 
