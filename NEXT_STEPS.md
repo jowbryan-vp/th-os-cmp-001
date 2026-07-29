@@ -2,13 +2,10 @@
 
 ## Antes de ampliar o piloto
 
-1. Autenticar o Wrangler, publicar o Worker e validar a URL pública.
-2. Registrar a URL validada no README e em `DEPLOYMENT.md`.
-3. Criar a tag `v0.2.0-pilot` somente após deploy e testes pós-publicação.
-4. Validar campos e pesos com três projetos reais.
-5. Definir política formal de retenção e exclusão.
-6. Realizar auditoria assistiva com leitor de tela.
-7. Treinar a equipe no fluxo de exportação e restauração.
+1. Validar campos e pesos com três projetos reais.
+2. Definir política formal de retenção e exclusão.
+3. Realizar auditoria assistiva com leitor de tela.
+4. Treinar a equipe no fluxo de exportação e restauração.
 
 ## Evoluções seguras
 

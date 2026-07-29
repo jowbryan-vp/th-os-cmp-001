@@ -50,9 +50,13 @@ Preencha as seções e aguarde “Salvo neste dispositivo”. O piloto correto �
 
 ## Acesso online
 
-A URL pública do piloto ainda depende da primeira autenticação e implantação
-manual no Cloudflare. Ela será registrada aqui somente depois de ser aberta e
-validada. Consulte [DEPLOYMENT.md](./DEPLOYMENT.md) para o procedimento.
+O piloto validado está disponível em:
+
+**<https://th-os-cmp-001-pilot.jowbryan.workers.dev>**
+
+Os dados dessa URL continuam locais e independentes em cada navegador, perfil e
+dispositivo. Consulte [DEPLOYMENT.md](./DEPLOYMENT.md) para implantação,
+validação e rollback.
 
 Para publicar ou atualizar manualmente:
 

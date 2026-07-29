@@ -56,11 +56,18 @@ no terminal que o Worker publicado é `th-os-cmp-001-pilot`.
 
 ## 6. Registrar a URL gerada
 
-O Wrangler informa uma URL semelhante a
-`https://th-os-cmp-001-pilot.<subdominio>.workers.dev`. Não antecipe nem
-invente o subdomínio. Depois da primeira implantação, abra a URL, conclua o
-checklist pós-deploy e substitua esta seção e a seção “Acesso online” do README
-pela URL exata validada.
+Implantação piloto validada em 2026-07-28:
+
+- URL: <https://th-os-cmp-001-pilot.jowbryan.workers.dev>
+- Worker: `th-os-cmp-001-pilot`
+- versão Cloudflare: `62e728d4-c11e-4bd8-8f55-0d7db68ad09f`
+
+Para executar os mesmos cenários E2E diretamente contra a implantação:
+
+```powershell
+$env:PLAYWRIGHT_BASE_URL = "https://th-os-cmp-001-pilot.jowbryan.workers.dev"
+pnpm test:e2e
+```
 
 ## 7. Atualizar a implantação
 
@@ -114,18 +121,18 @@ Exportar JSON é a única cópia de segurança prevista nesta fase.
 
 ## 12. Checklist pós-deploy
 
-- [ ] abrir a URL exata e confirmar resposta sem erro;
-- [ ] visualizar o projeto piloto `TH-2026-001` de Cacoal/RO;
-- [ ] visualizar o aviso de armazenamento local;
-- [ ] criar e editar um projeto;
-- [ ] aguardar “Salvo neste dispositivo” e atualizar a página;
-- [ ] confirmar persistência no mesmo contexto do navegador;
-- [ ] exportar JSON no Chrome desktop;
-- [ ] exportar JSON em navegador móvel compatível;
-- [ ] importar o JSON pela URL pública;
-- [ ] confirmar que outro navegador/perfil não recebeu o novo projeto;
-- [ ] validar layout desktop e móvel;
-- [ ] registrar a URL validada no README e neste arquivo.
+- [x] abrir a URL exata e confirmar resposta sem erro;
+- [x] visualizar o projeto piloto `TH-2026-001` de Cacoal/RO;
+- [x] visualizar o aviso de armazenamento local;
+- [x] criar e editar um projeto;
+- [x] aguardar “Salvo neste dispositivo” e atualizar a página;
+- [x] confirmar persistência no mesmo contexto do navegador;
+- [x] exportar JSON no Chrome desktop;
+- [x] exportar JSON em navegador móvel compatível;
+- [x] importar o JSON pela URL pública;
+- [x] confirmar que outro navegador/perfil não recebeu o novo projeto;
+- [x] validar layout desktop e móvel;
+- [x] registrar a URL validada no README e neste arquivo.
 
 ## Automação futura
 

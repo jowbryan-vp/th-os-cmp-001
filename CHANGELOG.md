@@ -1,13 +1,15 @@
 # Changelog
 
-## Não lançado — Piloto Cloudflare
+## v0.2.0-pilot — 2026-07-28
 
 - configuração do Worker `th-os-cmp-001-pilot` para Vinext/Vite e Wrangler 4;
 - scripts de preview, dry-run real do bundle e implantação manual;
 - aviso acessível de que os dados permanecem somente no navegador/dispositivo;
 - cobertura E2E de aviso local, exportação móvel e isolamento entre contextos;
 - guia de implantação, rollback, segredos e checklist pós-deploy;
-- tag `v0.2.0-pilot` reservada para depois da implantação e validação públicas.
+- implantação validada em
+  `https://th-os-cmp-001-pilot.jowbryan.workers.dev`;
+- smoke test público sem erros de navegador e sete cenários E2E aprovados.
 
 ## 2026-07-28 — Consolidação v2 para uso piloto
 

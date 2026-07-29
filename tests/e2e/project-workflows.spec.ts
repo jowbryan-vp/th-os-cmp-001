@@ -28,6 +28,25 @@ test.beforeEach(async ({ page }) => {
   await resetDatabase(page);
 });
 
+test("loads the pilot without browser or framework errors", async ({ page }) => {
+  const browserErrors: string[] = [];
+  page.on("pageerror", (error) => browserErrors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") browserErrors.push(message.text());
+  });
+
+  const response = await page.goto("/");
+  expect(response?.ok()).toBe(true);
+  await expect(page.locator("body")).not.toHaveText("");
+  await expect(page.locator("[data-nextjs-dialog], .vite-error-overlay, #webpack-dev-server-client-overlay")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Cadastro Mestre do Projeto" })).toBeVisible();
+  expect(browserErrors).toEqual([]);
+
+  if (process.env.PLAYWRIGHT_BASE_URL) {
+    await page.screenshot({ path: "test-results/public-pilot.png", fullPage: true });
+  }
+});
+
 test("creates, autosaves, and restores a project after reload", async ({ page }) => {
   await page.getByRole("button", { name: "Novo projeto" }).click();
   await expect(page.getByText(/TH-\d{4}-002/, { exact: true }).first()).toBeVisible();
