@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-07-28 — Consolidação v2 para uso piloto
+
+- seed canônico de Cacoal/RO sem dados pessoais inventados;
+- modelo v2, enums, Zod e migração explícita v1 → v2;
+- escopo, programa, planejamento, orçamento e registros ampliados;
+- progresso ponderado e quatro níveis de prontidão sem mutação;
+- importação/exportação envelopada e autosave serializado;
+- workspace com 14 seções, busca, filtros e ordenação;
+- testes unitários, IndexedDB, smoke, Playwright e CI.
+
 ## 2026-07-28 — Reestruturação para CMP-001
 
 ### Adicionado

@@ -1,81 +1,48 @@
-# Modelo de dados — Cadastro Mestre do Projeto
-
-## Entidade central
-
-`ProjectMasterRecord` é a fonte única de informações de um projeto dentro do
-TH OS. A entidade está definida em
-`src/domain/project-master-record.ts`.
-
-Campos de controle:
-
-| Campo | Finalidade |
-|---|---|
-| `id` | Identificador técnico estável |
-| `schemaVersion` | Versão estrutural do registro |
-| `code` | Código legível no padrão `TH-AAAA-NNN` |
-| `status` | `draft`, `active` ou `archived` |
-| `createdAt` / `updatedAt` | Auditoria temporal |
-| `archivedAt` | Data de arquivamento ou `null` |
-
-Blocos de conteúdo:
-
-- identificação: `title`, `projectType`, `phase`;
-- síntese e contexto: `summary`, `context`, `objectives`;
-- clientes: `clients[]`, com múltiplas pessoas e contato principal;
-- imóvel: `property`;
-- escopo preliminar: `preliminaryScope[]`;
-- programa de necessidades: `needsProgram[]`;
-- planejamento: `timeline[]`, `estimatedBudget`, `budgetNotes`;
-- registros: `visits[]`, `documents[]`, `team[]`, `decisions[]`,
-  `pending[]` e `history[]`.
-
-Documentos são apenas referências textuais. O modelo não armazena arquivos e a
-interface não realiza upload.
+# Modelo de dados — CMP-001
 
 ## Versão e migração
 
-A versão atual é `PROJECT_SCHEMA_VERSION = 1`. Todo JSON importado passa por
-`migrateProject`, que:
+`PROJECT_SCHEMA_VERSION = 2`. A entidade raiz permanece
+`ProjectMasterRecord`. `project-migrations.ts` transforma v1 em v2. Registros
+futuros são rejeitados. O antigo seed conhecido é substituído pelo seed
+canônico de Cacoal; demais registros preservam os dados legados mapeáveis.
 
-1. verifica se o conteúdo é um objeto;
-2. exige `id`, `code` e `title`;
-3. rejeita versões mais recentes que a aplicação;
-4. preenche coleções e estruturas ausentes com valores seguros;
-5. atualiza o registro para a versão corrente.
+## Agregados
 
-Novas alterações incompatíveis devem elevar `PROJECT_SCHEMA_VERSION` e
-incorporar uma migração explícita antes da leitura.
+- controle: nomes, status, fase, prioridade, responsáveis e timestamps;
+- clientes: pessoa, contatos, documentos opcionais e poder de decisão;
+- imóvel: localização, situação, registros e áreas numéricas;
+- contexto: problema, objetivos, intervenções, expectativas e riscos;
+- escopo: serviço, categoria, status, execução, responsável e ordem;
+- programa: ambiente, situação, intervenção, áreas, requisitos e ordem;
+- planejamento, marcos, orçamento em centavos, visitas e documentos;
+- equipe, decisões, pendências e histórico centralizado.
 
-## Persistência
+Schemas Zod estritos rejeitam campos desconhecidos. Áreas usam `number | null`;
+dinheiro usa inteiros em centavos.
 
-`IndexedDbProjectRepository` implementa `ProjectRepository` em
-`src/data/project-repository.ts`.
+## Progresso ponderado
 
-- banco: `th-os`;
-- versão do banco: `1`;
-- object store: `project-master-records`;
-- chave: `id`;
-- índices: `code`, `status`, `updatedAt`.
+| Grupo | Peso |
+|---|---:|
+| Identificação | 10% |
+| Clientes | 10% |
+| Imóvel | 12% |
+| Contexto | 10% |
+| Escopo | 12% |
+| Programa | 12% |
+| Prazos | 8% |
+| Orçamento | 7% |
+| Visitas | 5% |
+| Documentos | 5% |
+| Equipe | 4% |
+| Decisões e pendências | 5% |
 
-O repositório expõe `list`, `get`, `save`, `remove`, `nextCode` e
-`ensurePilot`. A interface não acessa IndexedDB diretamente.
+Cada seção retorna percentual, completos, obrigatórios, ausentes e alertas.
+Ter pendências não aumenta o progresso; bloqueios o reduzem.
 
-## Geração de código
+## Prontidão e autosave
 
-`nextCode(year)` localiza o maior número existente para o ano solicitado e gera
-o próximo identificador com três dígitos. Importações com conflito recebem novo
-código sem sobrescrever outro projeto.
-
-## Progresso e validação
-
-O progresso é uma indicação de completude, não de execução física da obra. Ele
-considera 12 grupos essenciais do cadastro.
-
-Há três níveis de validação:
-
-- **rascunho:** identificação mínima e ao menos um cliente;
-- **reunião:** inclui síntese, contexto, imóvel, escopo e programa;
-- **proposta:** inclui objetivos, prazos, orçamento de referência e ausência de
-  pendências abertas de alta prioridade.
-
-Validar para proposta não gera proposta automática.
+`calculateReadiness` cobre rascunho, reunião, levantamento e proposta sem
+alterar o ciclo de vida. `useProjectAutosave` usa debounce configurável, fila,
+token de versão, retry, último salvamento e aviso de saída.
