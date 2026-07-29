@@ -17,6 +17,9 @@ async function resetDatabase(page: import("@playwright/test").Page) {
       }),
   );
   await page.reload();
+  await expect(page.getByLabel("Aviso sobre armazenamento local")).toContainText(
+    "Os dados ficam armazenados somente neste navegador e dispositivo.",
+  );
   await expect(page.getByText("TH-2026-001", { exact: true })).toBeVisible();
   await expect(page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" }).getByText(/Cacoal/)).toBeVisible();
 }
@@ -105,4 +108,35 @@ test("keeps functional content available on tablet and mobile", async ({ page })
   await pilot.locator("button.project-card__open").click();
   await expect(page.getByRole("heading", { name: "1. Identificação" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "14. Histórico" })).toBeAttached();
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Exportar JSON" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("th-2026-001-cmp.json");
+});
+
+test("keeps projects isolated between browser contexts", async ({ browser }) => {
+  const firstContext = await browser.newContext();
+  const secondContext = await browser.newContext();
+  const firstPage = await firstContext.newPage();
+  const secondPage = await secondContext.newPage();
+
+  try {
+    await firstPage.goto("/");
+    await secondPage.goto("/");
+    await expect(firstPage.getByText("TH-2026-001", { exact: true })).toBeVisible();
+    await expect(secondPage.getByText("TH-2026-001", { exact: true })).toBeVisible();
+
+    await firstPage.getByRole("button", { name: "Novo projeto" }).click();
+    await firstPage.getByLabel("Nome interno").fill("Projeto isolado E2E");
+    await expect(firstPage.getByText("Salvo neste dispositivo")).toBeVisible();
+    await firstPage.getByRole("button", { name: /Projetos/ }).click();
+    await expect(firstPage.getByRole("heading", { name: "Projeto isolado E2E" })).toBeVisible();
+
+    await secondPage.reload();
+    await expect(secondPage.getByText("Projeto isolado E2E")).toHaveCount(0);
+  } finally {
+    await firstContext.close();
+    await secondContext.close();
+  }
 });
