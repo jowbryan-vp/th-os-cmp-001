@@ -26,3 +26,6 @@
 Reordenação por drag-and-drop e agrupamento avançado do programa permanecem
 próximos passos. A revisão técnica CAP-001 continua aberta. Proposta, contrato, honorários,
 financeiro, login e upload seguem fora do produto.
+# Complemento — revisão visual e funcional do PR #5
+
+Foram tratados os achados de corte em larguras intermediárias, aviso ilegível, entrada decimal com vírgula, erro técnico em item personalizado incompleto, ausência de edição/duplicação e falta de catálogo central. A evidência automatizada fica nos testes unitários, de integração e E2E; a evidência visual é produzida como artefato do Playwright.

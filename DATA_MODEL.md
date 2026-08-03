@@ -58,3 +58,6 @@ Ter pendências não aumenta o progresso; bloqueios o reduzem.
 `calculateReadiness` cobre rascunho, reunião, levantamento e proposta sem
 alterar o ciclo de vida. `useProjectAutosave` usa debounce configurável, fila,
 token de versão, retry, último salvamento e aviso de saída.
+# Catálogos de referência (IndexedDB v4)
+
+O store `reference-catalog-options` persiste `CatalogOption` global ou por projeto. `parentId` preserva relações como cidade–estado. O backup consolidado v3 restaura projetos, estudos CAP e catálogos na mesma transação.

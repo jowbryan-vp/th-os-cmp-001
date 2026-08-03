@@ -77,3 +77,9 @@
 - decisões válidas de identidade, tipografia substituta e uso das marcas;
 - fundamentos visuais genéricos de botões, formulários, cartões,
   responsividade e impressão.
+# Não publicado — correções do PR #5
+
+- Layout CAP responsivo e toast acessível.
+- Entrada decimal pt-BR e ciclo completo de itens personalizados.
+- Catálogos referenciais reutilizáveis com combobox e IndexedDB v4.
+- Backup consolidado v3 com catálogos e compatibilidade de leitura anterior.
