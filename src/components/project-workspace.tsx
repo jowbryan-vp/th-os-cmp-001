@@ -15,11 +15,14 @@ import { useProjectAutosave } from "../hooks/use-project-autosave";
 import { useProjects } from "../hooks/use-projects";
 import {
   detectImportConflict, exportConsolidatedBackup, exportProject, importAsNew,
-  parseConsolidatedBackup, parseProjectImport,
+  parseConsolidatedBackup, parseProjectImportBundle,
 } from "../services/project-import-service";
 import { changeArchiveState, duplicateProject } from "../services/project-lifecycle-service";
+import { getParametricStudyRepository } from "../features/cap/repositories/parametric-study-repository";
+import { CapApplyPayload, CapWorkspace } from "../features/cap/components/cap-workspace";
+import { applyScenarioToNeedsProgram } from "../features/cap/services/cap-program-service";
 
-type View = "list" | "record";
+type View = "list" | "record" | "cap";
 const sections = [
   ["identification", "Identificação"], ["clients", "Clientes"], ["property", "Imóvel"],
   ["context", "Contexto"], ["scope", "Escopo"], ["program", "Programa inicial"],
@@ -47,9 +50,11 @@ export function ProjectWorkspace() {
   const [view, setView] = useState<View>("list");
   const [current, setCurrent] = useState<ProjectMasterRecord | null>(null);
   const [notice, setNotice] = useState("");
+  const [capContext, setCapContext] = useState<{ projectId?: string; needsItemId?: string }>({});
   const [validation, setValidation] = useState<ReturnType<typeof calculateReadiness> | null>(null);
   const importInput = useRef<HTMLInputElement>(null);
   const backupInput = useRef<HTMLInputElement>(null);
+  const studyRepository = getParametricStudyRepository();
   const save = useCallback(async (project: ProjectMasterRecord) => {
     const saved = await repository.save(project); upsert(saved); return saved;
   }, [repository, upsert]);
@@ -79,32 +84,43 @@ export function ProjectWorkspace() {
   async function importJson(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]; event.target.value = ""; if (!file) return;
     try {
-      let imported = parseProjectImport(JSON.parse(await file.text()));
+      const bundle = parseProjectImportBundle(JSON.parse(await file.text()));
+      let imported = bundle.project; let importedStudies = bundle.studies;
       const conflict = detectImportConflict(imported, projects);
       if (conflict !== "none") {
         const replace = window.confirm("Há conflito de ID ou código. OK: substituir existente. Cancelar: escolher importar como novo.");
         if (replace) {
           const target = projects.find((item) => item.id === imported.id || item.code === imported.code);
-          if (target) imported = { ...imported, id: target.id, code: target.code };
+          if (target) { importedStudies = importedStudies.map((study) => ({ ...study, projectId: target.id })); imported = { ...imported, id: target.id, code: target.code }; }
         } else {
           if (!window.confirm("Importar como novo projeto? Cancelar interrompe a importação.")) return;
-          imported = importAsNew(imported, await repository.nextCode());
+          const originalId = imported.id; imported = importAsNew(imported, await repository.nextCode());
+          importedStudies = importedStudies.map((study) => ({ ...study, id: createId("cap-study"), projectId: imported.id,
+            name: `${study.name} — importado`, needsProgramItemId: study.needsProgramItemId && originalId === bundle.project.id ? study.needsProgramItemId : null }));
         }
       }
       imported = { ...imported, history: [...imported.history, createHistoryEvent("imported", "Cadastro importado.")] };
-      const saved = await save(imported); setCurrent(saved); setView("record");
-      setNotice(`Cadastro ${saved.code} importado.`);
+      const saved = await save(imported);
+      for (const study of importedStudies) {
+        const existing = await studyRepository.findById(study.id);
+        if (existing) await studyRepository.update(study); else await studyRepository.create(study);
+      }
+      setCurrent(saved); setView("record");
+      setNotice(importedStudies.length ? `Cadastro ${saved.code} importado com ${importedStudies.length} estudo(s).`
+        : `Cadastro ${saved.code} importado.`);
     } catch (reason) { setNotice(reason instanceof Error ? reason.message : "Falha ao importar."); }
   }
-  function download() {
+  async function download() {
     if (!current) return;
-    const blob = new Blob([JSON.stringify(exportProject(current), null, 2)], { type: "application/json" });
+    const studies = await studyRepository.listByProject(current.id);
+    const blob = new Blob([JSON.stringify(exportProject(current, studies), null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob); const anchor = document.createElement("a");
     anchor.href = url; anchor.download = `${current.code.toLowerCase()}-cmp.json`; anchor.click();
     URL.revokeObjectURL(url); setNotice("Cadastro exportado em JSON.");
   }
-  function downloadBackup() {
-    const blob = new Blob([JSON.stringify(exportConsolidatedBackup(projects), null, 2)], { type: "application/json" });
+  async function downloadBackup() {
+    const studies = await studyRepository.listAll();
+    const blob = new Blob([JSON.stringify(exportConsolidatedBackup(projects, studies), null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob); const anchor = document.createElement("a");
     anchor.href = url; anchor.download = `th-os-cmp-backup-${new Date().toISOString().slice(0, 10)}.json`; anchor.click();
     URL.revokeObjectURL(url); setNotice(`Backup completo exportado com ${projects.length} cadastro(s).`);
@@ -113,11 +129,30 @@ export function ProjectWorkspace() {
     const file = event.target.files?.[0]; event.target.value = ""; if (!file) return;
     try {
       const restored = parseConsolidatedBackup(JSON.parse(await file.text()));
-      if (!window.confirm(`Restaurar ${restored.length} cadastro(s)? Isso substituirá todos os dados locais atuais.`)) return;
-      const saved = await repository.replaceAll(restored);
-      setProjects(saved); setCurrent(null); setView("list");
-      setNotice(`Backup restaurado com ${saved.length} cadastro(s).`);
+      if (!window.confirm(`Restaurar ${restored.projects.length} cadastro(s) e ${restored.studies.length} estudo(s)? Isso substituirá todos os dados locais atuais.`)) return;
+      const saved = await repository.restoreAll(restored.projects, restored.studies);
+      setProjects(saved.projects); setCurrent(null); setView("list");
+      setNotice(`Backup restaurado com ${saved.projects.length} cadastro(s) e ${saved.studies.length} estudo(s).`);
     } catch (reason) { setNotice(reason instanceof Error ? reason.message : "Falha ao restaurar backup."); }
+  }
+  function openCap(projectId?: string, needsItemId?: string) {
+    setCapContext({ projectId, needsItemId });
+    setView("cap");
+  }
+  async function applyCapResult(payload: CapApplyPayload) {
+    const project = projects.find((item) => item.id === payload.study.projectId);
+    if (!project) throw new Error("Projeto vinculado ao estudo não encontrado.");
+    const needsItem = project.needsProgram.find((item) => item.id === payload.study.needsProgramItemId);
+    if (needsItem?.desiredAreaM2 !== null && needsItem?.desiredAreaM2 !== undefined
+      && !window.confirm(`A área desejada atual é ${needsItem.desiredAreaM2.toLocaleString("pt-BR")} m². Substituir por ${payload.areaM2.toLocaleString("pt-BR")} m²?`)) return;
+    const calculatedAt = new Date().toISOString();
+    const updatedProject = applyScenarioToNeedsProgram(project, payload.study, payload.scenario, payload.areaType, calculatedAt);
+    const savedProject = await save(updatedProject);
+    const appliedStudy = { ...payload.study, status: "applied" as const, updatedAt: calculatedAt };
+    const existingStudy = await studyRepository.findById(appliedStudy.id);
+    if (existingStudy) await studyRepository.update(appliedStudy); else await studyRepository.create(appliedStudy);
+    setCurrent(savedProject); setView("record");
+    setNotice(`Área CAP-001 de ${payload.areaM2.toLocaleString("pt-BR")} m² aplicada ao Programa de Necessidades.`);
   }
   if (loading) return <main className="loading-state">Carregando Cadastro Mestre…</main>;
   if (error) return <main className="loading-state" role="alert">{error.message}</main>;
@@ -126,18 +161,22 @@ export function ProjectWorkspace() {
       <Header
         record={view === "record"} autosave={autosave}
         onHome={() => setView("list")} onNew={newProject}
-        onImport={() => importInput.current?.click()} onExport={download}
+        onImport={() => importInput.current?.click()} onExport={() => void download()}
+        onCap={() => openCap(current?.id)}
       />
       <aside className="pilot-notice" aria-label="Aviso sobre armazenamento local">
         <strong>Versão piloto.</strong>{" "}
         Os dados ficam armazenados somente neste navegador e dispositivo. Exporte o projeto em JSON para manter uma cópia de segurança.
       </aside>
-      {view === "list" ? (
+      {view === "cap" ? (
+        <CapWorkspace projects={projects} initialProjectId={capContext.projectId} initialNeedsItemId={capContext.needsItemId}
+          onBack={() => setView(current ? "record" : "list")} onApply={applyCapResult} />
+      ) : view === "list" ? (
         <ProjectList projects={projects} onOpen={open} onArchive={archive} onDuplicate={duplicate} onDelete={remove}
-          onBackup={downloadBackup} onRestore={() => backupInput.current?.click()} />
+          onBackup={() => void downloadBackup()} onRestore={() => backupInput.current?.click()} />
       ) : current ? (
         <ProjectRecord project={current} update={update} validation={validation}
-          setValidation={setValidation} onBack={() => setView("list")} />
+          setValidation={setValidation} onBack={() => setView("list")} onOpenCap={(needsItemId) => openCap(current.id, needsItemId)} />
       ) : null}
       <input ref={importInput} className="sr-only" type="file" accept=".json,application/json" onChange={importJson} />
       <input ref={backupInput} className="sr-only" type="file" accept=".json,application/json" onChange={restoreBackup} />
@@ -146,9 +185,9 @@ export function ProjectWorkspace() {
   );
 }
 
-function Header({ record, autosave, onHome, onNew, onImport, onExport }: {
+function Header({ record, autosave, onHome, onNew, onImport, onExport, onCap }: {
   record: boolean; autosave: ReturnType<typeof useProjectAutosave>; onHome: () => void;
-  onNew: () => void; onImport: () => void; onExport: () => void;
+  onNew: () => void; onImport: () => void; onExport: () => void; onCap: () => void;
 }) {
   const saveLabel = autosave.state === "saving" ? "Salvando…" : autosave.state === "dirty" ? "Alterações pendentes"
     : autosave.state === "error" ? "Erro ao salvar" : autosave.state === "saved" ? "Salvo neste dispositivo" : "";
@@ -160,6 +199,7 @@ function Header({ record, autosave, onHome, onNew, onImport, onExport }: {
     </button>
     <div className="product-signature"><strong>TH OS</strong><span>Cadastro Mestre do Projeto · CMP-001</span></div>
     <div className="topbar-actions">
+      <button className="button button--ghost" onClick={onCap}>CAP-001</button>
       {record && saveLabel && <span className={`save-status save-status--${autosave.state}`}>{saveLabel}</span>}
       {autosave.state === "error" && <button className="button button--ghost" onClick={() => void autosave.retry()}>Tentar novamente</button>}
       {record ? <button className="button button--ghost record-export" onClick={onExport}>Exportar JSON</button>
@@ -231,10 +271,11 @@ function ProjectList({ projects, onOpen, onArchive, onDuplicate, onDelete, onBac
   </main>;
 }
 
-function ProjectRecord({ project, update, validation, setValidation, onBack }: {
+function ProjectRecord({ project, update, validation, setValidation, onBack, onOpenCap }: {
   project: ProjectMasterRecord; update: (patch: Partial<ProjectMasterRecord>) => void;
   validation: ReturnType<typeof calculateReadiness> | null;
   setValidation: (v: ReturnType<typeof calculateReadiness>) => void; onBack: () => void;
+  onOpenCap: (needsItemId: string) => void;
 }) {
   const areas = summarizeAreas(project);
   const mutate = <K extends keyof ProjectMasterRecord>(key: K, value: ProjectMasterRecord[K]) => update({ [key]: value } as Pick<ProjectMasterRecord, K>);
@@ -298,7 +339,8 @@ function ProjectRecord({ project, update, validation, setValidation, onBack }: {
           <Input label="Área existente m²" value={item.existingAreaM2?.toLocaleString("pt-BR") ?? ""} onChange={(v) => updateNeed(project, item.id, { existingAreaM2: numberPt(v) }, mutate)} />
           <Input label="Área desejada m²" value={item.desiredAreaM2?.toLocaleString("pt-BR") ?? ""} onChange={(v) => updateNeed(project, item.id, { desiredAreaM2: numberPt(v) }, mutate)} />
           <Select label="Prioridade" value={item.priority} onChange={(priority) => updateNeed(project, item.id, { priority: priority as NeedsItem["priority"] }, mutate)} options={[["essential", "Essencial"], ["important", "Importante"], ["desirable", "Desejável"], ["under_review", "Sob análise"]]} />
-        </Grid></Collection>)}
+        </Grid><div className="cap-program-link"><button className="button button--ghost" onClick={() => onOpenCap(item.id)}>Pré-dimensionar com CAP-001</button>
+          {item.parametricStudyId && <small>Aplicado: {item.appliedAreaM2?.toLocaleString("pt-BR")} m² · biblioteca {item.capLibraryVersion} · motor {item.calculationEngineVersion}</small>}</div></Collection>)}
       </Section>
       <Section id="planning" title="7. Prazos"><Grid>
         <Input type="date" label="Primeiro contato" value={project.planning.firstContactDate} onChange={(firstContactDate) => mutate("planning", { ...project.planning, firstContactDate })} />
@@ -365,7 +407,7 @@ function ScopeRow({ item, onChange, onRemove }: { item: PreliminaryScopeItem; on
     <Select label="Execução" value={item.executionMode} onChange={(executionMode) => onChange({ executionMode: executionMode as PreliminaryScopeItem["executionMode"] })} options={[["internal", "Interna"], ["partner", "Parceiro"], ["outsourced", "Terceirizada"], ["client", "Cliente"], ["not_defined", "Não definida"]]} />
     <Input label="Responsável" value={item.responsible} onChange={(responsible) => onChange({ responsible })} /><Input label="Observações" value={item.notes} onChange={(notes) => onChange({ notes })} /></Grid></Collection>;
 }
-function emptyNeed(order: number): NeedsItem { return { id: createId("need"), environment: "", sector: "", floor: "", currentSituation: "under_review", intervention: "study", existingAreaM2: null, desiredAreaM2: null, quantity: 1, priority: "under_review", users: "", needs: "", lighting: "", ventilation: "", privacy: "", accessibility: "", furniture: "", equipment: "", connections: "", notes: "", order }; }
+function emptyNeed(order: number): NeedsItem { return { id: createId("need"), environment: "", sector: "", floor: "", currentSituation: "under_review", intervention: "study", existingAreaM2: null, desiredAreaM2: null, quantity: 1, priority: "under_review", users: "", needs: "", lighting: "", ventilation: "", privacy: "", accessibility: "", furniture: "", equipment: "", connections: "", notes: "", order, parametricStudyId: null, parametricScenarioId: null, appliedAreaType: null, appliedAreaM2: null, capLibraryVersion: null, calculationEngineVersion: null, calculatedAt: null }; }
 function updateNeed(project: ProjectMasterRecord, id: string, patch: Partial<NeedsItem>, mutate: <K extends keyof ProjectMasterRecord>(key: K, value: ProjectMasterRecord[K]) => void) { mutate("needsProgram", project.needsProgram.map((item) => item.id === id ? { ...item, ...patch } : item)); }
 function emptyVisit(): VisitRecord { return { id: createId("visit"), type: "survey", date: "", time: "", city: "", address: "", responsible: "", participants: "", estimatedDurationMinutes: null, actualDurationMinutes: null, purpose: "", notes: "", reportRequired: false, status: "planned", estimatedExpensesCents: null }; }
 function emptyDocument(): DocumentReference { return { id: createId("document"), name: "", category: "", required: false, status: "not_requested", requestedAt: "", receivedAt: "", notes: "", fileName: "", futureLink: "", responsible: "" }; }
