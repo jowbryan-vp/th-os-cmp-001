@@ -138,6 +138,43 @@ test("exports the versioned project envelope", async ({ page }) => {
   expect(envelope.project.code).toBe("TH-2026-001");
 });
 
+test("exports and restores a complete browser backup", async ({ page }) => {
+  await page.getByRole("button", { name: "Novo projeto" }).click();
+  await page.getByLabel("Nome interno").fill("Projeto do backup E2E");
+  await expect(page.getByText("Salvo neste dispositivo")).toBeVisible();
+  await page.getByRole("button", { name: /Projetos/ }).click();
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Exportar backup completo" }).click();
+  const download = await downloadPromise;
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+  const buffer = Buffer.concat(chunks);
+  const envelope = JSON.parse(buffer.toString());
+  expect(envelope.kind).toBe("consolidated-backup");
+  expect(envelope.projects).toHaveLength(2);
+
+  await page.evaluate(() => new Promise<void>((resolve, reject) => {
+    const request = indexedDB.open("th-os");
+    request.onsuccess = () => {
+      const transaction = request.result.transaction("project-master-records", "readwrite");
+      transaction.objectStore("project-master-records").clear();
+      transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error);
+    };
+    request.onerror = () => reject(request.error);
+  }));
+
+  page.once("dialog", (dialog) => dialog.accept());
+  const chooserPromise = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Restaurar backup" }).click();
+  const chooser = await chooserPromise;
+  await chooser.setFiles({ name: "backup.json", mimeType: "application/json", buffer });
+  await expect(page.getByText("Backup restaurado com 2 cadastro(s).")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Projeto do backup E2E" })).toBeVisible();
+  await expect(page.getByText("TH-2026-001", { exact: true })).toBeVisible();
+});
+
 test("keeps functional content available on tablet and mobile", async ({ page }) => {
   await page.setViewportSize({ width: 820, height: 1000 });
   await expect(page.getByRole("heading", { name: "Cadastro Mestre do Projeto" })).toBeVisible();

@@ -7,7 +7,9 @@ import {
 import { migrateProject } from "../../src/domain/project-migrations";
 import { calculateOverallProgress, calculateSectionProgress, overduePending, summarizeAreas } from "../../src/domain/project-progress";
 import { calculateReadiness } from "../../src/domain/project-validation";
-import { detectImportConflict, exportProject } from "../../src/services/project-import-service";
+import {
+  detectImportConflict, exportConsolidatedBackup, exportProject, parseConsolidatedBackup,
+} from "../../src/services/project-import-service";
 
 test("creates a v2 project with an enum phase and history", () => {
   const project = createEmptyProject("TH-2026-002", "2026-01-01T00:00:00.000Z");
@@ -81,6 +83,17 @@ test("detects import conflicts and exports a typed envelope", () => {
   const envelope = exportProject(project);
   assert.equal(envelope.application, "TH-OS-CMP-001");
   assert.ok(envelope.exportedAt);
+});
+test("exports and validates a consolidated backup", () => {
+  const first = createEmptyProject("TH-2026-002");
+  const second = createEmptyProject("TH-2026-003");
+  const backup = exportConsolidatedBackup([first, second]);
+  assert.equal(backup.kind, "consolidated-backup");
+  assert.equal(parseConsolidatedBackup(backup).length, 2);
+  assert.throws(() => parseConsolidatedBackup({ ...backup, projects: [first, { ...second, code: first.code }] }),
+    /ID ou código duplicado/);
+  assert.throws(() => parseConsolidatedBackup({ ...backup, schemaVersion: PROJECT_SCHEMA_VERSION + 1 }),
+    /versão futura/);
 });
 test("stores money as integer cents and creates centralized history", () => {
   const project = createEmptyProject("TH-2026-002");

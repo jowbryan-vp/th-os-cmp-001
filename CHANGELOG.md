@@ -1,5 +1,12 @@
 # Changelog
 
+## Não lançado — Backup consolidado
+
+- exportação versionada de todos os cadastros em um único JSON;
+- validação de versão, schema, IDs e códigos antes da restauração;
+- substituição atômica da base local após confirmação explícita;
+- testes unitários, integração IndexedDB e fluxo E2E de recuperação.
+
 ## Não lançado — Correções do piloto
 
 - corrige o recorte da logo de 2000×2000 no cabeçalho sticky para impedir que

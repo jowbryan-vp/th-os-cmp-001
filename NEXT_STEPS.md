@@ -11,10 +11,14 @@
 
 1. Reordenação por arrastar e soltar no escopo e programa.
 2. Agrupamento visual por setor/pavimento e filtros do programa.
-3. Backup consolidado de todos os cadastros.
-4. Testes de componentes e variações de conflito de importação.
-5. Automatizar deploy somente após estabilizar o piloto manual, usando secrets
+3. Testes de componentes e variações de conflito de importação.
+4. Automatizar deploy somente após estabilizar o piloto manual, usando secrets
    protegidos `CLOUDFLARE_API_TOKEN` e `CLOUDFLARE_ACCOUNT_ID`.
+
+## Concluído após o piloto
+
+- backup consolidado versionado de todos os cadastros;
+- restauração validada e atômica da base local.
 
 Proposta, contratos, financeiro, login e integrações permanecem módulos
 separados e fora do CMP-001.

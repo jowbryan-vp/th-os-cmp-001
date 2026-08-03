@@ -13,7 +13,10 @@ import { calculateOverallProgress, overduePending, summarizeAreas } from "../dom
 import { calculateReadiness } from "../domain/project-validation";
 import { useProjectAutosave } from "../hooks/use-project-autosave";
 import { useProjects } from "../hooks/use-projects";
-import { detectImportConflict, exportProject, importAsNew, parseProjectImport } from "../services/project-import-service";
+import {
+  detectImportConflict, exportConsolidatedBackup, exportProject, importAsNew,
+  parseConsolidatedBackup, parseProjectImport,
+} from "../services/project-import-service";
 import { changeArchiveState, duplicateProject } from "../services/project-lifecycle-service";
 
 type View = "list" | "record";
@@ -46,6 +49,7 @@ export function ProjectWorkspace() {
   const [notice, setNotice] = useState("");
   const [validation, setValidation] = useState<ReturnType<typeof calculateReadiness> | null>(null);
   const importInput = useRef<HTMLInputElement>(null);
+  const backupInput = useRef<HTMLInputElement>(null);
   const save = useCallback(async (project: ProjectMasterRecord) => {
     const saved = await repository.save(project); upsert(saved); return saved;
   }, [repository, upsert]);
@@ -99,6 +103,22 @@ export function ProjectWorkspace() {
     anchor.href = url; anchor.download = `${current.code.toLowerCase()}-cmp.json`; anchor.click();
     URL.revokeObjectURL(url); setNotice("Cadastro exportado em JSON.");
   }
+  function downloadBackup() {
+    const blob = new Blob([JSON.stringify(exportConsolidatedBackup(projects), null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob); const anchor = document.createElement("a");
+    anchor.href = url; anchor.download = `th-os-cmp-backup-${new Date().toISOString().slice(0, 10)}.json`; anchor.click();
+    URL.revokeObjectURL(url); setNotice(`Backup completo exportado com ${projects.length} cadastro(s).`);
+  }
+  async function restoreBackup(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]; event.target.value = ""; if (!file) return;
+    try {
+      const restored = parseConsolidatedBackup(JSON.parse(await file.text()));
+      if (!window.confirm(`Restaurar ${restored.length} cadastro(s)? Isso substituirá todos os dados locais atuais.`)) return;
+      const saved = await repository.replaceAll(restored);
+      setProjects(saved); setCurrent(null); setView("list");
+      setNotice(`Backup restaurado com ${saved.length} cadastro(s).`);
+    } catch (reason) { setNotice(reason instanceof Error ? reason.message : "Falha ao restaurar backup."); }
+  }
   if (loading) return <main className="loading-state">Carregando Cadastro Mestre…</main>;
   if (error) return <main className="loading-state" role="alert">{error.message}</main>;
   return (
@@ -113,12 +133,14 @@ export function ProjectWorkspace() {
         Os dados ficam armazenados somente neste navegador e dispositivo. Exporte o projeto em JSON para manter uma cópia de segurança.
       </aside>
       {view === "list" ? (
-        <ProjectList projects={projects} onOpen={open} onArchive={archive} onDuplicate={duplicate} onDelete={remove} />
+        <ProjectList projects={projects} onOpen={open} onArchive={archive} onDuplicate={duplicate} onDelete={remove}
+          onBackup={downloadBackup} onRestore={() => backupInput.current?.click()} />
       ) : current ? (
         <ProjectRecord project={current} update={update} validation={validation}
           setValidation={setValidation} onBack={() => setView("list")} />
       ) : null}
       <input ref={importInput} className="sr-only" type="file" accept=".json,application/json" onChange={importJson} />
+      <input ref={backupInput} className="sr-only" type="file" accept=".json,application/json" onChange={restoreBackup} />
       {notice && <div className="toast" role="status"><strong>{notice}</strong><button onClick={() => setNotice("")}>Fechar</button></div>}
     </div>
   );
@@ -147,10 +169,10 @@ function Header({ record, autosave, onHome, onNew, onImport, onExport }: {
   </header>;
 }
 
-function ProjectList({ projects, onOpen, onArchive, onDuplicate, onDelete }: {
+function ProjectList({ projects, onOpen, onArchive, onDuplicate, onDelete, onBackup, onRestore }: {
   projects: ProjectMasterRecord[]; onOpen: (p: ProjectMasterRecord) => void;
   onArchive: (p: ProjectMasterRecord, value: boolean) => void; onDuplicate: (p: ProjectMasterRecord) => void;
-  onDelete: (p: ProjectMasterRecord) => void;
+  onDelete: (p: ProjectMasterRecord) => void; onBackup: () => void; onRestore: () => void;
 }) {
   const [query, setQuery] = useState(""); const [status, setStatus] = useState("visible");
   const [phase, setPhase] = useState(""); const [priority, setPriority] = useState("");
@@ -174,6 +196,11 @@ function ProjectList({ projects, onOpen, onArchive, onDuplicate, onDelete }: {
       <h1>Cadastro Mestre do Projeto</h1><p>Fonte única para contexto, escopo, pessoas, decisões e próximos passos.</p></div>
       <div className="projects-metric"><strong>{projects.filter((p) => p.recordStatus !== "archived").length}</strong><span>projetos ativos</span></div>
     </div>
+    <section className="backup-card" aria-label="Backup completo">
+      <div><strong>Backup completo</strong><p>Exporte ou restaure todos os cadastros deste navegador em um único arquivo.</p></div>
+      <div className="backup-actions"><button className="button button--ghost" onClick={onRestore}>Restaurar backup</button>
+        <button className="button button--primary" onClick={onBackup}>Exportar backup completo</button></div>
+    </section>
     <div className="filters-card" aria-label="Filtros de projetos">
       <Field label="Buscar"><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Código, nome, cliente ou cidade" /></Field>
       <Select label="Status" value={status} onChange={setStatus} options={[["visible", "Não arquivados"], ["all", "Todos"], ["draft", "Rascunho"], ["active", "Ativo"], ["archived", "Arquivado"]]} />

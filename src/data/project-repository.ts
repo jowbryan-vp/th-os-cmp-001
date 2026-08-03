@@ -7,6 +7,7 @@ export interface ProjectRepository {
   list(): Promise<ProjectMasterRecord[]>;
   get(id: string): Promise<ProjectMasterRecord | undefined>;
   save(project: ProjectMasterRecord): Promise<ProjectMasterRecord>;
+  replaceAll(projects: ProjectMasterRecord[]): Promise<ProjectMasterRecord[]>;
   remove(id: string): Promise<void>;
   nextCode(year?: number): Promise<string>;
   ensurePilot(): Promise<void>;

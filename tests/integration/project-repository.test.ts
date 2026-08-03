@@ -21,6 +21,12 @@ test("IndexedDB repository supports CRUD, ordering, uniqueness, archive and sing
   const duplicate = { ...createEmptyProject("TH-2026-002"), id: "duplicate-id" };
   await assert.rejects(() => repository.save(duplicate));
   assert.equal(await repository.nextCode(2026), "TH-2026-003");
+  const restored = createEmptyProject("TH-2030-001", "2030-01-01T00:00:00.000Z");
+  const replacement = await repository.replaceAll([restored]);
+  assert.equal(replacement.length, 1);
+  assert.equal((await repository.list())[0]?.code, "TH-2030-001");
+  await assert.rejects(() => repository.replaceAll([restored, { ...restored, id: "duplicate-restored" }]));
+  assert.equal((await repository.list())[0]?.code, "TH-2030-001");
   await repository.remove(updated.id);
   assert.equal(await repository.get(updated.id), undefined);
 });

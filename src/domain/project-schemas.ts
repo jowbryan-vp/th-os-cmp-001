@@ -122,4 +122,9 @@ export const importEnvelopeSchema = z.object({
   schemaVersion: z.number().int().positive(), exportedAt: z.string(),
   application: z.literal("TH-OS-CMP-001"), project: z.unknown(),
 }).strict();
+export const backupEnvelopeSchema = z.object({
+  kind: z.literal("consolidated-backup"), schemaVersion: z.number().int().positive(),
+  exportedAt: z.string(), application: z.literal("TH-OS-CMP-001"),
+  projects: z.array(z.unknown()),
+}).strict();
 export const readinessSchema = z.enum(readinessLevels);
