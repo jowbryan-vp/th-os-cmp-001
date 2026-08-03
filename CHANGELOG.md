@@ -12,6 +12,7 @@
 - adiciona extensões técnicas separadas para piscina, deck/solário, casa de máquinas e despensa;
 - adiciona terceira coluna com relatório vivo dos ambientes, quantidades e totais líquidos e bruto preliminar;
 - sincroniza o nome escolhido na calculadora com o Programa de Necessidades e recupera nomes de estudos já salvos;
+- permite editar ou excluir ambientes diretamente no relatório acumulado, com confirmação e remoção dos estudos vinculados;
 - migra o IndexedDB para v3 e inclui estudos no backup/restauração atômicos.
 
 ## Não lançado — Backup consolidado

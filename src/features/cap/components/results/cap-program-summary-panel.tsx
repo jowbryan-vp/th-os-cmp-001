@@ -7,11 +7,13 @@ const formatArea = (value: number) => value.toLocaleString("pt-BR", {
   minimumFractionDigits: 2, maximumFractionDigits: 2,
 });
 
-export function CapProgramSummaryPanel({ project, currentNeedsItemId, currentEnvironmentLabel, studies = [] }: {
+export function CapProgramSummaryPanel({ project, currentNeedsItemId, currentEnvironmentLabel, studies = [], onEdit, onDelete }: {
   project?: ProjectMasterRecord;
   currentNeedsItemId?: string;
   currentEnvironmentLabel?: string;
   studies?: ParametricEnvironmentStudy[];
+  onEdit?: (needsItemId: string) => void;
+  onDelete?: (needsItemId: string) => void;
 }) {
   if (!project) return <aside className="cap-program-report"><h2>Relatório do programa</h2><p>Selecione um projeto para acompanhar as somatórias.</p></aside>;
   const totals = summarizeCapAreaOptions(project.needsProgram);
@@ -42,6 +44,8 @@ export function CapProgramSummaryPanel({ project, currentNeedsItemId, currentEnv
           <div><dt>Recomendada</dt><dd>{formatArea(item.capRecommendedAreaM2! * quantity)} m²</dd></div>
           <div><dt>Bruta</dt><dd>{formatArea(item.capPreliminaryGrossAreaM2! * quantity)} m²</dd></div>
         </dl> : <p>Aguardando cálculo</p>}
+        <div className="cap-report-actions"><button type="button" onClick={() => onEdit?.(item.id)}>Editar</button>
+          <button type="button" className="danger-action" onClick={() => onDelete?.(item.id)}>Excluir</button></div>
       </article>;
     }) : <p>Nenhum ambiente adicionado.</p>}</div>
   </aside>;

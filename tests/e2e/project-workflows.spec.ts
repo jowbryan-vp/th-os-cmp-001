@@ -294,6 +294,14 @@ test("shows comfort and accessibility choices and advances to the next environme
   await expect(page.getByLabel("Item do programa").locator("option:checked")).toHaveText("Ambiente sem nome");
   await expect(page.getByText("Configure os itens e calcule o cenário.")).toBeVisible();
 
+  await report.locator("article").first().getByRole("button", { name: "Editar" }).click();
+  await expect(report.locator("article").first()).toHaveClass(/is-current/);
+  await expect(page.getByLabel("Item do programa").locator("option:checked")).toHaveText("Varanda Gourmet");
+  page.once("dialog", (dialog) => dialog.accept());
+  await report.locator("article").first().getByRole("button", { name: "Excluir" }).click();
+  await expect(report.locator("article")).toHaveCount(1);
+  await expect(page.getByText(/Varanda Gourmet excluído/)).toBeVisible();
+
   const environment = page.getByRole("combobox", { name: "Ambiente", exact: true });
   await environment.selectOption({ label: "Piscina — Espelho d’água" });
   await expect(page.getByLabel("Largura do espelho d’água (m)")).toBeVisible();

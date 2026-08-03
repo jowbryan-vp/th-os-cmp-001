@@ -23,10 +23,12 @@ export interface CapSaveOptionsPayload {
   study: ParametricEnvironmentStudy; scenario: ParametricScenario; continueToNext?: boolean;
 }
 export interface CapSaveOptionsResult { nextNeedsItemId?: string; }
+export interface CapDeleteNeedsItemResult { deletedStudyIds: string[]; }
 interface Props {
   projects: ProjectMasterRecord[]; initialProjectId?: string; initialNeedsItemId?: string;
   onBack: () => void; onApply: (payload: CapApplyPayload) => Promise<void>;
   onSaveOptions: (payload: CapSaveOptionsPayload) => Promise<CapSaveOptionsResult>;
+  onDeleteNeedsItem: (projectId: string, needsItemId: string) => Promise<CapDeleteNeedsItemResult>;
 }
 const repository = getParametricStudyRepository();
 const emptyCustomItem = { name: "", widthM: "", lengthM: "", heightM: "", quantity: "1", functionalRole: "primary", notes: "" };
@@ -81,7 +83,7 @@ function scenarioWithDefaults(study: ParametricEnvironmentStudy, environmentId: 
 }
 function format(value: number) { return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
-export function CapWorkspace({ projects, initialProjectId, initialNeedsItemId, onBack, onApply, onSaveOptions }: Props) {
+export function CapWorkspace({ projects, initialProjectId, initialNeedsItemId, onBack, onApply, onSaveOptions, onDeleteNeedsItem }: Props) {
   const initialProject = projects.find((item) => item.id === initialProjectId) ?? projects[0];
   const linkedNeed = initialProject?.needsProgram.find((item) => item.id === initialNeedsItemId);
   const matchedEnvironment = linkedNeed ? capLibrary.environments.find((environment) =>
@@ -202,6 +204,30 @@ export function CapWorkspace({ projects, initialProjectId, initialNeedsItemId, o
     await onApply({ study: { ...study, status: "applied" }, scenario: currentScenario, areaType, areaM2 });
     setStudy({ ...study, status: "applied" }); setNotice(`Área de ${format(areaM2)} m² aplicada ao programa.`);
   }
+  function editNeedsItem(nextNeedsItemId: string) {
+    const item = selectedProject?.needsProgram.find((candidate) => candidate.id === nextNeedsItemId); if (!item) return;
+    const savedStudy = studies.find((candidate) => candidate.id === item.parametricStudyId)
+      ?? studies.find((candidate) => candidate.needsProgramItemId === item.id);
+    const environmentId = savedStudy?.environmentId ?? capLibrary.environments.find((environment) =>
+      item.environment && environment.label.toLocaleLowerCase("pt-BR").includes(item.environment.toLocaleLowerCase("pt-BR")))?.id ?? "AMB-001";
+    setNeedsItemId(item.id); setSelectedEnvironmentId(environmentId);
+    setStudy(savedStudy ?? scenarioWithDefaults(createParametricStudy(projectId, environmentId, item.id), environmentId));
+    setResultStale(false); setTab("calculator"); setNotice(`Editando ${item.environment || "ambiente"}.`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  async function deleteNeedsItem(nextNeedsItemId: string) {
+    const item = selectedProject?.needsProgram.find((candidate) => candidate.id === nextNeedsItemId); if (!item) return;
+    const label = item.environment || "este ambiente";
+    if (!window.confirm(`Excluir ${label} e os estudos CAP vinculados? Esta ação não pode ser desfeita sem um backup.`)) return;
+    const deleted = await onDeleteNeedsItem(projectId, item.id);
+    setStudies((current) => current.filter((studyItem) => !deleted.deletedStudyIds.includes(studyItem.id)));
+    if (needsItemId === item.id) {
+      const remaining = selectedProject?.needsProgram.find((candidate) => candidate.id !== item.id);
+      if (remaining) editNeedsItem(remaining.id);
+      else { setNeedsItemId(""); setStudy((current) => current ? { ...current, needsProgramItemId: null } : current); }
+    }
+    setNotice(`${label} excluído. A recuperação exige um backup exportado anteriormente.`);
+  }
   async function saveOptions() {
     if (!study || !currentScenario?.result) return;
     await onSaveOptions({ study, scenario: currentScenario, continueToNext: false });
@@ -262,7 +288,8 @@ export function CapWorkspace({ projects, initialProjectId, initialNeedsItemId, o
         <div className="cap-actions"><button className="button button--primary" onClick={calculateCurrent}>Calcular e revisar</button><button className="button cap-next-button" disabled={!needsItemId} onClick={() => void calculateAndContinue()}>Calcular, registrar e próximo ambiente →</button><button className="button button--ghost" onClick={() => void saveStudy()}>Salvar estudo</button><button className="button button--ghost" onClick={addScenario}>Duplicar cenário</button></div></>}
     </div><CapResultPanel scenario={currentScenario} onApply={apply} onSaveOptions={saveOptions} canSaveOptions={Boolean(study?.needsProgramItemId)} />
       <CapProgramSummaryPanel project={selectedProject} currentNeedsItemId={needsItemId}
-        currentEnvironmentLabel={selectedEnvironment.label} studies={studies} /></section>}
+        currentEnvironmentLabel={selectedEnvironment.label} studies={studies}
+        onEdit={editNeedsItem} onDelete={(itemId) => void deleteNeedsItem(itemId)} /></section>}
     {tab === "studies" && <section className="cap-panel"><h2>Estudos do projeto</h2>{studies.length ? <div className="cap-study-list">{studies.map((item) => <article key={item.id}><div><strong>{item.name}</strong><p>{capLibrary.environments.find((environment) => environment.id === item.environmentId)?.label} · {item.scenarios.length} cenário(s) · {item.status}</p></div><button onClick={() => { setStudy(item); setSelectedEnvironmentId(item.environmentId); setTab("calculator"); }}>Abrir</button><button onClick={() => void repository.duplicate(item.id).then(async () => setStudies(await repository.listByProject(projectId)))}>Duplicar</button>{item.status === "archived" ? <button onClick={() => void repository.restore(item.id).then(async () => setStudies(await repository.listByProject(projectId)))}>Restaurar</button> : <button onClick={() => void repository.archive(item.id).then(async () => setStudies(await repository.listByProject(projectId)))}>Arquivar</button>}</article>)}</div> : <p>Nenhum estudo salvo para o projeto selecionado.</p>}</section>}
     {tab === "compare" && <CapScenarioComparator study={study} onPrefer={(scenarioId) => setStudy((current) => current ? { ...current, selectedScenarioId: scenarioId } : current)} />}
     {tab === "sources" && <section className="cap-panel"><h2>Fontes, conflitos e avisos</h2><div className="cap-source-grid"><div><h3>Fontes</h3>{capLibrary.sources.map((source) => <article key={source.id}><strong>{source.code}</strong><p>{source.title} · {source.authors.join(", ")} · {source.edition} · {source.year}</p></article>)}</div><div><h3>Conflitos preservados</h3>{capLibrary.conflicts.map((conflict) => <article key={conflict.id}><strong>{conflict.parameter}</strong><p>{conflict.sourceA}</p><p>{conflict.sourceB}</p><small>{conflict.description}</small></article>)}</div><div><h3>Avisos</h3>{capLibrary.warnings.map((warning) => <article key={warning.id}><strong>{warning.title}</strong><p>{warning.message}</p>{warning.normativeReferenceRequiresReview && <small>Referência técnica a verificar conforme norma vigente.</small>}</article>)}</div></div></section>}

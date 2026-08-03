@@ -19,7 +19,7 @@ import {
 } from "../services/project-import-service";
 import { changeArchiveState, duplicateProject } from "../services/project-lifecycle-service";
 import { getParametricStudyRepository } from "../features/cap/repositories/parametric-study-repository";
-import { CapApplyPayload, CapSaveOptionsPayload, CapWorkspace } from "../features/cap/components/cap-workspace";
+import { CapApplyPayload, CapDeleteNeedsItemResult, CapSaveOptionsPayload, CapWorkspace } from "../features/cap/components/cap-workspace";
 import { applyScenarioToNeedsProgram, saveScenarioOptionsToNeedsProgram, summarizeCapAreaOptions } from "../features/cap/services/cap-program-service";
 import { CatalogCombobox } from "../features/catalogs/components/catalog-combobox";
 import { getReferenceCatalogRepository } from "../features/catalogs/repositories/reference-catalog-repository";
@@ -175,6 +175,22 @@ export function ProjectWorkspace() {
       : "As três áreas CAP-001 foram registradas. Escolha uma opção no ambiente quando estiver pronto.");
     return { nextNeedsItemId: nextNeed?.id };
   }
+  async function deleteCapNeedsItem(projectId: string, needsItemId: string): Promise<CapDeleteNeedsItemResult> {
+    const project = projects.find((item) => item.id === projectId);
+    if (!project) throw new Error("Projeto do ambiente não encontrado.");
+    const target = project.needsProgram.find((item) => item.id === needsItemId);
+    if (!target) throw new Error("Ambiente não encontrado no Programa de Necessidades.");
+    const linkedStudies = (await studyRepository.listByProject(projectId))
+      .filter((study) => study.needsProgramItemId === needsItemId || study.id === target.parametricStudyId);
+    const updatedAt = new Date().toISOString();
+    const savedProject = await save({ ...project, updatedAt,
+      needsProgram: project.needsProgram.filter((item) => item.id !== needsItemId),
+      history: [...project.history, createHistoryEvent("edited", `Ambiente ${target.environment || "sem nome"} excluído do Programa de Necessidades.`, updatedAt)],
+    });
+    await Promise.all(linkedStudies.map((study) => studyRepository.delete(study.id)));
+    setCurrent(savedProject);
+    return { deletedStudyIds: linkedStudies.map((study) => study.id) };
+  }
   if (loading) return <main className="loading-state">Carregando Cadastro Mestre…</main>;
   if (error) return <main className="loading-state" role="alert">{error.message}</main>;
   return (
@@ -191,7 +207,8 @@ export function ProjectWorkspace() {
       </aside>
       {view === "cap" ? (
         <CapWorkspace projects={projects} initialProjectId={capContext.projectId} initialNeedsItemId={capContext.needsItemId}
-          onBack={() => setView(current ? "record" : "list")} onApply={applyCapResult} onSaveOptions={saveCapOptions} />
+          onBack={() => setView(current ? "record" : "list")} onApply={applyCapResult} onSaveOptions={saveCapOptions}
+          onDeleteNeedsItem={deleteCapNeedsItem} />
       ) : view === "list" ? (
         <ProjectList projects={projects} onOpen={open} onArchive={archive} onDuplicate={duplicate} onDelete={remove}
           onBackup={() => void downloadBackup()} onRestore={() => backupInput.current?.click()} />
