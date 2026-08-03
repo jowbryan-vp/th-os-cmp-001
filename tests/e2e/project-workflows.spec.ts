@@ -282,6 +282,8 @@ test("CAP accepts 0,60 x 1,60 and stays usable across desktop, zoom equivalents,
   for (const viewport of viewports) {
     await page.setViewportSize(viewport); await expect(page.locator(".cap-result-panel")).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
+    expect(await page.evaluate(() => [...document.querySelectorAll(".cap-config-panel input,.cap-config-panel select,.cap-config-panel button")]
+      .every((element) => { const rect = element.getBoundingClientRect(); return rect.left >= -1 && rect.right <= document.documentElement.clientWidth + 1; }))).toBe(true);
     await page.screenshot({ path: `test-results/cap-${viewport.name}.png`, fullPage: true });
   }
   await page.setViewportSize({ width: 1440, height: 900 });

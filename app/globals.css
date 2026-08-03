@@ -1438,6 +1438,7 @@ button {
 .cap-config-panel { display: grid; align-content: start; gap: 14px; border-radius: 12px; }
 .cap-config-panel > *, .cap-result-panel > *, .cap-custom-item > *, .cap-items > * { min-width: 0; max-width: 100%; }
 .cap-config-panel input, .cap-config-panel select, .cap-config-panel textarea, .cap-config-panel button { max-width: 100%; }
+.cap-config-panel > label > input, .cap-config-panel > label > select, .cap-config-panel > label > textarea { width: 100%; min-width: 0; }
 .cap-config-panel label, .cap-custom-item legend { overflow-wrap: break-word; word-break: normal; }
 .cap-items { display: grid; gap: 8px; padding: 14px; border: 1px solid #d8dbd0; }
 .cap-items > div { display: grid; grid-template-columns: 1fr 74px; gap: 8px; align-items: center; }
