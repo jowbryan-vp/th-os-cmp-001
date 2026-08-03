@@ -1440,6 +1440,15 @@ button {
 .cap-config-panel input, .cap-config-panel select, .cap-config-panel textarea, .cap-config-panel button { max-width: 100%; }
 .cap-config-panel > label > input, .cap-config-panel > label > select, .cap-config-panel > label > textarea { width: 100%; min-width: 0; }
 .cap-config-panel label, .cap-custom-item legend { overflow-wrap: break-word; word-break: normal; }
+.cap-step-intro { margin: -4px 0 2px; color: #62685a; }
+.cap-choice-group { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; padding: 14px; border: 1px solid #d8dbd0; border-radius: 9px; }
+.cap-choice-group legend { padding: 0 5px; font-weight: 700; }
+.cap-choice-group > label { display: flex; gap: 9px; min-width: 0; padding: 11px; cursor: pointer; background: #fafbf7; border: 1px solid #d9ddd0; border-radius: 8px; }
+.cap-choice-group > label.is-selected { background: #eef3e5; border-color: #728052; box-shadow: 0 0 0 1px #728052; }
+.cap-choice-group input { flex: 0 0 auto; width: auto; margin-top: 3px; }
+.cap-choice-group span { display: grid; gap: 3px; min-width: 0; }
+.cap-choice-group small, .cap-choice-group > p { color: #62685a; }
+.cap-choice-group > p { grid-column: 1 / -1; margin: 2px 0 0; font-size: .78rem; }
 .cap-items { display: grid; gap: 8px; padding: 14px; border: 1px solid #d8dbd0; }
 .cap-items > div { display: grid; grid-template-columns: 1fr 74px; gap: 8px; align-items: center; }
 .cap-custom-item { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: end; min-width: 0; padding: 14px; border: 1px solid #d8dbd0; }
@@ -1454,6 +1463,8 @@ button {
 .cap-stale-result { padding: 10px; color: #704411; background: #fff3d2; border-left: 4px solid #bb7b21; }
 .cap-parameter-grid, .cap-result-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .cap-actions, .cap-apply, .cap-program-link, .cap-save-options { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.cap-next-button { color: #fff; background: #314d44; border-color: #314d44; }
+.cap-next-button:hover { background: #233a33; }
 .cap-program-link { margin-top: 12px; }
 .cap-program-link small { color: #64685e; }
 .cap-save-options { margin-top: 18px; padding: 16px; background: #eef3e5; border: 1px solid #cdd7bb; border-radius: 10px; }
@@ -1491,6 +1502,8 @@ button {
   .cap-panel, .cap-config-panel, .cap-result-panel { padding: 15px; }
   .cap-study-list article { align-items: flex-start; flex-wrap: wrap; }
   .cap-custom-item__notes { grid-column: auto; }
+  .cap-choice-group { grid-template-columns: 1fr; }
+  .cap-choice-group > p { grid-column: auto; }
   .toast { right: 10px; bottom: 10px; width: calc(100vw - 20px); max-width: none; }
 }
 

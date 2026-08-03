@@ -207,6 +207,41 @@ export const stairPreliminaryStrategy: CapCalculationStrategy = {
   },
 };
 
+export const pilotAreaReferenceStrategy: CapCalculationStrategy = {
+  id: "pilot-area-reference", version: "1.0.0", environmentIds: ["AMB-015", "AMB-016", "AMB-017", "AMB-018"],
+  inputs: ["dimensões ou área de referência", "reserva geométrica"],
+  limitations: ["Extensão técnica do piloto sem composição bibliográfica aprovada.", "Validar estrutura, instalações, legislação e requisitos específicos no projeto."],
+  validate(context) {
+    if (context.environment.id === "AMB-015") {
+      return ["poolWidthM", "poolLengthM"].filter((key) => !(context.scenario.customParameters[key] > 0))
+        .map((key) => `Parâmetro obrigatório ausente: ${key}.`);
+    }
+    return context.scenario.customParameters.referenceNetAreaM2 > 0 ? [] : ["Informe uma área útil de referência maior que zero."];
+  },
+  calculate(context) {
+    const isPool = context.environment.id === "AMB-015";
+    const isDeck = context.environment.id === "AMB-016";
+    const width = isPool ? context.scenario.customParameters.poolWidthM : 0;
+    const length = isPool ? context.scenario.customParameters.poolLengthM : 0;
+    const referenceArea = isPool ? width * length : context.scenario.customParameters.referenceNetAreaM2;
+    const minimumArea = isPool ? referenceArea : referenceArea * 0.85;
+    const ratio = isPool ? length / width : 1.25;
+    const minimumWidth = isPool ? width : Math.sqrt(minimumArea / ratio);
+    const recommendedWidth = isPool ? width : Math.sqrt(referenceArea / ratio);
+    return result(context, pilotAreaReferenceStrategy, {
+      minimumWidthM: minimumWidth, minimumLengthM: isPool ? length : minimumWidth * ratio,
+      recommendedWidthM: recommendedWidth, recommendedLengthM: isPool ? length : recommendedWidth * ratio,
+      zones: isPool ? ["espelho d’água"] : isDeck ? ["permanência", "circulação externa"] : ["área útil técnica"],
+      assumptions: isPool
+        ? ["Dimensões informadas representam exclusivamente o espelho d’água; deck e casa de máquinas são ambientes separados."]
+        : ["Área recomendada informada diretamente como referência preliminar."],
+      warnings: isDeck ? ["Área aberta: a reserva geométrica não representa paredes."] : [],
+      drivers: isPool ? ["largura e comprimento do espelho d’água"] : ["área útil de referência"],
+      confidence: "low",
+    });
+  },
+};
+
 export const capCalculationStrategies = [bedroomBoundingBoxStrategy, closetLinearStrategy, bathroomFixtureStrategy,
   diningEnvelopeStrategy, officeWorkstationStrategy, garageVehicleEnvelopeStrategy, genericReferenceStrategy,
-  stairPreliminaryStrategy] as const;
+  stairPreliminaryStrategy, pilotAreaReferenceStrategy] as const;

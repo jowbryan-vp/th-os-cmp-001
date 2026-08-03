@@ -208,7 +208,7 @@ test("calculates, compares, accumulates three CAP-001 areas and restores scenari
   await expect(page.getByRole("heading", { name: "Biblioteca e Calculadora Paramétrica" })).toBeVisible();
 
   await page.getByLabel("Nome do cenário").fill("King + armário");
-  await page.getByRole("button", { name: "Calcular cenário" }).click();
+  await page.getByRole("button", { name: "Calcular e revisar" }).click();
   await expect(page.getByText("Cenário calculado. Revise premissas e alertas.")).toBeVisible();
   await page.getByRole("button", { name: "Duplicar cenário" }).click();
   await page.getByLabel("Nome do cenário").fill("Queen + closet");
@@ -216,7 +216,7 @@ test("calculates, compares, accumulates three CAP-001 areas and restores scenari
   await page.getByRole("checkbox", { name: "Guarda-Roupas Porta de Abrir" }).uncheck();
   await page.getByRole("checkbox", { name: "Cama Queen Size" }).check();
   await page.getByRole("checkbox", { name: "Módulo de Closet Aberto" }).check();
-  await page.getByRole("button", { name: "Calcular cenário" }).click();
+  await page.getByRole("button", { name: "Calcular e revisar" }).click();
 
   await page.getByRole("button", { name: "Comparador" }).click();
   await expect(page.getByRole("columnheader", { name: "King + armário" })).toBeVisible();
@@ -264,11 +264,41 @@ test("calculates, compares, accumulates three CAP-001 areas and restores scenari
   await expect(page.getByText(/biblioteca 1\.1\.0 · motor 1\.0\.0/)).toBeVisible();
 });
 
+test("shows comfort and accessibility choices and advances to the next environment", async ({ page }) => {
+  const pilot = page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" });
+  await pilot.locator("button.project-card__open").click();
+  await page.getByRole("button", { name: "+ Ambiente" }).click();
+  await page.getByRole("combobox", { name: "Ambiente", exact: true }).last().fill("Varanda Gourmet");
+  await expect(page.getByText("Salvo neste dispositivo")).toBeVisible();
+  await page.getByRole("button", { name: "Pré-dimensionar com CAP-001" }).click();
+
+  await expect(page.getByRole("radio", { name: /Mínimo \/ compacto/ })).toBeVisible();
+  await expect(page.getByRole("radio", { name: /Confortável \/ recomendado/ })).toBeChecked();
+  await expect(page.getByRole("radio", { name: /Generoso/ })).toBeVisible();
+  await expect(page.getByRole("radio", { name: /Acessível — referência NBR 9050/ })).toBeVisible();
+  await page.getByRole("radio", { name: /Mínimo \/ compacto/ }).check();
+  await page.getByRole("radio", { name: /Acessível — referência NBR 9050/ }).check();
+  await page.getByRole("button", { name: "Calcular, registrar e próximo ambiente →" }).click();
+
+  await expect(page.getByText("Ambiente registrado. Configure agora o próximo ambiente.")).toBeVisible();
+  await expect(page.getByLabel("Item do programa").locator("option")).toHaveCount(3);
+  await expect(page.getByLabel("Item do programa").locator("option:checked")).toHaveText("Ambiente sem nome");
+  await expect(page.getByText("Configure os itens e calcule o cenário.")).toBeVisible();
+
+  const environment = page.getByRole("combobox", { name: "Ambiente", exact: true });
+  await environment.selectOption({ label: "Piscina — Espelho d’água" });
+  await expect(page.getByLabel("Largura do espelho d’água (m)")).toBeVisible();
+  await page.getByLabel("Largura do espelho d’água (m)").fill("4");
+  await page.getByLabel("Comprimento do espelho d’água (m)").fill("8");
+  await page.getByRole("button", { name: "Calcular e revisar" }).click();
+  await expect(page.getByText("32,00 m²", { exact: true }).first()).toBeVisible();
+});
+
 test("CAP accepts 0,60 x 1,60 and stays usable across desktop, zoom equivalents, tablet and mobile", async ({ page }) => {
   await page.getByRole("button", { name: "CAP-001" }).click();
   await page.getByRole("button", { name: "Calculadora", exact: true }).click();
   const environment = page.getByRole("combobox", { name: "Ambiente", exact: true });
-  await environment.fill("Sala de Estar"); await environment.press("ArrowDown"); await environment.press("Enter");
+  await environment.selectOption({ label: "Sala de Estar / Home Theater" });
   await page.getByRole("checkbox", { name: /Sofá 3 Lugares/ }).check();
   await page.getByLabel("Quantidade de Poltrona Individual").fill("2");
   await page.getByLabel("Nome", { exact: true }).fill("Mesa especial");
@@ -276,7 +306,7 @@ test("CAP accepts 0,60 x 1,60 and stays usable across desktop, zoom equivalents,
   await page.getByLabel("Comprimento (m)").fill("1,60");
   await page.getByRole("button", { name: "Adicionar item" }).click();
   await expect(page.locator(".cap-custom-item__row").filter({ hasText: "Mesa especial" })).toContainText("0,6 × 1,6 m");
-  await page.getByRole("button", { name: "Calcular cenário" }).click();
+  await page.getByRole("button", { name: "Calcular e revisar" }).click();
   await expect(page.getByText("Cenário calculado. Revise premissas e alertas.")).toBeVisible();
   await expect(page.getByText(/não foi possível calcular/i)).toHaveCount(0);
 

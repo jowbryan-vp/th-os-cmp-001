@@ -11,6 +11,7 @@ import furnitureData from "../data/v1.1.0/furniture.json";
 import metadataData from "../data/v1.1.0/metadata.json";
 import sourcesData from "../data/v1.1.0/sources.json";
 import warningsData from "../data/v1.1.0/warnings.json";
+import { pilotEnvironmentExtensions } from "../data/pilot-environment-extensions";
 import {
   capAccessibilityProfileDefinitionSchema, capCalculationRuleSchema, capCirculationProfileSchema,
   capComfortLevelSchema, capCompositionSchema, capConflictSchema, capEnvironmentSchema,
@@ -20,7 +21,8 @@ import { CapLibrary } from "../domain/cap-library-types";
 
 export const capLibrary: CapLibrary = {
   metadata: capLibraryMetadataSchema.parse(metadataData),
-  sources: capSourceSchema.array().parse(sourcesData), environments: capEnvironmentSchema.array().parse(environmentsData),
+  sources: capSourceSchema.array().parse(sourcesData),
+  environments: capEnvironmentSchema.array().parse([...environmentsData, ...pilotEnvironmentExtensions]),
   furniture: capLibraryItemSchema.array().parse(furnitureData), equipment: capLibraryItemSchema.array().parse(equipmentData),
   functionalZones: capFunctionalZoneSchema.array().parse(functionalZonesData),
   circulationProfiles: capCirculationProfileSchema.array().parse(circulationProfilesData),

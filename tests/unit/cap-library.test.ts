@@ -18,10 +18,10 @@ test("preserves the approved raw hash and exposes a valid versioned library", ()
   assert.equal(hash(raw), "8449321c330345221cf3136cdd7f5e6b2becf88f35215240ff921dcab8319ac2");
   assert.equal(capLibrary.metadata.version, "1.1.0");
   assert.equal(capLibrary.metadata.sourceHash, hash(raw));
-  assert.equal(capLibrary.environments.length, 14);
-  assert.equal(new Set(capLibrary.environments.map((item) => item.id)).size, 14);
+  assert.equal(capLibrary.environments.length, 18);
+  assert.equal(new Set(capLibrary.environments.map((item) => item.id)).size, 18);
   assert.equal(capLibrary.environments.filter((item) => item.capability === "full_calculator").length, 8);
-  assert.equal(capLibrary.environments.filter((item) => item.capability === "preliminary_calculator").length, 5);
+  assert.equal(capLibrary.environments.filter((item) => item.capability === "preliminary_calculator").length, 9);
   assert.equal(capLibrary.environments.filter((item) => item.capability === "experimental").length, 1);
 });
 

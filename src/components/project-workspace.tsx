@@ -162,13 +162,18 @@ export function ProjectWorkspace() {
     const project = projects.find((item) => item.id === payload.study.projectId);
     if (!project) throw new Error("Projeto vinculado ao estudo não encontrado.");
     const calculatedAt = new Date().toISOString();
-    const updatedProject = saveScenarioOptionsToNeedsProgram(project, payload.study, payload.scenario, calculatedAt);
+    let updatedProject = saveScenarioOptionsToNeedsProgram(project, payload.study, payload.scenario, calculatedAt);
+    const nextNeed = payload.continueToNext ? emptyNeed(updatedProject.needsProgram.length) : null;
+    if (nextNeed) updatedProject = { ...updatedProject, needsProgram: [...updatedProject.needsProgram, nextNeed] };
     const savedProject = await save(updatedProject);
     const savedStudy = { ...payload.study, status: "calculated" as const, updatedAt: calculatedAt };
     const existingStudy = await studyRepository.findById(savedStudy.id);
     if (existingStudy) await studyRepository.update(savedStudy); else await studyRepository.create(savedStudy);
-    setCurrent(savedProject); setView("record");
-    setNotice("As três áreas CAP-001 foram registradas. Escolha uma opção no ambiente quando estiver pronto.");
+    setCurrent(savedProject);
+    if (!payload.continueToNext) setView("record");
+    setNotice(payload.continueToNext ? "Ambiente registrado. Configure o próximo ambiente."
+      : "As três áreas CAP-001 foram registradas. Escolha uma opção no ambiente quando estiver pronto.");
+    return { nextNeedsItemId: nextNeed?.id };
   }
   if (loading) return <main className="loading-state">Carregando Cadastro Mestre…</main>;
   if (error) return <main className="loading-state" role="alert">{error.message}</main>;

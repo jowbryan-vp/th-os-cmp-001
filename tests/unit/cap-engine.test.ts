@@ -92,3 +92,20 @@ test("calculates the experimental stair with adjusted riser and Blondel", () => 
   assert.ok(stair.assumptions.some((assumption) => assumption.includes("16 espelhos de 0.18m; Blondel 0.63m")));
   assert.ok(stair.warnings.some((warning) => warning.includes("Não calcula rampas")));
 });
+
+test("separates pool water, deck and machine room pilot areas", () => {
+  const pool = calculateParametricScenario(scenario("AMB-015", [], {
+    customParameters: { poolWidthM: 3, poolLengthM: 5 }, geometricReservePercentage: 15,
+  }), AT);
+  const deck = calculateParametricScenario(scenario("AMB-016", [], {
+    customParameters: { referenceNetAreaM2: 20 }, geometricReservePercentage: 0,
+  }), AT);
+  const machineRoom = calculateParametricScenario(scenario("AMB-017", [], {
+    customParameters: { referenceNetAreaM2: 4 }, geometricReservePercentage: 15,
+  }), AT);
+  assert.deepEqual([pool.minimumNetAreaM2, pool.recommendedNetAreaM2, pool.estimatedGrossAreaM2], [15, 15, 17.25]);
+  assert.deepEqual([deck.minimumNetAreaM2, deck.recommendedNetAreaM2, deck.estimatedGrossAreaM2], [17, 20, 20]);
+  assert.deepEqual([machineRoom.minimumNetAreaM2, machineRoom.recommendedNetAreaM2, machineRoom.estimatedGrossAreaM2], [3.4, 4, 4.6]);
+  assert.ok(pool.assumptions.some((assumption) => assumption.includes("espelho d’água")));
+  assert.ok(deck.warnings.some((warning) => warning.includes("não representa paredes")));
+});

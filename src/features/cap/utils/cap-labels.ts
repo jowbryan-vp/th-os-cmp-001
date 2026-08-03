@@ -5,9 +5,9 @@ export const capabilityLabels: Record<CapCapability, string> = {
   reference_only: "Somente referência", experimental: "Experimental",
 };
 export const comfortLabels: Record<ComfortLevel, string> = {
-  compact: "Compacto", comfortable: "Confortável", generous: "Generoso", custom: "Personalizado",
+  compact: "Mínimo / compacto", comfortable: "Confortável / recomendado", generous: "Generoso", custom: "Personalizado",
 };
 export const accessibilityLabels: Record<AccessibilityProfile, string> = {
-  standard: "Padrão", reduced_mobility: "Mobilidade reduzida", wheelchair: "Cadeira de rodas",
+  standard: "Padrão", reduced_mobility: "Mobilidade reduzida", wheelchair: "Acessível — referência NBR 9050",
   elderly: "Pessoa idosa", custom: "Personalizado",
 };
