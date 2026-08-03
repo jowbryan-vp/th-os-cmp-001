@@ -1,7 +1,8 @@
 export const DB_NAME = "th-os";
 export const PROJECT_STORE_NAME = "project-master-records";
 export const CAP_STUDY_STORE_NAME = "parametric-studies";
-export const DB_VERSION = 3;
+export const CATALOG_STORE_NAME = "reference-catalog-options";
+export const DB_VERSION = 4;
 
 let databasePromise: Promise<IDBDatabase> | null = null;
 export const requestResult = <T>(request: IDBRequest<T>) => new Promise<T>((resolve, reject) => {
@@ -28,6 +29,12 @@ export function openThOsDatabase() {
       if (!studyStore.indexNames.contains("projectId")) studyStore.createIndex("projectId", "projectId");
       if (!studyStore.indexNames.contains("status")) studyStore.createIndex("status", "status");
       if (!studyStore.indexNames.contains("updatedAt")) studyStore.createIndex("updatedAt", "updatedAt");
+      const catalogStore = database.objectStoreNames.contains(CATALOG_STORE_NAME)
+        ? request.transaction!.objectStore(CATALOG_STORE_NAME)
+        : database.createObjectStore(CATALOG_STORE_NAME, { keyPath: "id" });
+      if (!catalogStore.indexNames.contains("catalogType")) catalogStore.createIndex("catalogType", "catalogType");
+      if (!catalogStore.indexNames.contains("active")) catalogStore.createIndex("active", "active");
+      if (!catalogStore.indexNames.contains("projectId")) catalogStore.createIndex("projectId", "projectId");
     };
     request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
   });

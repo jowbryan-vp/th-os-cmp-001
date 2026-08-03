@@ -21,6 +21,8 @@ import { changeArchiveState, duplicateProject } from "../services/project-lifecy
 import { getParametricStudyRepository } from "../features/cap/repositories/parametric-study-repository";
 import { CapApplyPayload, CapWorkspace } from "../features/cap/components/cap-workspace";
 import { applyScenarioToNeedsProgram } from "../features/cap/services/cap-program-service";
+import { CatalogCombobox } from "../features/catalogs/components/catalog-combobox";
+import { getReferenceCatalogRepository } from "../features/catalogs/repositories/reference-catalog-repository";
 
 type View = "list" | "record" | "cap";
 const sections = [
@@ -55,6 +57,7 @@ export function ProjectWorkspace() {
   const importInput = useRef<HTMLInputElement>(null);
   const backupInput = useRef<HTMLInputElement>(null);
   const studyRepository = getParametricStudyRepository();
+  const catalogRepository = getReferenceCatalogRepository();
   const save = useCallback(async (project: ProjectMasterRecord) => {
     const saved = await repository.save(project); upsert(saved); return saved;
   }, [repository, upsert]);
@@ -120,7 +123,8 @@ export function ProjectWorkspace() {
   }
   async function downloadBackup() {
     const studies = await studyRepository.listAll();
-    const blob = new Blob([JSON.stringify(exportConsolidatedBackup(projects, studies), null, 2)], { type: "application/json" });
+    const catalogs = await catalogRepository.list();
+    const blob = new Blob([JSON.stringify(exportConsolidatedBackup(projects, studies, catalogs), null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob); const anchor = document.createElement("a");
     anchor.href = url; anchor.download = `th-os-cmp-backup-${new Date().toISOString().slice(0, 10)}.json`; anchor.click();
     URL.revokeObjectURL(url); setNotice(`Backup completo exportado com ${projects.length} cadastro(s).`);
@@ -130,7 +134,7 @@ export function ProjectWorkspace() {
     try {
       const restored = parseConsolidatedBackup(JSON.parse(await file.text()));
       if (!window.confirm(`Restaurar ${restored.projects.length} cadastro(s) e ${restored.studies.length} estudo(s)? Isso substituirá todos os dados locais atuais.`)) return;
-      const saved = await repository.restoreAll(restored.projects, restored.studies);
+      const saved = await repository.restoreAll(restored.projects, restored.studies, restored.catalogs);
       setProjects(saved.projects); setCurrent(null); setView("list");
       setNotice(`Backup restaurado com ${saved.projects.length} cadastro(s) e ${saved.studies.length} estudo(s).`);
     } catch (reason) { setNotice(reason instanceof Error ? reason.message : "Falha ao restaurar backup."); }
@@ -180,7 +184,7 @@ export function ProjectWorkspace() {
       ) : null}
       <input ref={importInput} className="sr-only" type="file" accept=".json,application/json" onChange={importJson} />
       <input ref={backupInput} className="sr-only" type="file" accept=".json,application/json" onChange={restoreBackup} />
-      {notice && <div className="toast" role="status"><strong>{notice}</strong><button onClick={() => setNotice("")}>Fechar</button></div>}
+      {notice && <div className="toast" role="status" aria-live="polite"><strong>{notice}</strong><button type="button" aria-label="Fechar aviso" onClick={() => setNotice("")}>Fechar</button></div>}
     </div>
   );
 }
@@ -294,7 +298,7 @@ function ProjectRecord({ project, update, validation, setValidation, onBack, onO
           <Select label="Fase" value={project.projectPhase} onChange={(projectPhase) => update({ projectPhase: projectPhase as ProjectPhase, history: [...project.history, createHistoryEvent("phase_changed", `Fase alterada para ${phaseLabels[projectPhase as ProjectPhase]}.`)] })} options={projectPhases.map((p) => [p, phaseLabels[p]])} />
           <Select label="Prioridade" value={project.priority} onChange={(priority) => update({ priority: priority as ProjectMasterRecord["priority"] })} options={[["low", "Baixa"], ["medium", "Média"], ["high", "Alta"], ["urgent", "Urgente"]]} />
           <Input label="Responsável principal" value={project.primaryResponsible} onChange={(primaryResponsible) => update({ primaryResponsible })} />
-          <Input label="Origem do contato" value={project.contactOrigin} onChange={(contactOrigin) => update({ contactOrigin })} />
+          <CatalogCombobox label="Origem do contato" catalogType="contactOrigin" value={project.contactOrigin} onChange={(contactOrigin) => update({ contactOrigin })} />
           <Textarea label="Notas internas" value={project.internalNotes} onChange={(internalNotes) => update({ internalNotes })} /></Grid>
       </Section>
       <Section id="clients" title="2. Clientes" action={<button onClick={() => mutate("clients", [...project.clients, { ...createEmptyClient(), primary: project.clients.length === 0 }])}>+ Cliente</button>}>
@@ -302,17 +306,17 @@ function ProjectRecord({ project, update, validation, setValidation, onBack, onO
           <Grid><Input label="Nome" value={client.name} onChange={(name) => updateClient(client.id, { name })} />
             <Input label="Nome preferido" value={client.preferredName} onChange={(preferredName) => updateClient(client.id, { preferredName })} />
             <Select label="Pessoa" value={client.personType} onChange={(personType) => updateClient(client.id, { personType: personType as ClientRecord["personType"] })} options={[["individual", "Pessoa física"], ["company", "Empresa"]]} />
-            <Input label="Papel no projeto" value={client.projectRole} onChange={(projectRole) => updateClient(client.id, { projectRole })} />
+            <CatalogCombobox label="Papel no projeto" catalogType="professionalRole" value={client.projectRole} onChange={(projectRole) => updateClient(client.id, { projectRole })} />
             <Input label="Telefone" value={client.phone} onChange={(phone) => updateClient(client.id, { phone })} /><Input label="E-mail" value={client.email} onChange={(email) => updateClient(client.id, { email })} />
             <label className="check-row"><input type="checkbox" checked={client.primary} onChange={(e) => updateClient(client.id, { primary: e.target.checked })} /> Contato principal</label></Grid>
         </Collection>)}
       </Section>
       <Section id="property" title="3. Imóvel"><Grid>
-        <Input label="Tipo" value={project.property.type} onChange={(type) => mutate("property", { ...project.property, type })} />
-        <Input label="Situação" value={project.property.condition} onChange={(condition) => mutate("property", { ...project.property, condition })} />
+        <CatalogCombobox label="Tipo" catalogType="propertyType" value={project.property.type} onChange={(type) => mutate("property", { ...project.property, type })} />
+        <CatalogCombobox label="Situação" catalogType="propertyCondition" value={project.property.condition} onChange={(condition) => mutate("property", { ...project.property, condition })} />
         <Input label="Endereço/localização" value={project.property.address} onChange={(address) => mutate("property", { ...project.property, address })} />
-        <Input label="Cidade" value={project.property.city} onChange={(city) => mutate("property", { ...project.property, city })} />
-        <Input label="Estado" value={project.property.state} onChange={(state) => mutate("property", { ...project.property, state })} />
+        <CatalogCombobox label="Cidade" catalogType="city" parentId={project.property.state === "RO" ? "catalog-state-ro" : null} value={project.property.city} onChange={(city) => mutate("property", { ...project.property, city })} />
+        <CatalogCombobox label="Estado" catalogType="state" value={project.property.state} onChange={(state) => mutate("property", { ...project.property, state })} />
         <Input label="Área existente (m²)" value={project.property.existingBuiltAreaM2?.toLocaleString("pt-BR") ?? ""} onChange={(v) => mutate("property", { ...project.property, existingBuiltAreaM2: numberPt(v) })} />
         <Input label="Ampliação estimada (m²)" value={project.property.estimatedExpansionAreaM2?.toLocaleString("pt-BR") ?? ""} onChange={(v) => mutate("property", { ...project.property, estimatedExpansionAreaM2: numberPt(v) })} />
         <Textarea label="Condição aparente" value={project.property.apparentCondition} onChange={(apparentCondition) => mutate("property", { ...project.property, apparentCondition })} />
@@ -333,9 +337,9 @@ function ProjectRecord({ project, update, validation, setValidation, onBack, onO
       <Section id="program" title="6. Programa inicial" action={<button onClick={() => mutate("needsProgram", [...project.needsProgram, emptyNeed(project.needsProgram.length)])}>+ Ambiente</button>}>
         <div className="summary-strip"><span>Existente: {areas.existing} m²</span><span>Desejada: {areas.desired} m²</span><span>Ampliação: {areas.expansion} m²</span><span>Ambientes: {areas.environments}</span><span>Essenciais: {areas.essential}</span><span>Sob análise: {areas.underReview}</span></div>
         {project.needsProgram.map((item) => <Collection key={item.id} onRemove={() => mutate("needsProgram", project.needsProgram.filter((n) => n.id !== item.id))}><Grid>
-          <Input label="Ambiente" value={item.environment} onChange={(environment) => updateNeed(project, item.id, { environment }, mutate)} />
-          <Input label="Setor" value={item.sector} onChange={(sector) => updateNeed(project, item.id, { sector }, mutate)} />
-          <Input label="Pavimento" value={item.floor} onChange={(floor) => updateNeed(project, item.id, { floor }, mutate)} />
+          <CatalogCombobox label="Ambiente" catalogType="environmentType" projectId={project.id} value={item.environment} onChange={(environment) => updateNeed(project, item.id, { environment }, mutate)} />
+          <CatalogCombobox label="Setor" catalogType="environmentSector" value={item.sector} onChange={(sector) => updateNeed(project, item.id, { sector }, mutate)} />
+          <CatalogCombobox label="Pavimento" catalogType="floor" projectId={project.id} value={item.floor} onChange={(floor) => updateNeed(project, item.id, { floor }, mutate)} />
           <Input label="Área existente m²" value={item.existingAreaM2?.toLocaleString("pt-BR") ?? ""} onChange={(v) => updateNeed(project, item.id, { existingAreaM2: numberPt(v) }, mutate)} />
           <Input label="Área desejada m²" value={item.desiredAreaM2?.toLocaleString("pt-BR") ?? ""} onChange={(v) => updateNeed(project, item.id, { desiredAreaM2: numberPt(v) }, mutate)} />
           <Select label="Prioridade" value={item.priority} onChange={(priority) => updateNeed(project, item.id, { priority: priority as NeedsItem["priority"] }, mutate)} options={[["essential", "Essencial"], ["important", "Importante"], ["desirable", "Desejável"], ["under_review", "Sob análise"]]} />
@@ -360,13 +364,13 @@ function ProjectRecord({ project, update, validation, setValidation, onBack, onO
       </Grid><p className="helper-text">Este cadastro não calcula honorários.</p></Section>
       <GenericCollection id="visits" title="9. Visitas" items={project.visits} addLabel="Visita"
         onAdd={() => mutate("visits", [...project.visits, emptyVisit()])} onRemove={(id) => mutate("visits", project.visits.filter((v) => v.id !== id))}
-        render={(item: VisitRecord) => <Grid><Input label="Finalidade" value={item.purpose} onChange={(purpose) => mutate("visits", project.visits.map((v) => v.id === item.id ? { ...v, purpose } : v))} /><Input type="date" label="Data" value={item.date} onChange={(date) => mutate("visits", project.visits.map((v) => v.id === item.id ? { ...v, date } : v))} /><Input label="Responsável" value={item.responsible} onChange={(responsible) => mutate("visits", project.visits.map((v) => v.id === item.id ? { ...v, responsible } : v))} /></Grid>} />
+        render={(item: VisitRecord) => <Grid><Select label="Tipo" value={item.type} onChange={(type) => mutate("visits", project.visits.map((v) => v.id === item.id ? { ...v, type: type as VisitRecord["type"] } : v))} options={[["first_meeting", "Primeira reunião"], ["survey", "Levantamento"], ["technical_visit", "Visita técnica"], ["construction_monitoring", "Acompanhamento de obra"], ["client_meeting", "Reunião com cliente"], ["other", "Outra"]]} /><Input label="Finalidade" value={item.purpose} onChange={(purpose) => mutate("visits", project.visits.map((v) => v.id === item.id ? { ...v, purpose } : v))} /><Input type="date" label="Data" value={item.date} onChange={(date) => mutate("visits", project.visits.map((v) => v.id === item.id ? { ...v, date } : v))} /><Input label="Responsável" value={item.responsible} onChange={(responsible) => mutate("visits", project.visits.map((v) => v.id === item.id ? { ...v, responsible } : v))} /></Grid>} />
       <GenericCollection id="documents" title="10. Documentos" items={project.documents} addLabel="Documento"
         onAdd={() => mutate("documents", [...project.documents, emptyDocument()])} onRemove={(id) => mutate("documents", project.documents.filter((v) => v.id !== id))}
-        render={(item: DocumentReference) => <Grid><Input label="Documento" value={item.name} onChange={(name) => mutate("documents", project.documents.map((v) => v.id === item.id ? { ...v, name } : v))} /><Input label="Categoria" value={item.category} onChange={(category) => mutate("documents", project.documents.map((v) => v.id === item.id ? { ...v, category } : v))} /><label className="check-row"><input type="checkbox" checked={item.required} onChange={(e) => mutate("documents", project.documents.map((v) => v.id === item.id ? { ...v, required: e.target.checked } : v))} /> Obrigatório</label></Grid>} />
+        render={(item: DocumentReference) => <Grid><Input label="Documento" value={item.name} onChange={(name) => mutate("documents", project.documents.map((v) => v.id === item.id ? { ...v, name } : v))} /><CatalogCombobox label="Categoria" catalogType="documentCategory" value={item.category} onChange={(category) => mutate("documents", project.documents.map((v) => v.id === item.id ? { ...v, category } : v))} /><label className="check-row"><input type="checkbox" checked={item.required} onChange={(e) => mutate("documents", project.documents.map((v) => v.id === item.id ? { ...v, required: e.target.checked } : v))} /> Obrigatório</label></Grid>} />
       <GenericCollection id="team" title="11. Responsáveis e parceiros" items={project.team} addLabel="Participante"
         onAdd={() => mutate("team", [...project.team, emptyTeam()])} onRemove={(id) => mutate("team", project.team.filter((v) => v.id !== id))}
-        render={(item: TeamMember) => <Grid><Input label="Nome" value={item.name} onChange={(name) => mutate("team", project.team.map((v) => v.id === item.id ? { ...v, name } : v))} /><Input label="Profissão" value={item.profession} onChange={(profession) => mutate("team", project.team.map((v) => v.id === item.id ? { ...v, profession } : v))} /><Select label="Status" value={item.status} onChange={(status) => mutate("team", project.team.map((v) => v.id === item.id ? { ...v, status: status as TeamMember["status"] } : v))} options={[["suggested", "Sugerido"], ["invited", "Convidado"], ["active", "Ativo"], ["inactive", "Inativo"]]} /></Grid>} />
+        render={(item: TeamMember) => <Grid><Input label="Nome" value={item.name} onChange={(name) => mutate("team", project.team.map((v) => v.id === item.id ? { ...v, name } : v))} /><CatalogCombobox label="Profissão" catalogType="professionalRole" value={item.profession} onChange={(profession) => mutate("team", project.team.map((v) => v.id === item.id ? { ...v, profession } : v))} /><Select label="Status" value={item.status} onChange={(status) => mutate("team", project.team.map((v) => v.id === item.id ? { ...v, status: status as TeamMember["status"] } : v))} options={[["suggested", "Sugerido"], ["invited", "Convidado"], ["active", "Ativo"], ["inactive", "Inativo"]]} /></Grid>} />
       <GenericCollection id="decisions" title="12. Decisões" items={project.decisions} addLabel="Decisão"
         onAdd={() => mutate("decisions", [...project.decisions, emptyDecision(project.projectPhase)])} onRemove={(id) => mutate("decisions", project.decisions.filter((v) => v.id !== id))}
         render={(item: DecisionRecord) => <Grid><Input label="Assunto" value={item.subject} onChange={(subject) => mutate("decisions", project.decisions.map((v) => v.id === item.id ? { ...v, subject } : v))} /><Textarea label="Decisão" value={item.decision} onChange={(decision) => mutate("decisions", project.decisions.map((v) => v.id === item.id ? { ...v, decision } : v))} /></Grid>} />

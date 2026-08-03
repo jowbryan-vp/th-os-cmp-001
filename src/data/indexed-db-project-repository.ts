@@ -3,9 +3,10 @@ import { migrateProject } from "../domain/project-migrations";
 import { projectMasterRecordSchema } from "../domain/project-schemas";
 import { ParametricEnvironmentStudy } from "../features/cap/domain/cap-library-types";
 import { parametricEnvironmentStudySchema } from "../features/cap/domain/cap-library-schema";
+import { CatalogOption, catalogOptionSchema } from "../features/catalogs/domain/reference-catalog";
 import { ProjectRepository } from "./project-repository";
 import {
-  CAP_STUDY_STORE_NAME, PROJECT_STORE_NAME, openThOsDatabase, requestResult, transactionDone,
+  CAP_STUDY_STORE_NAME, CATALOG_STORE_NAME, PROJECT_STORE_NAME, openThOsDatabase, requestResult, transactionDone,
 } from "./th-os-database";
 
 export { DB_NAME, PROJECT_STORE_NAME as STORE_NAME } from "./th-os-database";
@@ -53,21 +54,23 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     await transactionDone(transaction);
     return parsed.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }
-  async restoreAll(projects: ProjectMasterRecord[], studies: ParametricEnvironmentStudy[]) {
+  async restoreAll(projects: ProjectMasterRecord[], studies: ParametricEnvironmentStudy[], catalogs: CatalogOption[] = []) {
     const parsedProjects = projects.map((project) => projectMasterRecordSchema.parse(migrateProject(project)));
     const parsedStudies = studies.map((study) => parametricEnvironmentStudySchema.parse(study));
+    const parsedCatalogs = catalogs.map((option) => catalogOptionSchema.parse(option));
     const projectIds = new Set(parsedProjects.map((project) => project.id));
     if (parsedStudies.some((study) => !projectIds.has(study.projectId))) {
       throw new Error("O backup contém estudo sem projeto correspondente.");
     }
     const database = await openThOsDatabase();
-    const transaction = database.transaction([PROJECT_STORE_NAME, CAP_STUDY_STORE_NAME], "readwrite");
-    const projectStore = transaction.objectStore(PROJECT_STORE_NAME); const studyStore = transaction.objectStore(CAP_STUDY_STORE_NAME);
-    projectStore.clear(); studyStore.clear();
+    const transaction = database.transaction([PROJECT_STORE_NAME, CAP_STUDY_STORE_NAME, CATALOG_STORE_NAME], "readwrite");
+    const projectStore = transaction.objectStore(PROJECT_STORE_NAME); const studyStore = transaction.objectStore(CAP_STUDY_STORE_NAME); const catalogStore = transaction.objectStore(CATALOG_STORE_NAME);
+    projectStore.clear(); studyStore.clear(); catalogStore.clear();
     for (const project of parsedProjects) projectStore.put(project);
     for (const study of parsedStudies) studyStore.put(study);
+    for (const option of parsedCatalogs) catalogStore.put(option);
     await transactionDone(transaction);
-    return { projects: parsedProjects.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)), studies: parsedStudies };
+    return { projects: parsedProjects.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)), studies: parsedStudies, catalogs: parsedCatalogs };
   }
   async remove(id: string) {
     const database = await openThOsDatabase();

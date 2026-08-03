@@ -4,15 +4,17 @@ import { backupEnvelopeSchema, importEnvelopeSchema } from "../domain/project-sc
 import { parametricEnvironmentStudySchema } from "../features/cap/domain/cap-library-schema";
 import { ParametricEnvironmentStudy } from "../features/cap/domain/cap-library-types";
 import { capLibrary } from "../features/cap/services/cap-library-service";
+import { CatalogOption, catalogOptionSchema, normalizeCatalogValue } from "../features/catalogs/domain/reference-catalog";
 
 export interface ExportEnvelope {
   schemaVersion: number; exportedAt: string; application: typeof APPLICATION_ID;
   project: ProjectMasterRecord; parametricStudies: ParametricEnvironmentStudy[];
 }
 export interface ConsolidatedBackupEnvelope {
-  kind: "consolidated-backup"; backupSchemaVersion: 2; schemaVersion: number; exportedAt: string;
+  kind: "consolidated-backup"; backupSchemaVersion: 3; schemaVersion: number; exportedAt: string;
   application: typeof APPLICATION_ID; projectRecords: ProjectMasterRecord[];
   parametricStudies: ParametricEnvironmentStudy[];
+  referenceCatalogOptions: CatalogOption[];
   capLibraryReferences: Array<{ libraryCode: "CAP-001"; version: string; sourceHash: string }>;
 }
 export type ImportConflict = "none" | "id" | "code" | "both";
@@ -24,19 +26,20 @@ export function exportProject(project: ProjectMasterRecord, studies: ParametricE
     parametricStudies: studies.filter((study) => study.projectId === project.id),
   };
 }
-export function exportConsolidatedBackup(projects: ProjectMasterRecord[], studies: ParametricEnvironmentStudy[] = []): ConsolidatedBackupEnvelope {
+export function exportConsolidatedBackup(projects: ProjectMasterRecord[], studies: ParametricEnvironmentStudy[] = [], catalogs: CatalogOption[] = []): ConsolidatedBackupEnvelope {
   return {
-    kind: "consolidated-backup", backupSchemaVersion: 2, schemaVersion: PROJECT_SCHEMA_VERSION,
+    kind: "consolidated-backup", backupSchemaVersion: 3, schemaVersion: PROJECT_SCHEMA_VERSION,
     exportedAt: new Date().toISOString(), application: APPLICATION_ID,
     projectRecords: projects.map((project) => ({
       ...project,
       history: [...project.history, createHistoryEvent("exported", "Incluído em backup consolidado.")],
     })),
     parametricStudies: studies,
+    referenceCatalogOptions: catalogs,
     capLibraryReferences: [{ libraryCode: "CAP-001", version: capLibrary.metadata.version, sourceHash: capLibrary.metadata.sourceHash }],
   };
 }
-export function parseConsolidatedBackup(input: unknown): { projects: ProjectMasterRecord[]; studies: ParametricEnvironmentStudy[] } {
+export function parseConsolidatedBackup(input: unknown): { projects: ProjectMasterRecord[]; studies: ParametricEnvironmentStudy[]; catalogs: CatalogOption[] } {
   const envelope = backupEnvelopeSchema.parse(input);
   if (envelope.schemaVersion > PROJECT_SCHEMA_VERSION) {
     throw new Error("O backup foi criado por uma versão futura do CMP.");
@@ -44,6 +47,7 @@ export function parseConsolidatedBackup(input: unknown): { projects: ProjectMast
   const legacy = "projects" in envelope;
   const projects = (legacy ? envelope.projects : envelope.projectRecords).map(migrateProject);
   const studies = legacy ? [] : parametricEnvironmentStudySchema.array().parse(envelope.parametricStudies);
+  const catalogs = !legacy && envelope.backupSchemaVersion === 3 ? catalogOptionSchema.array().parse(envelope.referenceCatalogOptions) : [];
   const ids = new Set<string>(); const codes = new Set<string>();
   for (const project of projects) {
     if (ids.has(project.id) || codes.has(project.code)) {
@@ -61,7 +65,15 @@ export function parseConsolidatedBackup(input: unknown): { projects: ProjectMast
       }
     }
   }
-  return { projects, studies };
+  const catalogKeys = new Set<string>();
+  for (const option of catalogs) {
+    const key = `${option.catalogType}:${option.projectId ?? "global"}:${normalizeCatalogValue(option.value)}`;
+    if (catalogKeys.has(key)) throw new Error("O backup contém opções de catálogo duplicadas.");
+    catalogKeys.add(key);
+  }
+  const catalogIds = new Set(catalogs.map((option) => option.id));
+  if (catalogs.some((option) => option.parentId && !catalogIds.has(option.parentId))) throw new Error("O backup contém cidade sem estado correspondente.");
+  return { projects, studies, catalogs };
 }
 export function parseProjectImport(input: unknown) {
   return parseProjectImportBundle(input).project;
