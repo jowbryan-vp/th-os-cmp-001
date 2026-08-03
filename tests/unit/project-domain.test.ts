@@ -70,7 +70,8 @@ test("summarizes needs areas and quantities", () => {
     intervention: "expand", existingAreaM2: 10, desiredAreaM2: 18, quantity: 2,
     priority: "essential", users: "", needs: "", lighting: "", ventilation: "", privacy: "",
     accessibility: "", furniture: "", equipment: "", connections: "", notes: "", order: 0,
-    parametricStudyId: null, parametricScenarioId: null, appliedAreaType: null, appliedAreaM2: null,
+    parametricStudyId: null, parametricScenarioId: null, capMinimumAreaM2: null,
+    capRecommendedAreaM2: null, capPreliminaryGrossAreaM2: null, appliedAreaType: null, appliedAreaM2: null,
     capLibraryVersion: null, calculationEngineVersion: null, calculatedAt: null,
   });
   assert.deepEqual(summarizeAreas(project), {

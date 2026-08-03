@@ -1453,9 +1453,12 @@ button {
 .cap-custom-item__row.is-pending { padding: 10px; color: #743f14; background: #fff4dc; border: 1px solid #d7a45e; }
 .cap-stale-result { padding: 10px; color: #704411; background: #fff3d2; border-left: 4px solid #bb7b21; }
 .cap-parameter-grid, .cap-result-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.cap-actions, .cap-apply, .cap-program-link { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.cap-actions, .cap-apply, .cap-program-link, .cap-save-options { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .cap-program-link { margin-top: 12px; }
 .cap-program-link small { color: #64685e; }
+.cap-save-options { margin-top: 18px; padding: 16px; background: #eef3e5; border: 1px solid #cdd7bb; border-radius: 10px; }
+.cap-save-options strong, .cap-save-options p { flex-basis: 100%; margin: 0; }
+.cap-save-options small { color: #64685e; }
 .cap-result-panel { border-radius: 12px; }
 .cap-result-grid > div { display: grid; gap: 4px; padding: 14px; background: #f3f4ed; border-radius: 8px; }
 .cap-result-grid span { color: #656a5e; font-size: .78rem; }
@@ -1548,6 +1551,14 @@ button {
 .semantic-alert { display: block; margin: 10px 0; color: #7a321e; }
 .summary-strip { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 .summary-strip span { padding: 7px 10px; background: #f2f3ed; border-radius: 999px; font-size: .82rem; }
+.cap-total-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 14px; margin-bottom: 16px; background: #eef3e5; border: 1px solid #d4ddc4; border-radius: 10px; }
+.cap-total-options > div { display: grid; gap: 3px; min-width: 0; }
+.cap-total-options span { color: #626956; font-size: .78rem; }
+.cap-total-options strong { font-size: 1.12rem; }
+.cap-total-options p { grid-column: 1 / -1; margin: 2px 0 0; color: #626956; font-size: .8rem; }
+.cap-program-options { display: grid; gap: 8px; padding: 12px; margin-top: 12px; background: #f7f8f3; border: 1px solid #dde2d3; border-radius: 8px; }
+.cap-program-options > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.cap-program-options button[aria-pressed="true"] { color: #fff; background: #596441; border-color: #596441; }
 .collection-card { position: relative; padding: 18px 48px 18px 18px; margin-bottom: 12px; }
 .collection-card .row-remove { position: absolute; right: 12px; top: 12px; }
 .helper-text { margin-top: 12px; color: #676a61; font-size: .85rem; }
@@ -1566,6 +1577,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .section-nav { position: static; display: flex; overflow-x: auto; max-height: none; margin-bottom: 16px; }
   .section-nav a { flex: 0 0 auto; }
   .project-meta { grid-template-columns: 1fr; }
+  .cap-total-options { grid-template-columns: 1fr; }
+  .cap-total-options p { grid-column: auto; }
   .topbar { align-items: flex-start; }
   .topbar-actions { flex-wrap: wrap; }
 }

@@ -7,6 +7,7 @@
 - separa conforto de acessibilidade, preserva inferências e conflitos;
 - inclui calculadora, estudos, comparador de quatro cenários e breakdown rastreável;
 - aplica resultados ao Programa de Necessidades com confirmação e metadados;
+- registra as três opções de área por ambiente, acumula os três totais com quantidade e permite escolher depois;
 - migra o IndexedDB para v3 e inclui estudos no backup/restauração atômicos.
 
 ## Não lançado — Backup consolidado

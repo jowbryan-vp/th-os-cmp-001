@@ -19,8 +19,8 @@ import {
 } from "../services/project-import-service";
 import { changeArchiveState, duplicateProject } from "../services/project-lifecycle-service";
 import { getParametricStudyRepository } from "../features/cap/repositories/parametric-study-repository";
-import { CapApplyPayload, CapWorkspace } from "../features/cap/components/cap-workspace";
-import { applyScenarioToNeedsProgram } from "../features/cap/services/cap-program-service";
+import { CapApplyPayload, CapSaveOptionsPayload, CapWorkspace } from "../features/cap/components/cap-workspace";
+import { applyScenarioToNeedsProgram, saveScenarioOptionsToNeedsProgram, summarizeCapAreaOptions } from "../features/cap/services/cap-program-service";
 import { CatalogCombobox } from "../features/catalogs/components/catalog-combobox";
 import { getReferenceCatalogRepository } from "../features/catalogs/repositories/reference-catalog-repository";
 
@@ -158,6 +158,18 @@ export function ProjectWorkspace() {
     setCurrent(savedProject); setView("record");
     setNotice(`Área CAP-001 de ${payload.areaM2.toLocaleString("pt-BR")} m² aplicada ao Programa de Necessidades.`);
   }
+  async function saveCapOptions(payload: CapSaveOptionsPayload) {
+    const project = projects.find((item) => item.id === payload.study.projectId);
+    if (!project) throw new Error("Projeto vinculado ao estudo não encontrado.");
+    const calculatedAt = new Date().toISOString();
+    const updatedProject = saveScenarioOptionsToNeedsProgram(project, payload.study, payload.scenario, calculatedAt);
+    const savedProject = await save(updatedProject);
+    const savedStudy = { ...payload.study, status: "calculated" as const, updatedAt: calculatedAt };
+    const existingStudy = await studyRepository.findById(savedStudy.id);
+    if (existingStudy) await studyRepository.update(savedStudy); else await studyRepository.create(savedStudy);
+    setCurrent(savedProject); setView("record");
+    setNotice("As três áreas CAP-001 foram registradas. Escolha uma opção no ambiente quando estiver pronto.");
+  }
   if (loading) return <main className="loading-state">Carregando Cadastro Mestre…</main>;
   if (error) return <main className="loading-state" role="alert">{error.message}</main>;
   return (
@@ -174,7 +186,7 @@ export function ProjectWorkspace() {
       </aside>
       {view === "cap" ? (
         <CapWorkspace projects={projects} initialProjectId={capContext.projectId} initialNeedsItemId={capContext.needsItemId}
-          onBack={() => setView(current ? "record" : "list")} onApply={applyCapResult} />
+          onBack={() => setView(current ? "record" : "list")} onApply={applyCapResult} onSaveOptions={saveCapOptions} />
       ) : view === "list" ? (
         <ProjectList projects={projects} onOpen={open} onArchive={archive} onDuplicate={duplicate} onDelete={remove}
           onBackup={() => void downloadBackup()} onRestore={() => backupInput.current?.click()} />
@@ -282,9 +294,20 @@ function ProjectRecord({ project, update, validation, setValidation, onBack, onO
   onOpenCap: (needsItemId: string) => void;
 }) {
   const areas = summarizeAreas(project);
+  const capAreas = summarizeCapAreaOptions(project.needsProgram);
   const mutate = <K extends keyof ProjectMasterRecord>(key: K, value: ProjectMasterRecord[K]) => update({ [key]: value } as Pick<ProjectMasterRecord, K>);
   const updateClient = (id: string, patch: Partial<ClientRecord>) => mutate("clients", project.clients.map((item) =>
     item.id === id ? { ...item, ...patch } : patch.primary ? { ...item, primary: false } : item));
+  const selectCapArea = (item: NeedsItem, areaType: NonNullable<NeedsItem["appliedAreaType"]>) => {
+    const areaM2 = areaType === "minimum" ? item.capMinimumAreaM2
+      : areaType === "recommended" ? item.capRecommendedAreaM2 : item.capPreliminaryGrossAreaM2;
+    if (areaM2 === null) return;
+    update({
+      needsProgram: project.needsProgram.map((candidate) => candidate.id === item.id
+        ? { ...candidate, desiredAreaM2: areaM2, appliedAreaType: areaType, appliedAreaM2: areaM2 } : candidate),
+      history: [...project.history, createHistoryEvent("cap_area_applied", `CAP-001: ${areaM2.toFixed(2)} m² (${areaType}) escolhidos para ${item.environment || "ambiente"}.`)],
+    });
+  };
   return <main className="workspace expanded-workspace">
     <aside className="section-nav" aria-label="Seções do cadastro"><button className="back-action" onClick={onBack}>← Projetos</button>
       {sections.map(([id, label]) => <a key={id} href={`#${id}`}>{label}</a>)}</aside>
@@ -336,15 +359,26 @@ function ProjectRecord({ project, update, validation, setValidation, onBack, onO
       </Section>
       <Section id="program" title="6. Programa inicial" action={<button onClick={() => mutate("needsProgram", [...project.needsProgram, emptyNeed(project.needsProgram.length)])}>+ Ambiente</button>}>
         <div className="summary-strip"><span>Existente: {areas.existing} m²</span><span>Desejada: {areas.desired} m²</span><span>Ampliação: {areas.expansion} m²</span><span>Ambientes: {areas.environments}</span><span>Essenciais: {areas.essential}</span><span>Sob análise: {areas.underReview}</span></div>
+        <div className="cap-total-options" aria-label="Totais das opções calculadas pelo CAP-001">
+          <div><span>Total mínimo</span><strong>{capAreas.minimumAreaM2.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} m²</strong></div>
+          <div><span>Total recomendado</span><strong>{capAreas.recommendedAreaM2.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} m²</strong></div>
+          <div><span>Total bruto preliminar</span><strong>{capAreas.preliminaryGrossAreaM2.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} m²</strong></div>
+          <p>Somente ambientes calculados pelo CAP-001: {capAreas.calculatedEnvironments} de {capAreas.totalEnvironments}. Os totais consideram a quantidade.</p>
+        </div>
         {project.needsProgram.map((item) => <Collection key={item.id} onRemove={() => mutate("needsProgram", project.needsProgram.filter((n) => n.id !== item.id))}><Grid>
           <CatalogCombobox label="Ambiente" catalogType="environmentType" projectId={project.id} value={item.environment} onChange={(environment) => updateNeed(project, item.id, { environment }, mutate)} />
           <CatalogCombobox label="Setor" catalogType="environmentSector" value={item.sector} onChange={(sector) => updateNeed(project, item.id, { sector }, mutate)} />
           <CatalogCombobox label="Pavimento" catalogType="floor" projectId={project.id} value={item.floor} onChange={(floor) => updateNeed(project, item.id, { floor }, mutate)} />
           <Input label="Área existente m²" value={item.existingAreaM2?.toLocaleString("pt-BR") ?? ""} onChange={(v) => updateNeed(project, item.id, { existingAreaM2: numberPt(v) }, mutate)} />
           <Input label="Área desejada m²" value={item.desiredAreaM2?.toLocaleString("pt-BR") ?? ""} onChange={(v) => updateNeed(project, item.id, { desiredAreaM2: numberPt(v) }, mutate)} />
+          <Input type="number" label="Quantidade" value={String(item.quantity)} onChange={(v) => updateNeed(project, item.id, { quantity: Math.max(1, Number(v) || 1) }, mutate)} />
           <Select label="Prioridade" value={item.priority} onChange={(priority) => updateNeed(project, item.id, { priority: priority as NeedsItem["priority"] }, mutate)} options={[["essential", "Essencial"], ["important", "Importante"], ["desirable", "Desejável"], ["under_review", "Sob análise"]]} />
-        </Grid><div className="cap-program-link"><button className="button button--ghost" onClick={() => onOpenCap(item.id)}>Pré-dimensionar com CAP-001</button>
-          {item.parametricStudyId && <small>Aplicado: {item.appliedAreaM2?.toLocaleString("pt-BR")} m² · biblioteca {item.capLibraryVersion} · motor {item.calculationEngineVersion}</small>}</div></Collection>)}
+        </Grid>{item.capMinimumAreaM2 !== null && item.capRecommendedAreaM2 !== null && item.capPreliminaryGrossAreaM2 !== null && <div className="cap-program-options"><strong>Escolha a área deste ambiente</strong><div>
+          <button aria-pressed={item.appliedAreaType === "minimum"} onClick={() => selectCapArea(item, "minimum")}>Mínima · {item.capMinimumAreaM2.toLocaleString("pt-BR")} m²</button>
+          <button aria-pressed={item.appliedAreaType === "recommended"} onClick={() => selectCapArea(item, "recommended")}>Recomendada · {item.capRecommendedAreaM2.toLocaleString("pt-BR")} m²</button>
+          <button aria-pressed={item.appliedAreaType === "preliminary_gross"} onClick={() => selectCapArea(item, "preliminary_gross")}>Bruta preliminar · {item.capPreliminaryGrossAreaM2.toLocaleString("pt-BR")} m²</button>
+        </div></div>}<div className="cap-program-link"><button className="button button--ghost" onClick={() => onOpenCap(item.id)}>{item.parametricStudyId ? "Recalcular com CAP-001" : "Pré-dimensionar com CAP-001"}</button>
+          {item.parametricStudyId && <small>{item.appliedAreaM2 !== null ? `Escolhida: ${item.appliedAreaM2.toLocaleString("pt-BR")} m²` : "3 opções registradas; escolha pendente"} · biblioteca {item.capLibraryVersion} · motor {item.calculationEngineVersion}</small>}</div></Collection>)}
       </Section>
       <Section id="planning" title="7. Prazos"><Grid>
         <Input type="date" label="Primeiro contato" value={project.planning.firstContactDate} onChange={(firstContactDate) => mutate("planning", { ...project.planning, firstContactDate })} />
@@ -411,7 +445,7 @@ function ScopeRow({ item, onChange, onRemove }: { item: PreliminaryScopeItem; on
     <Select label="Execução" value={item.executionMode} onChange={(executionMode) => onChange({ executionMode: executionMode as PreliminaryScopeItem["executionMode"] })} options={[["internal", "Interna"], ["partner", "Parceiro"], ["outsourced", "Terceirizada"], ["client", "Cliente"], ["not_defined", "Não definida"]]} />
     <Input label="Responsável" value={item.responsible} onChange={(responsible) => onChange({ responsible })} /><Input label="Observações" value={item.notes} onChange={(notes) => onChange({ notes })} /></Grid></Collection>;
 }
-function emptyNeed(order: number): NeedsItem { return { id: createId("need"), environment: "", sector: "", floor: "", currentSituation: "under_review", intervention: "study", existingAreaM2: null, desiredAreaM2: null, quantity: 1, priority: "under_review", users: "", needs: "", lighting: "", ventilation: "", privacy: "", accessibility: "", furniture: "", equipment: "", connections: "", notes: "", order, parametricStudyId: null, parametricScenarioId: null, appliedAreaType: null, appliedAreaM2: null, capLibraryVersion: null, calculationEngineVersion: null, calculatedAt: null }; }
+function emptyNeed(order: number): NeedsItem { return { id: createId("need"), environment: "", sector: "", floor: "", currentSituation: "under_review", intervention: "study", existingAreaM2: null, desiredAreaM2: null, quantity: 1, priority: "under_review", users: "", needs: "", lighting: "", ventilation: "", privacy: "", accessibility: "", furniture: "", equipment: "", connections: "", notes: "", order, parametricStudyId: null, parametricScenarioId: null, capMinimumAreaM2: null, capRecommendedAreaM2: null, capPreliminaryGrossAreaM2: null, appliedAreaType: null, appliedAreaM2: null, capLibraryVersion: null, calculationEngineVersion: null, calculatedAt: null }; }
 function updateNeed(project: ProjectMasterRecord, id: string, patch: Partial<NeedsItem>, mutate: <K extends keyof ProjectMasterRecord>(key: K, value: ProjectMasterRecord[K]) => void) { mutate("needsProgram", project.needsProgram.map((item) => item.id === id ? { ...item, ...patch } : item)); }
 function emptyVisit(): VisitRecord { return { id: createId("visit"), type: "survey", date: "", time: "", city: "", address: "", responsible: "", participants: "", estimatedDurationMinutes: null, actualDurationMinutes: null, purpose: "", notes: "", reportRequired: false, status: "planned", estimatedExpensesCents: null }; }
 function emptyDocument(): DocumentReference { return { id: createId("document"), name: "", category: "", required: false, status: "not_requested", requestedAt: "", receivedAt: "", notes: "", fileName: "", futureLink: "", responsible: "" }; }

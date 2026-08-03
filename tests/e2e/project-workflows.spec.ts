@@ -198,7 +198,7 @@ test("keeps functional content available on tablet and mobile", async ({ page })
   expect(download.suggestedFilename()).toBe("th-2026-001-cmp.json");
 });
 
-test("calculates, compares, applies and restores CAP-001 scenarios", async ({ page }) => {
+test("calculates, compares, accumulates three CAP-001 areas and restores scenarios", async ({ page }) => {
   const pilot = page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" });
   await pilot.locator("button.project-card__open").click();
   await page.getByRole("button", { name: "+ Ambiente" }).click();
@@ -223,8 +223,15 @@ test("calculates, compares, applies and restores CAP-001 scenarios", async ({ pa
   await expect(page.getByRole("columnheader", { name: /Queen \+ closet/ })).toBeVisible();
   await expect(page.getByRole("rowheader", { name: "Diferença vs. cenário A" })).toBeVisible();
   await page.getByRole("button", { name: "Calculadora", exact: true }).click();
-  await page.getByRole("button", { name: "Área recomendada" }).click();
-  await expect(page.getByText(/Área CAP-001 de .* aplicada/)).toBeVisible();
+  await page.getByRole("button", { name: "Registrar as 3 áreas" }).click();
+  await expect(page.getByText("As três áreas CAP-001 foram registradas. Escolha uma opção no ambiente quando estiver pronto.")).toBeVisible();
+  await expect(page.getByText("Total mínimo")).toBeVisible();
+  await expect(page.getByText("Total recomendado")).toBeVisible();
+  await expect(page.getByText("Total bruto preliminar")).toBeVisible();
+  await expect(page.getByText("Somente ambientes calculados pelo CAP-001: 1 de 1. Os totais consideram a quantidade.")).toBeVisible();
+  const recommendedOption = page.getByRole("button", { name: /Recomendada · .* m²/ });
+  await recommendedOption.click();
+  await expect(recommendedOption).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText(/biblioteca 1\.1\.0 · motor 1\.0\.0/)).toBeVisible();
 
   await page.reload();

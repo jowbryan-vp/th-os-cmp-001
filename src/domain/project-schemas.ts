@@ -57,6 +57,8 @@ export const needsItemSchema = z.object({
   privacy: z.string(), accessibility: z.string(), furniture: z.string(), equipment: z.string(),
   connections: z.string(), notes: z.string(), order: z.number().int().nonnegative(),
   parametricStudyId: z.string().nullable().default(null), parametricScenarioId: z.string().nullable().default(null),
+  capMinimumAreaM2: nullableNumber.default(null), capRecommendedAreaM2: nullableNumber.default(null),
+  capPreliminaryGrossAreaM2: nullableNumber.default(null),
   appliedAreaType: z.enum(["minimum", "recommended", "preliminary_gross"]).nullable().default(null),
   appliedAreaM2: nullableNumber.default(null), capLibraryVersion: z.string().nullable().default(null),
   calculationEngineVersion: z.string().nullable().default(null), calculatedAt: z.string().nullable().default(null),
@@ -106,7 +108,7 @@ const pendingSchema = z.object({
   completedAt: z.string().nullable(),
 }).strict();
 const historySchema = z.object({
-  id, at: z.string(), action: z.enum(["created", "edited", "phase_changed", "status_changed", "duplicated", "imported", "exported", "archived", "restored", "deleted", "scope_changed", "cap_area_applied"]),
+  id, at: z.string(), action: z.enum(["created", "edited", "phase_changed", "status_changed", "duplicated", "imported", "exported", "archived", "restored", "deleted", "scope_changed", "cap_options_saved", "cap_area_applied"]),
   detail: z.string(),
 }).strict();
 

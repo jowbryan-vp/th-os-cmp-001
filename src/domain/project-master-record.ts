@@ -82,6 +82,8 @@ export interface NeedsItem {
   accessibility: string; furniture: string; equipment: string; connections: string;
   notes: string; order: number;
   parametricStudyId: string | null; parametricScenarioId: string | null;
+  capMinimumAreaM2: number | null; capRecommendedAreaM2: number | null;
+  capPreliminaryGrossAreaM2: number | null;
   appliedAreaType: "minimum" | "recommended" | "preliminary_gross" | null;
   appliedAreaM2: number | null; capLibraryVersion: string | null;
   calculationEngineVersion: string | null; calculatedAt: string | null;
@@ -136,7 +138,8 @@ export interface PendingRecord {
 export interface HistoryEntry {
   id: string; at: string;
   action: "created" | "edited" | "phase_changed" | "status_changed" | "duplicated" |
-    "imported" | "exported" | "archived" | "restored" | "deleted" | "scope_changed" | "cap_area_applied";
+    "imported" | "exported" | "archived" | "restored" | "deleted" | "scope_changed" |
+    "cap_options_saved" | "cap_area_applied";
   detail: string;
 }
 

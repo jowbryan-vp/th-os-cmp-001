@@ -6,7 +6,7 @@ import path from "node:path";
 import test from "node:test";
 import { pilotProject } from "../../src/domain/project-master-record";
 import { capLibrary } from "../../src/features/cap/services/cap-library-service";
-import { applyScenarioToNeedsProgram } from "../../src/features/cap/services/cap-program-service";
+import { applyScenarioToNeedsProgram, saveScenarioOptionsToNeedsProgram, summarizeCapAreaOptions } from "../../src/features/cap/services/cap-program-service";
 import { calculateScenario, createParametricStudy, createSelectedLibraryItem } from "../../src/features/cap/services/cap-scenario-service";
 
 const root = process.cwd();
@@ -54,7 +54,8 @@ test("applies a calculated scenario with complete CAP traceability", () => {
   const need = { id: "need-cap-test", environment: "Suíte", sector: "Íntimo", floor: "Térreo", currentSituation: "under_review" as const,
     intervention: "study" as const, existingAreaM2: null, desiredAreaM2: null, quantity: 1, priority: "important" as const,
     users: "", needs: "", lighting: "", ventilation: "", privacy: "", accessibility: "", furniture: "", equipment: "",
-    connections: "", notes: "", order: 0, parametricStudyId: null, parametricScenarioId: null, appliedAreaType: null,
+    connections: "", notes: "", order: 0, parametricStudyId: null, parametricScenarioId: null,
+    capMinimumAreaM2: null, capRecommendedAreaM2: null, capPreliminaryGrossAreaM2: null, appliedAreaType: null,
     appliedAreaM2: null, capLibraryVersion: null, calculationEngineVersion: null, calculatedAt: null };
   const project = { ...pilotProject, needsProgram: [need] };
   const at = "2026-08-03T15:00:00.000Z";
@@ -67,4 +68,34 @@ test("applies a calculated scenario with complete CAP traceability", () => {
     applied.capLibraryVersion, applied.calculationEngineVersion, applied.calculatedAt],
   [study.id, calculated.id, "recommended", "1.1.0", study.engineVersion, at]);
   assert.equal(updated.history.at(-1)?.action, "cap_area_applied");
+});
+
+test("stores all CAP options without choosing one and sums quantities", () => {
+  const need = { id: "need-options-test", environment: "Varanda gourmet", sector: "Social", floor: "Térreo", currentSituation: "under_review" as const,
+    intervention: "study" as const, existingAreaM2: null, desiredAreaM2: null, quantity: 2, priority: "important" as const,
+    users: "", needs: "", lighting: "", ventilation: "", privacy: "", accessibility: "", furniture: "", equipment: "",
+    connections: "", notes: "", order: 0, parametricStudyId: null, parametricScenarioId: null,
+    capMinimumAreaM2: null, capRecommendedAreaM2: null, capPreliminaryGrossAreaM2: null, appliedAreaType: null,
+    appliedAreaM2: null, capLibraryVersion: null, calculationEngineVersion: null, calculatedAt: null };
+  const project = { ...pilotProject, needsProgram: [need] };
+  const at = "2026-08-03T16:00:00.000Z";
+  const study = createParametricStudy(project.id, "AMB-011", need.id, at);
+  const calculated = calculateScenario({ ...study.scenarios[0]!, selectedItems: [createSelectedLibraryItem("MOB-017", "furniture")] }, at);
+  const updated = saveScenarioOptionsToNeedsProgram(project, study, calculated, at);
+  const saved = updated.needsProgram[0]!;
+  assert.equal(saved.desiredAreaM2, null);
+  assert.equal(saved.appliedAreaType, null);
+  assert.deepEqual([saved.capMinimumAreaM2, saved.capRecommendedAreaM2, saved.capPreliminaryGrossAreaM2], [
+    calculated.result!.minimumNetAreaM2,
+    calculated.result!.recommendedNetAreaM2,
+    calculated.result!.estimatedGrossAreaM2,
+  ]);
+  assert.deepEqual(summarizeCapAreaOptions(updated.needsProgram), {
+    minimumAreaM2: calculated.result!.minimumNetAreaM2 * 2,
+    recommendedAreaM2: calculated.result!.recommendedNetAreaM2 * 2,
+    preliminaryGrossAreaM2: calculated.result!.estimatedGrossAreaM2 * 2,
+    calculatedEnvironments: 2,
+    totalEnvironments: 2,
+  });
+  assert.equal(updated.history.at(-1)?.action, "cap_options_saved");
 });
