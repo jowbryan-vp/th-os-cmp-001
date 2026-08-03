@@ -1,6 +1,6 @@
 {
   "name": "th-os-cmp-001",
-  "version": "0.1.0",
+  "version": "0.2.0-pilot",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -9,13 +9,16 @@
     "dev": "vinext dev",
     "build": "vinext build",
     "start": "vinext start",
+    "preview": "vinext start",
+    "deploy": "vinext deploy",
+    "deploy:dry-run": "pnpm build && wrangler deploy --dry-run --outdir .wrangler/dry-run",
     "typecheck": "tsc --noEmit",
     "test": "pnpm test:unit && pnpm test:integration",
     "test:unit": "node --import tsx --test tests/unit/*.test.ts",
     "test:integration": "node --import tsx --test tests/integration/*.test.ts",
     "test:e2e": "playwright test",
     "test:smoke": "pnpm build && node --test tests/smoke/rendered-html.test.mjs",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern playwright-report --ignore-pattern test-results",
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern .wrangler --ignore-pattern playwright-report --ignore-pattern test-results",
     "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
   "dependencies": {

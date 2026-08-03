@@ -1,5 +1,23 @@
 # Changelog
 
+## Não lançado — Correções do piloto
+
+- corrige o recorte da logo de 2000×2000 no cabeçalho sticky para impedir que
+  sua área bloqueie a rolagem;
+- adiciona regressão E2E para altura do cabeçalho e scroll sobre a logo em
+  desktop e mobile.
+
+## v0.2.0-pilot — 2026-07-28
+
+- configuração do Worker `th-os-cmp-001-pilot` para Vinext/Vite e Wrangler 4;
+- scripts de preview, dry-run real do bundle e implantação manual;
+- aviso acessível de que os dados permanecem somente no navegador/dispositivo;
+- cobertura E2E de aviso local, exportação móvel e isolamento entre contextos;
+- guia de implantação, rollback, segredos e checklist pós-deploy;
+- implantação validada em
+  `https://th-os-cmp-001-pilot.jowbryan.workers.dev`;
+- smoke test público sem erros de navegador e sete cenários E2E aprovados.
+
 ## 2026-07-28 — Consolidação v2 para uso piloto
 
 - seed canônico de Cacoal/RO sem dados pessoais inventados;

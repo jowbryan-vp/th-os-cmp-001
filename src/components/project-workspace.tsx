@@ -108,6 +108,10 @@ export function ProjectWorkspace() {
         onHome={() => setView("list")} onNew={newProject}
         onImport={() => importInput.current?.click()} onExport={download}
       />
+      <aside className="pilot-notice" aria-label="Aviso sobre armazenamento local">
+        <strong>Versão piloto.</strong>{" "}
+        Os dados ficam armazenados somente neste navegador e dispositivo. Exporte o projeto em JSON para manter uma cópia de segurança.
+      </aside>
       {view === "list" ? (
         <ProjectList projects={projects} onOpen={open} onArchive={archive} onDuplicate={duplicate} onDelete={remove} />
       ) : current ? (
@@ -128,13 +132,15 @@ function Header({ record, autosave, onHome, onNew, onImport, onExport }: {
     : autosave.state === "error" ? "Erro ao salvar" : autosave.state === "saved" ? "Salvo neste dispositivo" : "";
   return <header className="topbar">
     <button className="brand-link brand-button" aria-label="Voltar para projetos" onClick={onHome}>
-      <Image src={logo} alt="TH Arquitetura" priority unoptimized />
+      <span className="brand-crop brand-crop--horizontal" aria-hidden="true">
+        <Image src={logo} alt="" priority unoptimized />
+      </span>
     </button>
     <div className="product-signature"><strong>TH OS</strong><span>Cadastro Mestre do Projeto · CMP-001</span></div>
     <div className="topbar-actions">
       {record && saveLabel && <span className={`save-status save-status--${autosave.state}`}>{saveLabel}</span>}
       {autosave.state === "error" && <button className="button button--ghost" onClick={() => void autosave.retry()}>Tentar novamente</button>}
-      {record ? <button className="button button--ghost" onClick={onExport}>Exportar JSON</button>
+      {record ? <button className="button button--ghost record-export" onClick={onExport}>Exportar JSON</button>
         : <><button className="button button--ghost" onClick={onImport}>Importar JSON</button>
           <button className="button button--primary" onClick={onNew}>Novo projeto</button></>}
     </div>

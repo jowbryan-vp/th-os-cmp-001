@@ -13,6 +13,8 @@
 2. Agrupamento visual por setor/pavimento e filtros do programa.
 3. Backup consolidado de todos os cadastros.
 4. Testes de componentes e variações de conflito de importação.
+5. Automatizar deploy somente após estabilizar o piloto manual, usando secrets
+   protegidos `CLOUDFLARE_API_TOKEN` e `CLOUDFLARE_ACCOUNT_ID`.
 
 Proposta, contratos, financeiro, login e integrações permanecem módulos
 separados e fora do CMP-001.
