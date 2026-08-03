@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   priorities, projectPhases, readinessLevels, recordStatuses,
 } from "./project-master-record";
+import { parametricEnvironmentStudySchema } from "../features/cap/domain/cap-library-schema";
 
 const nullableNumber = z.number().finite().nonnegative().nullable();
 const id = z.string().min(3);
@@ -54,6 +55,10 @@ export const needsItemSchema = z.object({
   users: z.string(), needs: z.string(), lighting: z.string(), ventilation: z.string(),
   privacy: z.string(), accessibility: z.string(), furniture: z.string(), equipment: z.string(),
   connections: z.string(), notes: z.string(), order: z.number().int().nonnegative(),
+  parametricStudyId: z.string().nullable().default(null), parametricScenarioId: z.string().nullable().default(null),
+  appliedAreaType: z.enum(["minimum", "recommended", "preliminary_gross"]).nullable().default(null),
+  appliedAreaM2: nullableNumber.default(null), capLibraryVersion: z.string().nullable().default(null),
+  calculationEngineVersion: z.string().nullable().default(null), calculatedAt: z.string().nullable().default(null),
 }).strict();
 const planningSchema = z.object({
   firstContactDate: z.string(), meetingDate: z.string(), surveyDate: z.string(),
@@ -100,7 +105,7 @@ const pendingSchema = z.object({
   completedAt: z.string().nullable(),
 }).strict();
 const historySchema = z.object({
-  id, at: z.string(), action: z.enum(["created", "edited", "phase_changed", "status_changed", "duplicated", "imported", "exported", "archived", "restored", "deleted", "scope_changed"]),
+  id, at: z.string(), action: z.enum(["created", "edited", "phase_changed", "status_changed", "duplicated", "imported", "exported", "archived", "restored", "deleted", "scope_changed", "cap_area_applied"]),
   detail: z.string(),
 }).strict();
 
@@ -121,10 +126,19 @@ export const projectMasterRecordSchema = z.object({
 export const importEnvelopeSchema = z.object({
   schemaVersion: z.number().int().positive(), exportedAt: z.string(),
   application: z.literal("TH-OS-CMP-001"), project: z.unknown(),
+  parametricStudies: z.array(parametricEnvironmentStudySchema).optional().default([]),
 }).strict();
-export const backupEnvelopeSchema = z.object({
+const legacyBackupEnvelopeSchema = z.object({
   kind: z.literal("consolidated-backup"), schemaVersion: z.number().int().positive(),
   exportedAt: z.string(), application: z.literal("TH-OS-CMP-001"),
   projects: z.array(z.unknown()),
 }).strict();
+const capLibraryReferenceSchema = z.object({ libraryCode: z.literal("CAP-001"), version: z.string(), sourceHash: z.string() }).strict();
+const backupV2EnvelopeSchema = z.object({
+  kind: z.literal("consolidated-backup"), backupSchemaVersion: z.literal(2),
+  schemaVersion: z.number().int().positive(), exportedAt: z.string(), application: z.literal("TH-OS-CMP-001"),
+  projectRecords: z.array(z.unknown()), parametricStudies: z.array(parametricEnvironmentStudySchema),
+  capLibraryReferences: z.array(capLibraryReferenceSchema),
+}).strict();
+export const backupEnvelopeSchema = z.union([backupV2EnvelopeSchema, legacyBackupEnvelopeSchema]);
 export const readinessSchema = z.enum(readinessLevels);
