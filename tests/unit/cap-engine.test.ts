@@ -36,6 +36,16 @@ test("handles opening and sliding wardrobes, overlap and source conflicts", () =
   assert.equal(sliding.warnings.some((warning) => warning.includes("Armário de abrir")), false);
 });
 
+test("calcula item personalizado 0,60 x 1,60 sem altura e ignora legado incompleto com aviso amigável", () => {
+  const custom = { id: "custom-valid", sourceType: "custom", libraryItemId: null, quantity: 1, dimensionsMode: "custom",
+    customWidthM: 0.6, customLengthM: 1.6, customHeightM: null, functionalRole: "primary", circulationProfileId: "CIR-002", notes: "Mesa especial" } as const;
+  const pending = { ...custom, id: "custom-pending", customWidthM: null, notes: "Item antigo" };
+  const result = calculateParametricScenario(scenario("AMB-004", [custom, pending]), AT);
+  assert.ok(result.breakdown.itemAreas.some((entry) => entry.itemId === "custom-valid"));
+  assert.equal(result.breakdown.itemAreas.some((entry) => entry.itemId === "custom-pending"), false);
+  assert.ok(result.warnings.some((warning) => warning.includes("Item antigo") && warning.includes("pendente")));
+});
+
 test("calculates one-face and two-face closet arrangements", () => {
   const one = calculateParametricScenario(scenario("AMB-003", [item("MOB-008")], { arrangement: "one_face" }), AT);
   const two = calculateParametricScenario(scenario("AMB-003", [item("MOB-008")], { arrangement: "two_faces" }), AT);

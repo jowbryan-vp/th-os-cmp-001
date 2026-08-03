@@ -8,9 +8,10 @@ export function createSelectedLibraryItem(libraryItemId: string, sourceType: "fu
     customWidthM: null, customLengthM: null, customHeightM: null, functionalRole: "primary",
     circulationProfileId: "CIR-002", notes: "" };
 }
-export function createSelectedCustomItem(widthM: number, lengthM: number, heightM: number | null, notes: string): SelectedItem {
-  return { id: createId("cap-item"), sourceType: "custom", libraryItemId: null, quantity: 1, dimensionsMode: "custom",
-    customWidthM: widthM, customLengthM: lengthM, customHeightM: heightM, functionalRole: "primary",
+export function createSelectedCustomItem(widthM: number, lengthM: number, heightM: number | null, notes: string,
+  quantity = 1, functionalRole = "primary"): SelectedItem {
+  return { id: createId("cap-item"), sourceType: "custom", libraryItemId: null, quantity, dimensionsMode: "custom",
+    customWidthM: widthM, customLengthM: lengthM, customHeightM: heightM, functionalRole,
     circulationProfileId: "CIR-002", notes };
 }
 export function createParametricScenario(environmentId: string, name = "Cenário inicial", now = new Date().toISOString()): ParametricScenario {
