@@ -1,5 +1,14 @@
 # Changelog
 
+## Não lançado — CAP-001 v1.1
+
+- preserva e audita a fonte CAP-001 com normalização determinística;
+- adiciona 14 ambientes com maturidade explícita e oito estratégias TypeScript;
+- separa conforto de acessibilidade, preserva inferências e conflitos;
+- inclui calculadora, estudos, comparador de quatro cenários e breakdown rastreável;
+- aplica resultados ao Programa de Necessidades com confirmação e metadados;
+- migra o IndexedDB para v3 e inclui estudos no backup/restauração atômicos.
+
 ## Não lançado — Backup consolidado
 
 - exportação versionada de todos os cadastros em um único JSON;

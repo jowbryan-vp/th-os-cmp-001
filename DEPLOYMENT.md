@@ -34,6 +34,7 @@ conversas, commits ou arquivos versionados.
 
 ```bash
 pnpm install --frozen-lockfile
+pnpm cap:normalize
 pnpm lint
 pnpm typecheck
 pnpm test
@@ -44,6 +45,10 @@ pnpm deploy:dry-run
 
 O último comando recompila a aplicação e executa `wrangler deploy --dry-run`,
 gravando o pacote inspecionável em `.wrangler/dry-run`.
+
+Antes de publicar uma versão CAP, confirme que a normalização não alterou o hash
+da fonte, que não há achados `blocking` e que o backup v2 restaura estudos em
+conjunto com os projetos. O PR CAP-001 não autoriza publicação em produção.
 
 ## 5. Publicar
 
