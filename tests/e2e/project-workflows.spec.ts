@@ -304,8 +304,12 @@ test("catalog combobox selects presets, creates a city linked to RO and keeps it
   await city.fill("Nova União");
   await page.getByRole("button", { name: /Adicionar “Nova União”/ }).click();
   await expect(city).toHaveValue("Nova União"); await city.blur();
-  await expect.poll(async () => page.getByText("Salvo neste dispositivo").count(), { timeout: 3_000 }).toBe(1);
-  await page.waitForTimeout(600);
+  await expect.poll(() => page.evaluate(() => new Promise<string>((resolve, reject) => {
+    const request = indexedDB.open("th-os"); request.onsuccess = () => {
+      const get = request.result.transaction("project-master-records").objectStore("project-master-records").get("project-th-2026-001");
+      get.onsuccess = () => resolve(get.result?.property?.city ?? ""); get.onerror = () => reject(get.error);
+    }; request.onerror = () => reject(request.error);
+  })), { timeout: 5_000 }).toBe("Nova União");
   await page.reload();
   await page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" }).locator("button.project-card__open").click();
   const restoredCity = page.getByRole("combobox", { name: "Cidade", exact: true });
