@@ -1099,9 +1099,10 @@ button {
   bottom: var(--space-6);
   z-index: 40;
   display: grid;
-  grid-template-columns: 1.8rem 1fr;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-3);
-  width: min(24rem, calc(100vw - 2rem));
+  width: clamp(20rem, 36vw, 32rem);
+  max-width: calc(100vw - 2rem);
   padding: var(--space-4);
   border: 1px solid color-mix(in srgb, var(--brand-military) 30%, var(--color-border));
   border-radius: var(--radius-md);
@@ -1121,11 +1122,16 @@ button {
 
 .toast strong {
   display: block;
-  font-size: 0.78rem;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: normal;
+  font-size: 0.86rem;
+  line-height: 1.45;
 }
 
 .toast button {
-  margin-top: var(--space-2);
+  align-self: start;
+  margin: 0;
   padding: 0;
   border: 0;
   background: transparent;
@@ -1404,7 +1410,8 @@ button {
 }
 
 /* CAP-001: biblioteca e calculadora paramétrica */
-.cap-shell { width: min(1500px, calc(100% - 32px)); margin: 24px auto 72px; }
+.cap-shell { width: min(1500px, calc(100% - 32px)); max-width: 100%; margin: 24px auto 72px; overflow-x: clip; }
+.cap-shell *, .cap-shell *::before, .cap-shell *::after { box-sizing: border-box; }
 .cap-header { padding: 24px; color: #f7f7f2; background: #303529; border-radius: 16px 16px 0 0; }
 .cap-header h1 { margin: 6px 0; }
 .cap-header p { max-width: 1000px; margin-bottom: 0; color: #dde1d4; }
@@ -1413,10 +1420,10 @@ button {
 .cap-tabs { display: flex; gap: 4px; padding: 10px; overflow-x: auto; background: #eceee6; border: 1px solid #d7dacd; }
 .cap-tabs button { flex: 0 0 auto; border-color: transparent; background: transparent; }
 .cap-tabs button[aria-current="page"] { color: #fff; background: #58613f; }
-.cap-panel, .cap-config-panel, .cap-result-panel { padding: 22px; background: #fff; border: 1px solid #d9dbd2; }
+.cap-panel, .cap-config-panel, .cap-result-panel { min-width: 0; max-width: 100%; padding: 22px; background: #fff; border: 1px solid #d9dbd2; }
 .cap-toolbar { display: grid; grid-template-columns: minmax(220px, 2fr) minmax(180px, 1fr); gap: 12px; margin-bottom: 18px; }
 .cap-toolbar label, .cap-config-panel > label, .cap-parameter-grid label { display: grid; gap: 6px; font-size: .84rem; font-weight: 650; }
-.cap-library-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(300px, .9fr); gap: 20px; }
+.cap-library-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, .9fr); gap: 20px; }
 .cap-environment-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .cap-environment-card { display: grid; gap: 7px; min-height: 150px; padding: 16px; text-align: left; background: #fafaf7; border: 1px solid #dfe1d8; border-radius: 12px; }
 .cap-environment-card span, .cap-environment-card small { color: #6c7065; }
@@ -1427,13 +1434,23 @@ button {
 .cap-maturity { display: inline-flex; padding: 4px 8px; margin-bottom: 8px; color: #394027; background: #e1e7d1; border-radius: 999px; font-size: .72rem; font-weight: 750; }
 .cap-maturity--reference_only, .cap-maturity--preliminary { color: #774f0c; background: #fff0c7; }
 .cap-warning { padding: 10px; color: #703a20; background: #fff0e5; border-left: 4px solid #a85a2c; }
-.cap-calculator { display: grid; grid-template-columns: minmax(340px, .85fr) minmax(0, 1.45fr); gap: 18px; margin-top: 18px; }
+.cap-calculator { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 18px; margin-top: 18px; }
 .cap-config-panel { display: grid; align-content: start; gap: 14px; border-radius: 12px; }
+.cap-config-panel > *, .cap-result-panel > *, .cap-custom-item > *, .cap-items > * { min-width: 0; max-width: 100%; }
+.cap-config-panel input, .cap-config-panel select, .cap-config-panel textarea, .cap-config-panel button { max-width: 100%; }
+.cap-config-panel label, .cap-custom-item legend { overflow-wrap: break-word; word-break: normal; }
 .cap-items { display: grid; gap: 8px; padding: 14px; border: 1px solid #d8dbd0; }
 .cap-items > div { display: grid; grid-template-columns: 1fr 74px; gap: 8px; align-items: center; }
-.cap-custom-item { display: grid; grid-template-columns: 1.4fr 1fr 1fr auto; gap: 8px; align-items: end; padding: 14px; border: 1px solid #d8dbd0; }
+.cap-custom-item { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: end; min-width: 0; padding: 14px; border: 1px solid #d8dbd0; }
 .cap-custom-item label { display: grid; gap: 5px; font-size: .8rem; }
-.cap-custom-item__row { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.cap-custom-item__notes { grid-column: span 2; }
+.cap-custom-item__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.cap-custom-item__row { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: center; padding-top: 9px; border-top: 1px solid #e1e3db; }
+.cap-custom-item__row > span { display: grid; min-width: 0; gap: 3px; }
+.cap-custom-item__row small { color: #64685e; }
+.cap-custom-item__row > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.cap-custom-item__row.is-pending { padding: 10px; color: #743f14; background: #fff4dc; border: 1px solid #d7a45e; }
+.cap-stale-result { padding: 10px; color: #704411; background: #fff3d2; border-left: 4px solid #bb7b21; }
 .cap-parameter-grid, .cap-result-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .cap-actions, .cap-apply, .cap-program-link { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .cap-program-link { margin-top: 12px; }
@@ -1461,12 +1478,29 @@ button {
   .cap-environment-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cap-library-layout, .cap-source-grid { grid-template-columns: 1fr; }
 }
+@media (max-width: 1180px) {
+  .cap-calculator { grid-template-columns: 1fr; }
+}
 @media (max-width: 760px) {
   .cap-shell { width: min(100% - 20px, 1500px); margin-top: 10px; }
   .cap-toolbar, .cap-calculator, .cap-environment-grid, .cap-parameter-grid, .cap-result-grid, .cap-custom-item { grid-template-columns: 1fr; }
   .cap-panel, .cap-config-panel, .cap-result-panel { padding: 15px; }
   .cap-study-list article { align-items: flex-start; flex-wrap: wrap; }
+  .cap-custom-item__notes { grid-column: auto; }
+  .toast { right: 10px; bottom: 10px; width: calc(100vw - 20px); max-width: none; }
 }
+
+.catalog-combobox { position: relative; min-width: 0; }
+.catalog-combobox__control { display: grid; grid-template-columns: minmax(0, 1fr) 2.6rem; }
+.catalog-combobox__control input { width: 100%; min-width: 0; border-radius: var(--radius-sm, 4px) 0 0 var(--radius-sm, 4px); }
+.catalog-combobox__control button { min-width: 0; padding-inline: 8px; border-left: 0; border-radius: 0 var(--radius-sm, 4px) var(--radius-sm, 4px) 0; }
+.catalog-combobox__popover { position: absolute; top: calc(100% + 4px); right: 0; left: 0; z-index: 30; min-width: min(18rem, calc(100vw - 32px)); max-height: 18rem; overflow: auto; padding: 5px; background: #fff; border: 1px solid #bfc3b5; border-radius: 8px; box-shadow: var(--shadow-float); }
+.catalog-combobox__popover ul { padding: 0; margin: 0; list-style: none; }
+.catalog-combobox__popover li, .catalog-combobox__create { width: 100%; padding: 9px 10px; text-align: left; border: 0; background: transparent; }
+.catalog-combobox__popover li[role="option"] { cursor: pointer; }
+.catalog-combobox__popover li[role="option"]:hover, .catalog-combobox__popover li.is-active { background: #ecefe4; }
+.catalog-combobox__empty { color: #666b61; }
+.catalog-combobox__create { border-top: 1px solid #e0e2da; color: #46502f; font-weight: 700; }
 
 /* CMP-001 v2: dense pilot workspace */
 .filters-card {
