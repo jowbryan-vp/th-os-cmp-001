@@ -8,10 +8,11 @@ async function resetDatabase(page: import("@playwright/test").Page) {
       new Promise<void>((resolve, reject) => {
         const request = indexedDB.open("th-os");
         request.onsuccess = () => {
-          const stores = ["project-master-records", "parametric-studies"].filter((name) => request.result.objectStoreNames.contains(name));
+          const stores = ["project-master-records", "parametric-studies", "reference-catalog-options"].filter((name) => request.result.objectStoreNames.contains(name));
           const transaction = request.result.transaction(stores, "readwrite");
           transaction.objectStore("project-master-records").clear();
           if (stores.includes("parametric-studies")) transaction.objectStore("parametric-studies").clear();
+          if (stores.includes("reference-catalog-options")) transaction.objectStore("reference-catalog-options").clear();
           transaction.oncomplete = () => resolve();
           transaction.onerror = () => reject(transaction.error);
         };
@@ -156,7 +157,8 @@ test("exports and restores a complete browser backup", async ({ page }) => {
   const buffer = Buffer.concat(chunks);
   const envelope = JSON.parse(buffer.toString());
   expect(envelope.kind).toBe("consolidated-backup");
-  expect(envelope.backupSchemaVersion).toBe(2);
+  expect(envelope.backupSchemaVersion).toBe(3);
+  expect(envelope.referenceCatalogOptions.length).toBeGreaterThan(0);
   expect(envelope.projectRecords).toHaveLength(2);
   expect(envelope.parametricStudies).toEqual([]);
   expect(envelope.capLibraryReferences).toHaveLength(1);
@@ -200,7 +202,7 @@ test("calculates, compares, applies and restores CAP-001 scenarios", async ({ pa
   const pilot = page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" });
   await pilot.locator("button.project-card__open").click();
   await page.getByRole("button", { name: "+ Ambiente" }).click();
-  await page.getByLabel("Ambiente").last().fill("Suíte");
+  await page.getByRole("combobox", { name: "Ambiente", exact: true }).last().fill("Suíte");
   await expect(page.getByText("Salvo neste dispositivo")).toBeVisible();
   await page.getByRole("button", { name: "Pré-dimensionar com CAP-001" }).click();
   await expect(page.getByRole("heading", { name: "Biblioteca e Calculadora Paramétrica" })).toBeVisible();
@@ -220,7 +222,7 @@ test("calculates, compares, applies and restores CAP-001 scenarios", async ({ pa
   await expect(page.getByRole("columnheader", { name: "King + armário" })).toBeVisible();
   await expect(page.getByRole("columnheader", { name: /Queen \+ closet/ })).toBeVisible();
   await expect(page.getByRole("rowheader", { name: "Diferença vs. cenário A" })).toBeVisible();
-  await page.getByRole("button", { name: "Calculadora" }).click();
+  await page.getByRole("button", { name: "Calculadora", exact: true }).click();
   await page.getByRole("button", { name: "Área recomendada" }).click();
   await expect(page.getByText(/Área CAP-001 de .* aplicada/)).toBeVisible();
   await expect(page.getByText(/biblioteca 1\.1\.0 · motor 1\.0\.0/)).toBeVisible();
@@ -253,6 +255,63 @@ test("calculates, compares, applies and restores CAP-001 scenarios", async ({ pa
   await expect(page.getByText("Backup restaurado com 1 cadastro(s) e 1 estudo(s).")).toBeVisible();
   await page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" }).locator("button.project-card__open").click();
   await expect(page.getByText(/biblioteca 1\.1\.0 · motor 1\.0\.0/)).toBeVisible();
+});
+
+test("CAP accepts 0,60 x 1,60 and stays usable across desktop, zoom equivalents, tablet and mobile", async ({ page }) => {
+  await page.getByRole("button", { name: "CAP-001" }).click();
+  await page.getByRole("button", { name: "Calculadora", exact: true }).click();
+  const environment = page.getByRole("combobox", { name: "Ambiente", exact: true });
+  await environment.fill("Sala de Estar"); await environment.press("ArrowDown"); await environment.press("Enter");
+  await page.getByRole("checkbox", { name: /Sofá 3 Lugares/ }).check();
+  await page.getByLabel("Quantidade de Poltrona Individual").fill("2");
+  await page.getByLabel("Nome", { exact: true }).fill("Mesa especial");
+  await page.getByLabel("Largura (m)").fill("0,60");
+  await page.getByLabel("Comprimento (m)").fill("1,60");
+  await page.getByRole("button", { name: "Adicionar item" }).click();
+  await expect(page.locator(".cap-custom-item__row").filter({ hasText: "Mesa especial" })).toContainText("0,6 × 1,6 m");
+  await page.getByRole("button", { name: "Calcular cenário" }).click();
+  await expect(page.getByText("Cenário calculado. Revise premissas e alertas.")).toBeVisible();
+  await expect(page.getByText(/não foi possível calcular/i)).toHaveCount(0);
+
+  const viewports = [
+    { name: "1920x1080", width: 1920, height: 1080 }, { name: "1440x900", width: 1440, height: 900 },
+    { name: "1366x768", width: 1366, height: 768 }, { name: "zoom-125", width: 1152, height: 720 },
+    { name: "zoom-150", width: 960, height: 600 }, { name: "tablet", width: 820, height: 1000 },
+    { name: "mobile", width: 390, height: 844 },
+  ];
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport); await expect(page.locator(".cap-result-panel")).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
+    await page.screenshot({ path: `test-results/cap-${viewport.name}.png`, fullPage: true });
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole("button", { name: "Salvar estudo" }).click();
+  await expect(page.getByText("Estudo salvo neste dispositivo.")).toBeVisible();
+  await page.getByRole("button", { name: "Duplicar cenário" }).click();
+  await expect(page.locator(".cap-custom-item__row").filter({ hasText: "Mesa especial" })).toContainText("0,6 × 1,6 m");
+  await page.getByRole("button", { name: "Salvar estudo" }).click();
+  await page.reload(); await page.getByRole("button", { name: "CAP-001" }).click();
+  await page.getByRole("button", { name: "Estudos do projeto" }).click();
+  await page.getByRole("button", { name: "Abrir" }).click();
+  await expect(page.locator(".cap-custom-item__row").filter({ hasText: "Mesa especial" })).toContainText("0,6 × 1,6 m");
+});
+
+test("catalog combobox selects presets, creates a city linked to RO and keeps it after reload", async ({ page }) => {
+  await page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" }).locator("button.project-card__open").click();
+  const state = page.getByRole("combobox", { name: "Estado", exact: true });
+  await state.fill("Rondônia"); await state.press("ArrowDown"); await state.press("Enter");
+  const city = page.getByRole("combobox", { name: "Cidade", exact: true });
+  await city.fill("Nova União");
+  await page.getByRole("button", { name: /Adicionar “Nova União”/ }).click();
+  await expect(city).toHaveValue("Nova União"); await city.blur();
+  await expect.poll(async () => page.getByText("Salvo neste dispositivo").count(), { timeout: 3_000 }).toBe(1);
+  await page.waitForTimeout(600);
+  await page.reload();
+  await page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" }).locator("button.project-card__open").click();
+  const restoredCity = page.getByRole("combobox", { name: "Cidade", exact: true });
+  await expect(restoredCity).toHaveValue("Nova União");
+  await restoredCity.press("ArrowDown"); await expect(page.getByRole("option", { name: "Nova União" })).toBeVisible();
+  await restoredCity.press("Escape"); await expect(restoredCity).toHaveAttribute("aria-expanded", "false");
 });
 
 test("keeps the CAP-001 library usable on tablet and mobile", async ({ page }) => {
