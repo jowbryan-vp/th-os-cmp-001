@@ -288,7 +288,7 @@ test("shows comfort and accessibility choices and advances to the next environme
   await expect(page.getByText("Ambiente registrado. Configure agora o próximo ambiente.")).toBeVisible();
   await expect(report.getByText("1 de 2 ambiente(s) calculado(s)")).toBeVisible();
   await expect(report.locator("article")).toHaveCount(2);
-  await expect(report.locator("article.is-current")).toContainText("Próximo ambiente");
+  await expect(report.locator("article.is-current")).toContainText("Dormitório Casal / Suíte");
   await expect(report.locator("article").first()).toContainText("Varanda Gourmet");
   await expect(page.getByLabel("Item do programa").locator("option")).toHaveCount(3);
   await expect(page.getByLabel("Item do programa").locator("option:checked")).toHaveText("Ambiente sem nome");

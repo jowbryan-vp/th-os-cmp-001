@@ -1,13 +1,17 @@
 import { ProjectMasterRecord } from "../../../../domain/project-master-record";
+import { ParametricEnvironmentStudy } from "../../domain/cap-library-types";
+import { capLibrary } from "../../services/cap-library-service";
 import { summarizeCapAreaOptions } from "../../services/cap-program-service";
 
 const formatArea = (value: number) => value.toLocaleString("pt-BR", {
   minimumFractionDigits: 2, maximumFractionDigits: 2,
 });
 
-export function CapProgramSummaryPanel({ project, currentNeedsItemId }: {
+export function CapProgramSummaryPanel({ project, currentNeedsItemId, currentEnvironmentLabel, studies = [] }: {
   project?: ProjectMasterRecord;
   currentNeedsItemId?: string;
+  currentEnvironmentLabel?: string;
+  studies?: ParametricEnvironmentStudy[];
 }) {
   if (!project) return <aside className="cap-program-report"><h2>Relatório do programa</h2><p>Selecione um projeto para acompanhar as somatórias.</p></aside>;
   const totals = summarizeCapAreaOptions(project.needsProgram);
@@ -24,8 +28,14 @@ export function CapProgramSummaryPanel({ project, currentNeedsItemId }: {
       const calculated = item.capMinimumAreaM2 !== null && item.capRecommendedAreaM2 !== null
         && item.capPreliminaryGrossAreaM2 !== null;
       const quantity = Math.max(1, item.quantity);
+      const savedStudy = item.parametricStudyId ? studies.find((study) => study.id === item.parametricStudyId) : undefined;
+      const savedEnvironmentLabel = savedStudy
+        ? capLibrary.environments.find((environment) => environment.id === savedStudy.environmentId)?.label : undefined;
+      const environmentLabel = item.environment.trim()
+        || (item.id === currentNeedsItemId ? currentEnvironmentLabel : undefined)
+        || savedEnvironmentLabel || "Próximo ambiente";
       return <article key={item.id} className={item.id === currentNeedsItemId ? "is-current" : ""}>
-        <div><span>{String(index + 1).padStart(2, "0")}</span><strong>{item.environment || "Próximo ambiente"}</strong></div>
+        <div><span>{String(index + 1).padStart(2, "0")}</span><strong>{environmentLabel}</strong></div>
         <small>Quantidade: {quantity}{item.id === currentNeedsItemId ? " · configurando agora" : ""}</small>
         {calculated ? <dl>
           <div><dt>Mínima</dt><dd>{formatArea(item.capMinimumAreaM2! * quantity)} m²</dd></div>

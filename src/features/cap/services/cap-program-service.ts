@@ -1,5 +1,6 @@
 import { NeedsItem, ProjectMasterRecord, createHistoryEvent } from "../../../domain/project-master-record";
 import { ParametricEnvironmentStudy, ParametricScenario } from "../domain/cap-library-types";
+import { getCapEnvironment } from "./cap-library-service";
 
 export type AppliedAreaType = "minimum" | "recommended" | "preliminary_gross";
 
@@ -36,11 +37,13 @@ export function saveScenarioOptionsToNeedsProgram(
 ): ProjectMasterRecord {
   const needsItemId = assertLinkedNeed(project, study);
   const options = getScenarioAreaOptions(scenario);
+  const environmentLabel = getCapEnvironment(scenario.environmentId).label;
   return {
     ...project,
     needsProgram: project.needsProgram.map((item) => item.id === needsItemId ? {
       ...item,
       ...options,
+      environment: item.environment.trim() || environmentLabel,
       parametricStudyId: study.id,
       parametricScenarioId: scenario.id,
       capLibraryVersion: study.libraryVersion,
@@ -87,11 +90,13 @@ export function applyScenarioToNeedsProgram(
   const needsItemId = assertLinkedNeed(project, study);
   const areaM2 = getScenarioArea(scenario, areaType);
   const options = getScenarioAreaOptions(scenario);
+  const environmentLabel = getCapEnvironment(scenario.environmentId).label;
   return {
     ...project,
     needsProgram: project.needsProgram.map((item) => item.id === needsItemId ? {
       ...item,
       ...options,
+      environment: item.environment.trim() || environmentLabel,
       desiredAreaM2: areaM2,
       parametricStudyId: study.id,
       parametricScenarioId: scenario.id,

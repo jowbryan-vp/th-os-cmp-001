@@ -71,7 +71,7 @@ test("applies a calculated scenario with complete CAP traceability", () => {
 });
 
 test("stores all CAP options without choosing one and sums quantities", () => {
-  const need = { id: "need-options-test", environment: "Varanda gourmet", sector: "Social", floor: "Térreo", currentSituation: "under_review" as const,
+  const need = { id: "need-options-test", environment: "", sector: "Social", floor: "Térreo", currentSituation: "under_review" as const,
     intervention: "study" as const, existingAreaM2: null, desiredAreaM2: null, quantity: 2, priority: "important" as const,
     users: "", needs: "", lighting: "", ventilation: "", privacy: "", accessibility: "", furniture: "", equipment: "",
     connections: "", notes: "", order: 0, parametricStudyId: null, parametricScenarioId: null,
@@ -83,6 +83,7 @@ test("stores all CAP options without choosing one and sums quantities", () => {
   const calculated = calculateScenario({ ...study.scenarios[0]!, selectedItems: [createSelectedLibraryItem("MOB-017", "furniture")] }, at);
   const updated = saveScenarioOptionsToNeedsProgram(project, study, calculated, at);
   const saved = updated.needsProgram[0]!;
+  assert.equal(saved.environment, "Varanda Gourmet / Churrasqueira");
   assert.equal(saved.desiredAreaM2, null);
   assert.equal(saved.appliedAreaType, null);
   assert.deepEqual([saved.capMinimumAreaM2, saved.capRecommendedAreaM2, saved.capPreliminaryGrossAreaM2], [
