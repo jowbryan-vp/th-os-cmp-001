@@ -272,6 +272,11 @@ test("shows comfort and accessibility choices and advances to the next environme
   await expect(page.getByText("Salvo neste dispositivo")).toBeVisible();
   await page.getByRole("button", { name: "Pré-dimensionar com CAP-001" }).click();
 
+  const report = page.getByLabel("Relatório acumulado do Programa de Necessidades");
+  await expect(report.getByRole("heading", { name: "Relatório acumulado" })).toBeVisible();
+  await expect(report.getByText("Líquida mínima")).toBeVisible();
+  await expect(report.getByText("Líquida recomendada")).toBeVisible();
+  await expect(report.getByText("Bruta preliminar")).toBeVisible();
   await expect(page.getByRole("radio", { name: /Mínimo \/ compacto/ })).toBeVisible();
   await expect(page.getByRole("radio", { name: /Confortável \/ recomendado/ })).toBeChecked();
   await expect(page.getByRole("radio", { name: /Generoso/ })).toBeVisible();
@@ -281,6 +286,10 @@ test("shows comfort and accessibility choices and advances to the next environme
   await page.getByRole("button", { name: "Calcular, registrar e próximo ambiente →" }).click();
 
   await expect(page.getByText("Ambiente registrado. Configure agora o próximo ambiente.")).toBeVisible();
+  await expect(report.getByText("1 de 2 ambiente(s) calculado(s)")).toBeVisible();
+  await expect(report.locator("article")).toHaveCount(2);
+  await expect(report.locator("article.is-current")).toContainText("Próximo ambiente");
+  await expect(report.locator("article").first()).toContainText("Varanda Gourmet");
   await expect(page.getByLabel("Item do programa").locator("option")).toHaveCount(3);
   await expect(page.getByLabel("Item do programa").locator("option:checked")).toHaveText("Ambiente sem nome");
   await expect(page.getByText("Configure os itens e calcule o cenário.")).toBeVisible();

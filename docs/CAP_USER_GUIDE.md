@@ -8,6 +8,8 @@ As opções de conforto ficam sempre visíveis: **Mínimo/compacto**, **Confort�
 
 Clique em **Calcular e revisar** para conferir dimensões, áreas, composição e alertas. Para montar vários ambientes em sequência, use **Calcular, registrar e próximo ambiente**: o sistema salva as três áreas, cria outro item no programa e abre uma nova configuração.
 
+A terceira coluna apresenta um relatório vivo do que já foi registrado: ambientes, quantidades, áreas de cada item e somatórias líquida mínima, líquida recomendada e bruta preliminar. O ambiente em configuração fica destacado; em telas menores, o relatório aparece abaixo da calculadora.
+
 No **Programa de Necessidades**, os três totais acumulados mostram somente os ambientes já calculados pelo CAP-001 e consideram a quantidade informada. Em cada ambiente, escolha depois qual das três áreas preencherá a área desejada. Você também pode recalcular o ambiente antes de decidir.
 
 Piscina, deck/solário e casa de máquinas são ambientes separados. A piscina calcula o espelho d’água e uma reserva estrutural preliminar; o deck não recebe reserva de paredes por padrão; a casa de máquinas é tratada como área técnica fechada. Essas opções são extensões do piloto em revisão técnica.

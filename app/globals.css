@@ -1410,7 +1410,7 @@ button {
 }
 
 /* CAP-001: biblioteca e calculadora paramétrica */
-.cap-shell { width: min(1500px, calc(100% - 32px)); max-width: 100%; margin: 24px auto 72px; overflow-x: clip; }
+.cap-shell { width: min(1800px, calc(100% - 32px)); max-width: 100%; margin: 24px auto 72px; overflow-x: clip; }
 .cap-shell *, .cap-shell *::before, .cap-shell *::after { box-sizing: border-box; }
 .cap-header { padding: 24px; color: #f7f7f2; background: #303529; border-radius: 16px 16px 0 0; }
 .cap-header h1 { margin: 6px 0; }
@@ -1420,7 +1420,7 @@ button {
 .cap-tabs { display: flex; gap: 4px; padding: 10px; overflow-x: auto; background: #eceee6; border: 1px solid #d7dacd; }
 .cap-tabs button { flex: 0 0 auto; border-color: transparent; background: transparent; }
 .cap-tabs button[aria-current="page"] { color: #fff; background: #58613f; }
-.cap-panel, .cap-config-panel, .cap-result-panel { min-width: 0; max-width: 100%; padding: 22px; background: #fff; border: 1px solid #d9dbd2; }
+.cap-panel, .cap-config-panel, .cap-result-panel, .cap-program-report { min-width: 0; max-width: 100%; padding: 22px; background: #fff; border: 1px solid #d9dbd2; }
 .cap-toolbar { display: grid; grid-template-columns: minmax(220px, 2fr) minmax(180px, 1fr); gap: 12px; margin-bottom: 18px; }
 .cap-toolbar label, .cap-config-panel > label, .cap-parameter-grid label { display: grid; gap: 6px; font-size: .84rem; font-weight: 650; }
 .cap-library-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, .9fr); gap: 20px; }
@@ -1434,7 +1434,7 @@ button {
 .cap-maturity { display: inline-flex; padding: 4px 8px; margin-bottom: 8px; color: #394027; background: #e1e7d1; border-radius: 999px; font-size: .72rem; font-weight: 750; }
 .cap-maturity--reference_only, .cap-maturity--preliminary { color: #774f0c; background: #fff0c7; }
 .cap-warning { padding: 10px; color: #703a20; background: #fff0e5; border-left: 4px solid #a85a2c; }
-.cap-calculator { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 18px; margin-top: 18px; }
+.cap-calculator { display: grid; grid-template-columns: minmax(340px, 1.1fr) minmax(320px, .95fr) minmax(280px, .8fr); gap: 18px; margin-top: 18px; align-items: start; }
 .cap-config-panel { display: grid; align-content: start; gap: 14px; border-radius: 12px; }
 .cap-config-panel > *, .cap-result-panel > *, .cap-custom-item > *, .cap-items > * { min-width: 0; max-width: 100%; }
 .cap-config-panel input, .cap-config-panel select, .cap-config-panel textarea, .cap-config-panel button { max-width: 100%; }
@@ -1471,6 +1471,26 @@ button {
 .cap-save-options strong, .cap-save-options p { flex-basis: 100%; margin: 0; }
 .cap-save-options small { color: #64685e; }
 .cap-result-panel { border-radius: 12px; }
+.cap-program-report { position: sticky; top: 18px; display: grid; align-content: start; gap: 14px; max-height: calc(100vh - 36px); overflow-y: auto; border-radius: 12px; }
+.cap-program-report header { display: grid; gap: 4px; }
+.cap-program-report header h2, .cap-program-report header p { margin: 0; }
+.cap-program-report header p, .cap-report-note { color: #62685a; font-size: .82rem; }
+.cap-report-totals { display: grid; gap: 8px; }
+.cap-report-totals > div { display: grid; gap: 3px; padding: 11px; background: #eef3e5; border: 1px solid #d7dfc9; border-radius: 8px; }
+.cap-report-totals span { color: #5d6651; font-size: .76rem; }
+.cap-report-totals strong { font-size: 1.12rem; }
+.cap-report-note { margin: -5px 0 0; }
+.cap-report-environments { display: grid; gap: 9px; }
+.cap-report-environments article { display: grid; gap: 7px; padding: 11px; background: #fafbf7; border: 1px solid #dde1d6; border-radius: 8px; }
+.cap-report-environments article.is-current { background: #fff8e8; border-color: #c99f4e; }
+.cap-report-environments article > div:first-child { display: flex; gap: 8px; align-items: baseline; }
+.cap-report-environments article > div:first-child span { color: #76805f; font-size: .72rem; font-weight: 700; }
+.cap-report-environments article small { color: #62685a; }
+.cap-report-environments article > p { margin: 0; color: #82651f; font-size: .8rem; }
+.cap-report-environments dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin: 0; }
+.cap-report-environments dl div { display: grid; gap: 2px; min-width: 0; }
+.cap-report-environments dt { color: #6a7063; font-size: .68rem; }
+.cap-report-environments dd { margin: 0; font-size: .78rem; font-weight: 700; overflow-wrap: anywhere; }
 .cap-result-grid > div { display: grid; gap: 4px; padding: 14px; background: #f3f4ed; border-radius: 8px; }
 .cap-result-grid span { color: #656a5e; font-size: .78rem; }
 .cap-result-grid strong { font-size: 1.15rem; }
@@ -1495,11 +1515,12 @@ button {
 }
 @media (max-width: 1180px) {
   .cap-calculator { grid-template-columns: 1fr; }
+  .cap-program-report { position: static; max-height: none; }
 }
 @media (max-width: 760px) {
-  .cap-shell { width: min(100% - 20px, 1500px); margin-top: 10px; }
+  .cap-shell { width: min(100% - 20px, 1800px); margin-top: 10px; }
   .cap-toolbar, .cap-calculator, .cap-environment-grid, .cap-parameter-grid, .cap-result-grid, .cap-custom-item { grid-template-columns: 1fr; }
-  .cap-panel, .cap-config-panel, .cap-result-panel { padding: 15px; }
+  .cap-panel, .cap-config-panel, .cap-result-panel, .cap-program-report { padding: 15px; }
   .cap-study-list article { align-items: flex-start; flex-wrap: wrap; }
   .cap-custom-item__notes { grid-column: auto; }
   .cap-choice-group { grid-template-columns: 1fr; }

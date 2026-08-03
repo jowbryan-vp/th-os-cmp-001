@@ -10,6 +10,7 @@
 - registra as três opções de área por ambiente, acumula os três totais com quantidade e permite escolher depois;
 - transforma a configuração em fluxo sequencial com conforto e acessibilidade sempre visíveis e avanço automático para o próximo ambiente;
 - adiciona extensões técnicas separadas para piscina, deck/solário, casa de máquinas e despensa;
+- adiciona terceira coluna com relatório vivo dos ambientes, quantidades e totais líquidos e bruto preliminar;
 - migra o IndexedDB para v3 e inclui estudos no backup/restauração atômicos.
 
 ## Não lançado — Backup consolidado
