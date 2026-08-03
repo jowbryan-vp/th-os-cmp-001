@@ -1,0 +1,20 @@
+{
+  "description": "Base de dados relacional, abrangente e rastreável para 14 tipos de ambientes residenciais baseada na literatura clássica (Panero, Pronk, Neufert).",
+  "generatedAt": "2026-08-03T00:00:00.000Z",
+  "libraryCode": "CAP-001",
+  "notes": [
+    "Áreas de composições são presets comparativos.",
+    "Referências normativas exigem verificação vigente."
+  ],
+  "schemaVersion": 1,
+  "sourceHash": "8449321c330345221cf3136cdd7f5e6b2becf88f35215240ff921dcab8319ac2",
+  "status": "technical_review",
+  "supportedApplicationVersion": ">=0.2.0-pilot",
+  "title": "Biblioteca Paramétrica Completa de Dimensionamento Residencial",
+  "units": {
+    "angle": "degrees",
+    "area": "m2",
+    "length": "m"
+  },
+  "version": "1.1.0"
+}
