@@ -1,0 +1,816 @@
+{
+  "metadados": {
+    "codigo_documento": "CAP-001",
+    "titulo": "Biblioteca Paramétrica Completa de Dimensionamento Residencial",
+    "versao": "1.1.0",
+    "data_criacao": "2026-08-03",
+    "autor": "Sistema Paramétrico de Arquitetura",
+    "descricao": "Base de dados relacional, abrangente e rastreável para 14 tipos de ambientes residenciais baseada na literatura clássica (Panero, Pronk, Neufert).",
+    "unidades": {
+      "comprimento": "m",
+      "area": "m2",
+      "angulo": "graus"
+    }
+  },
+  "fontes": [
+    {
+      "id": "FNT-001",
+      "codigo": "PANERO_2008",
+      "titulo": "Dimensionamento Humano para Espaços Interiores",
+      "autores": [
+        "Julius Panero",
+        "Martin Zelnik"
+      ],
+      "editora": "Editorial Gustavo Gili, SL",
+      "edicao": "1ª edição, 4ª impressão",
+      "ano": 2008,
+      "isbn": "978-84-252-1835-4"
+    },
+    {
+      "id": "FNT-002",
+      "codigo": "PRONK_2003",
+      "titulo": "Dimensionamento em Arquitetura",
+      "autores": [
+        "Emile Pronk"
+      ],
+      "editora": "Editora Universitária / UFPB",
+      "edicao": "7ª edição",
+      "ano": 2003,
+      "isbn": "85-237-0269-5"
+    },
+    {
+      "id": "FNT-003",
+      "codigo": "NEUFERT_2022",
+      "titulo": "Arte de Projetar em Arquitetura",
+      "autores": [
+        "Ernst Neufert",
+        "Johannes Kister"
+      ],
+      "editora": "Bookman",
+      "edicao": "42ª edição",
+      "ano": 2022,
+      "isbn": "978-85-8260-575-2"
+    }
+  ],
+  "tipos_ambientes": [
+    {
+      "id": "AMB-001",
+      "nome": "Dormitório Casal / Suíte",
+      "categoria": "Privativo",
+      "descricao": "Espaço de descanso, vestuário e higiene de casal."
+    },
+    {
+      "id": "AMB-002",
+      "nome": "Dormitório Solteiro / Infantil",
+      "categoria": "Privativo",
+      "descricao": "Espaço individual de descanso, estudo e brincadeiras."
+    },
+    {
+      "id": "AMB-003",
+      "nome": "Closet (Vestuário Dedicado)",
+      "categoria": "Privativo",
+      "descricao": "Espaço exclusivo para guarda e organização de vestuário e calçados."
+    },
+    {
+      "id": "AMB-004",
+      "nome": "Sala de Estar / Home Theater",
+      "categoria": "Social",
+      "descricao": "Espaço de convivência social e entretenimento audiovisual."
+    },
+    {
+      "id": "AMB-005",
+      "nome": "Sala de Jantar",
+      "categoria": "Social",
+      "descricao": "Espaço para refeições formais e de recepção de convidados."
+    },
+    {
+      "id": "AMB-006",
+      "nome": "Lavabo / W.C. Social",
+      "categoria": "Social",
+      "descricao": "Instalação sanitária compacta social (sem chuveiro)."
+    },
+    {
+      "id": "AMB-007",
+      "nome": "Banheiro Completo / Suíte",
+      "categoria": "Higiene",
+      "descricao": "Ambiente de higiene pessoal contendo lavatório, bacia e chuveiro."
+    },
+    {
+      "id": "AMB-008",
+      "nome": "Cozinha Residencial",
+      "categoria": "Serviço",
+      "descricao": "Área de cocção, lavagem e armazenamento de alimentos."
+    },
+    {
+      "id": "AMB-009",
+      "nome": "Área de Serviço / Lavanderia",
+      "categoria": "Serviço",
+      "descricao": "Espaço de lavagem, secagem e passagem de roupas e limpeza."
+    },
+    {
+      "id": "AMB-010",
+      "nome": "Home Office / Escritório",
+      "categoria": "Trabalho",
+      "descricao": "Espaço dedicado a estudo, trabalho remoto e tarefas administrativas."
+    },
+    {
+      "id": "AMB-011",
+      "nome": "Varanda Gourmet / Churrasqueira",
+      "categoria": "Lazer",
+      "descricao": "Espaço coberto para lazer, churrasco e refeições informais."
+    },
+    {
+      "id": "AMB-012",
+      "nome": "Hall de Entrada / Vestíbulo",
+      "categoria": "Circulação",
+      "descricao": "Área de transição entre o exterior/acesso e o interior residencial."
+    },
+    {
+      "id": "AMB-013",
+      "nome": "Garagem / Vaga de Garagem",
+      "categoria": "Apoio",
+      "descricao": "Espaço coberto para estacionamento e manobra de veículos."
+    },
+    {
+      "id": "AMB-014",
+      "nome": "Escadas e Rampas Residencias",
+      "categoria": "Circulação",
+      "descricao": "Núcleo de circulação vertical entre pavimentos."
+    }
+  ],
+  "mobiliarios": [
+    {
+      "id": "MOB-001",
+      "nome": "Cama King Size",
+      "categoria": "Dormitório",
+      "largura": 1.93,
+      "comprimento": 2.03,
+      "altura": 0.5,
+      "fonte_id": "FNT-001",
+      "pagina": 151,
+      "tabela_figura": "Seção C-2.3",
+      "confidence": "high",
+      "notes": "Medida de colchão padrão King."
+    },
+    {
+      "id": "MOB-002",
+      "nome": "Cama Queen Size",
+      "categoria": "Dormitório",
+      "largura": 1.58,
+      "comprimento": 1.98,
+      "altura": 0.5,
+      "fonte_id": "FNT-001",
+      "pagina": 151,
+      "tabela_figura": "Seção C-2.3",
+      "confidence": "high",
+      "notes": "Medida de colchão padrão Queen."
+    },
+    {
+      "id": "MOB-003",
+      "nome": "Cama Casal Padrão (Pronk)",
+      "categoria": "Dormitório",
+      "largura": 1.4,
+      "comprimento": 1.9,
+      "altura": 0.45,
+      "fonte_id": "FNT-002",
+      "pagina": 19,
+      "tabela_figura": "Cap. 06 Quarto",
+      "confidence": "high",
+      "notes": "Modelo tradicional de casal (1.40x1.90m)."
+    },
+    {
+      "id": "MOB-004",
+      "nome": "Cama Solteiro Padrão",
+      "categoria": "Dormitório",
+      "largura": 0.8,
+      "comprimento": 1.9,
+      "altura": 0.45,
+      "fonte_id": "FNT-002",
+      "pagina": 19,
+      "tabela_figura": "Cap. 06 Quarto",
+      "confidence": "high",
+      "notes": "Cama de solteiro (0.80x1.90m)."
+    },
+    {
+      "id": "MOB-005",
+      "nome": "Beliche Solteiro",
+      "categoria": "Dormitório",
+      "largura": 0.85,
+      "comprimento": 1.95,
+      "altura": 1.6,
+      "fonte_id": "FNT-002",
+      "pagina": 18,
+      "tabela_figura": "Cap. 06 Quarto",
+      "confidence": "high",
+      "notes": "Beliche residencial com 2 leitos."
+    },
+    {
+      "id": "MOB-006",
+      "nome": "Guarda-Roupas Porta de Abrir",
+      "categoria": "Armazenamento",
+      "largura": 2.0,
+      "comprimento": 0.6,
+      "altura": 2.1,
+      "fonte_id": "FNT-002",
+      "pagina": 18,
+      "tabela_figura": "Cap. 06 Quarto",
+      "confidence": "high",
+      "notes": "Profundidade de 0.60m para cabides."
+    },
+    {
+      "id": "MOB-007",
+      "nome": "Guarda-Roupas Porta de Correr",
+      "categoria": "Armazenamento",
+      "largura": 2.0,
+      "comprimento": 0.65,
+      "altura": 2.1,
+      "fonte_id": "FNT-002",
+      "pagina": 18,
+      "tabela_figura": "Cap. 06 Quarto",
+      "confidence": "high",
+      "notes": "Profundidade de 0.65m incluindo trilho."
+    },
+    {
+      "id": "MOB-008",
+      "nome": "Módulo de Closet Aberto",
+      "categoria": "Armazenamento",
+      "largura": 1.5,
+      "comprimento": 0.55,
+      "altura": 2.2,
+      "fonte_id": "FNT-003",
+      "pagina": 314,
+      "tabela_figura": "Cap. Habitação - Armários",
+      "confidence": "high",
+      "notes": "Módulo de closet sem portas."
+    },
+    {
+      "id": "MOB-009",
+      "nome": "Sofá 3 Lugares",
+      "categoria": "Estar",
+      "largura": 2.1,
+      "comprimento": 0.9,
+      "altura": 0.85,
+      "fonte_id": "FNT-002",
+      "pagina": 3,
+      "tabela_figura": "Cap. 01 Estar",
+      "confidence": "high",
+      "notes": "Sofá comercial 3 lugares."
+    },
+    {
+      "id": "MOB-010",
+      "nome": "Poltrona Individual",
+      "categoria": "Estar",
+      "largura": 0.85,
+      "comprimento": 0.85,
+      "altura": 0.8,
+      "fonte_id": "FNT-002",
+      "pagina": 3,
+      "tabela_figura": "Cap. 01 Estar",
+      "confidence": "high",
+      "notes": "Poltrona de estar."
+    },
+    {
+      "id": "MOB-011",
+      "nome": "Mesa de Centro",
+      "categoria": "Estar",
+      "largura": 0.6,
+      "comprimento": 1.05,
+      "altura": 0.4,
+      "fonte_id": "FNT-002",
+      "pagina": 4,
+      "tabela_figura": "Cap. 01 Estar",
+      "confidence": "high",
+      "notes": "Mesa de apoio diante do sofá."
+    },
+    {
+      "id": "MOB-012",
+      "nome": "Mesa de Jantar 6 Lugares",
+      "categoria": "Jantar",
+      "largura": 0.9,
+      "comprimento": 1.8,
+      "altura": 0.75,
+      "fonte_id": "FNT-002",
+      "pagina": 9,
+      "tabela_figura": "Cap. 02 Jantar",
+      "confidence": "high",
+      "notes": "Mesa retangular 6 lugares."
+    },
+    {
+      "id": "MOB-013",
+      "nome": "Cadeira de Jantar sem Braço",
+      "categoria": "Jantar",
+      "largura": 0.5,
+      "comprimento": 0.5,
+      "altura": 0.9,
+      "fonte_id": "FNT-001",
+      "pagina": 125,
+      "tabela_figura": "Seção C-1",
+      "confidence": "high",
+      "notes": "Cadeira de refeição."
+    },
+    {
+      "id": "MOB-014",
+      "nome": "Mesa de Trabalho / Home Office",
+      "categoria": "Trabalho",
+      "largura": 1.2,
+      "comprimento": 0.6,
+      "altura": 0.75,
+      "fonte_id": "FNT-002",
+      "pagina": 5,
+      "tabela_figura": "Cap. 01 Estar - Mesas trabalho",
+      "confidence": "high",
+      "notes": "Mesa de computador/escritório."
+    },
+    {
+      "id": "MOB-015",
+      "nome": "Cadeira de Escritório c/ Rodízios",
+      "categoria": "Trabalho",
+      "largura": 0.6,
+      "comprimento": 0.6,
+      "altura": 0.95,
+      "fonte_id": "FNT-003",
+      "pagina": 486,
+      "tabela_figura": "Cap. Trabalho",
+      "confidence": "high",
+      "notes": "Cadeira giratória operacional."
+    },
+    {
+      "id": "MOB-016",
+      "nome": "Aparador / Buffet de Jantar",
+      "categoria": "Jantar",
+      "largura": 1.5,
+      "comprimento": 0.45,
+      "altura": 0.8,
+      "fonte_id": "FNT-003",
+      "pagina": 319,
+      "tabela_figura": "Cap. Habitação - Jantar",
+      "confidence": "high",
+      "notes": "Móvel de apoio para louças."
+    },
+    {
+      "id": "MOB-017",
+      "nome": "Balcão com Banquetas Altas (Gourmet)",
+      "categoria": "Lazer/Cozinha",
+      "largura": 1.5,
+      "comprimento": 0.4,
+      "altura": 1.05,
+      "fonte_id": "FNT-002",
+      "pagina": 10,
+      "tabela_figura": "Cap. 03 Cozinha",
+      "confidence": "high",
+      "notes": "Balcão americano/gourmet."
+    },
+    {
+      "id": "MOB-018",
+      "nome": "Aparador de Hall de Entrada",
+      "categoria": "Circulação",
+      "largura": 1.1,
+      "comprimento": 0.35,
+      "altura": 0.85,
+      "fonte_id": "FNT-003",
+      "pagina": 311,
+      "tabela_figura": "Cap. Habitação - Acesso",
+      "confidence": "high",
+      "notes": "Móvel raso de hall de entrada."
+    }
+  ],
+  "equipamentos": [
+    {
+      "id": "EQP-001",
+      "nome": "Bacia Sanitária com Caixa Acoplada",
+      "categoria": "Sanitário",
+      "largura": 0.38,
+      "comprimento": 0.75,
+      "altura": 0.4,
+      "fonte_id": "FNT-002",
+      "pagina": 16,
+      "tabela_figura": "Cap. 05 Banheiro",
+      "confidence": "high",
+      "notes": "Projeção total bacia + caixa."
+    },
+    {
+      "id": "EQP-002",
+      "nome": "Lavatório de Coluna / Suspenso",
+      "categoria": "Sanitário",
+      "largura": 0.55,
+      "comprimento": 0.45,
+      "altura": 0.85,
+      "fonte_id": "FNT-002",
+      "pagina": 16,
+      "tabela_figura": "Cap. 05 Banheiro",
+      "confidence": "high",
+      "notes": "Lavatório individual de lavabo."
+    },
+    {
+      "id": "EQP-003",
+      "nome": "Bancada de Lavatório de Banheiro",
+      "categoria": "Sanitário",
+      "largura": 0.9,
+      "comprimento": 0.5,
+      "altura": 0.85,
+      "fonte_id": "FNT-002",
+      "pagina": 16,
+      "tabela_figura": "Cap. 05 Banheiro",
+      "confidence": "high",
+      "notes": "Bancada de pedra c/ cuba."
+    },
+    {
+      "id": "EQP-004",
+      "nome": "Box de Chuveiro Quadrado",
+      "categoria": "Sanitário",
+      "largura": 0.9,
+      "comprimento": 0.9,
+      "altura": 2.1,
+      "fonte_id": "FNT-002",
+      "pagina": 16,
+      "tabela_figura": "Cap. 05 Banheiro",
+      "confidence": "high",
+      "notes": "Box de banho confortável."
+    },
+    {
+      "id": "EQP-005",
+      "nome": "Banheira de Imersão",
+      "categoria": "Sanitário",
+      "largura": 1.7,
+      "comprimento": 0.75,
+      "altura": 0.55,
+      "fonte_id": "FNT-002",
+      "pagina": 17,
+      "tabela_figura": "Cap. 05 Banheiro",
+      "confidence": "high",
+      "notes": "Banheira individual."
+    },
+    {
+      "id": "EQP-006",
+      "nome": "Refrigerador Duas Portas",
+      "categoria": "Cozinha",
+      "largura": 0.75,
+      "comprimento": 0.75,
+      "altura": 1.8,
+      "fonte_id": "FNT-002",
+      "pagina": 13,
+      "tabela_figura": "Cap. 03 Cozinha",
+      "confidence": "high",
+      "notes": "Refrigerador médio."
+    },
+    {
+      "id": "EQP-007",
+      "nome": "Fogão 4 Bocas / Cooktop",
+      "categoria": "Cozinha",
+      "largura": 0.6,
+      "comprimento": 0.6,
+      "altura": 0.9,
+      "fonte_id": "FNT-002",
+      "pagina": 13,
+      "tabela_figura": "Cap. 03 Cozinha",
+      "confidence": "high",
+      "notes": "Módulo de cocção 4 bocas."
+    },
+    {
+      "id": "EQP-008",
+      "nome": "Bancada da Pia de Cozinha",
+      "categoria": "Cozinha",
+      "largura": 1.5,
+      "comprimento": 0.55,
+      "altura": 0.9,
+      "fonte_id": "FNT-002",
+      "pagina": 12,
+      "tabela_figura": "Cap. 03 Cozinha",
+      "confidence": "high",
+      "notes": "Bancada c/ cuba e preparo."
+    },
+    {
+      "id": "EQP-009",
+      "nome": "Tanque de Lavar Roupa (Louça/Inox)",
+      "categoria": "Serviço",
+      "largura": 0.6,
+      "comprimento": 0.55,
+      "altura": 0.87,
+      "fonte_id": "FNT-002",
+      "pagina": 15,
+      "tabela_figura": "Cap. 04 Serviço",
+      "confidence": "high",
+      "notes": "Tanque individual."
+    },
+    {
+      "id": "EQP-010",
+      "nome": "Máquina de Lavar Roupa (Lava-E-Seca)",
+      "categoria": "Serviço",
+      "largura": 0.65,
+      "comprimento": 0.65,
+      "altura": 0.85,
+      "fonte_id": "FNT-002",
+      "pagina": 15,
+      "tabela_figura": "Cap. 04 Serviço",
+      "confidence": "high",
+      "notes": "Lavadora de carga frontal/superior."
+    },
+    {
+      "id": "EQP-011",
+      "nome": "Churrasqueira em Alvenaria (Boca)",
+      "categoria": "Lazer",
+      "largura": 0.9,
+      "comprimento": 0.7,
+      "altura": 2.2,
+      "fonte_id": "FNT-003",
+      "pagina": 345,
+      "tabela_figura": "Cap. Gastronomia",
+      "confidence": "inferred",
+      "notes": "Dimensão de boca de churrasqueira residencial."
+    },
+    {
+      "id": "EQP-012",
+      "nome": "Veículo Automóvel Médio (Garagem)",
+      "categoria": "Apoio",
+      "largura": 1.7,
+      "comprimento": 4.5,
+      "altura": 1.5,
+      "fonte_id": "FNT-002",
+      "pagina": 20,
+      "tabela_figura": "Cap. 07 Garagem",
+      "confidence": "high",
+      "notes": "Veículo de passeio porte médio (Gol/Corsa/Sedã)."
+    }
+  ],
+  "zonas_funcionais": [
+    {
+      "id": "ZON-001",
+      "nome": "Zona de Repouso (Cama)",
+      "descricao": "Cama somada à folga lateral de circulação.",
+      "folga_min": 0.6
+    },
+    {
+      "id": "ZON-002",
+      "nome": "Zona de Vestuário (Guarda-Roupas de Abrir)",
+      "descricao": "Uso frontal para guarda-roupas de abrir.",
+      "folga_min": 0.8
+    },
+    {
+      "id": "ZON-003",
+      "nome": "Zona de Refeição (Mesa + Cadeira Ocupada)",
+      "descricao": "Mesa + cadeira ocupada + passagem atrás.",
+      "folga_min": 0.8
+    },
+    {
+      "id": "ZON-004",
+      "nome": "Triângulo de Trabalho da Cozinha",
+      "descricao": "Perímetro entre Pia, Fogão e Geladeira.",
+      "folga_min": 1.2
+    },
+    {
+      "id": "ZON-005",
+      "nome": "Zona de Uso do Tanque / Lavadora",
+      "descricao": "Espaço frontal para abaixar e manusear roupas.",
+      "folga_min": 0.8
+    },
+    {
+      "id": "ZON-006",
+      "nome": "Abertura de Porta de Veículo (Garagem)",
+      "descricao": "Espaço lateral para entrar e sair do carro.",
+      "folga_min": 0.5
+    }
+  ],
+  "perfis_circulacao": [
+    {
+      "id": "CIR-001",
+      "nome": "Passagem Individual Mínima",
+      "largura_minima": 0.6,
+      "aplicacao": "Passagem estreita móvel/parede",
+      "confidence": "high"
+    },
+    {
+      "id": "CIR-002",
+      "nome": "Circulação Confortável Individual",
+      "largura_minima": 0.8,
+      "aplicacao": "Corredores internos e acessos principais",
+      "confidence": "high"
+    },
+    {
+      "id": "CIR-003",
+      "nome": "Passagem de Duas Pessoas (Cruzamento)",
+      "largura_minima": 1.2,
+      "aplicacao": "Corredores sociais e áreas de grande tráfego",
+      "confidence": "high"
+    },
+    {
+      "id": "CIR-004",
+      "nome": "Giro de Cadeira de Rodas (PCD 360°)",
+      "largura_minima": 1.5,
+      "aplicacao": "Área de manobra acessível NBR 9050",
+      "confidence": "high"
+    }
+  ],
+  "niveis_conforto": [
+    {
+      "id": "NCF-001",
+      "nome": "Compacto / Mínimo",
+      "fator_folga": 1.0,
+      "descricao": "Adota folgas mínimas operacionais (0.55m a 0.60m)."
+    },
+    {
+      "id": "NCF-002",
+      "nome": "Médio / Confortável",
+      "fator_folga": 1.25,
+      "descricao": "Adota folgas generosas e confortáveis (0.80m a 0.90m)."
+    },
+    {
+      "id": "NCF-003",
+      "nome": "Alto Padrão / Acessível",
+      "fator_folga": 1.5,
+      "descricao": "Adota diretrizes universais de acessibilidade (giro 1.50m)."
+    }
+  ],
+  "composicoes": [
+    {
+      "id": "CMP-001",
+      "nome": "Suíte Casal King",
+      "ambiente_id": "AMB-001",
+      "area_liquida_est": 16.5,
+      "area_bruta_est": 18.98,
+      "confidence": "inferred",
+      "notes": "Suíte completa com cama King e guarda-roupas."
+    },
+    {
+      "id": "CMP-002",
+      "nome": "Dormitório Solteiro com Estudo",
+      "ambiente_id": "AMB-002",
+      "area_liquida_est": 8.5,
+      "area_bruta_est": 9.78,
+      "confidence": "high",
+      "notes": "Cama solteiro, armário e escrivaninha."
+    },
+    {
+      "id": "CMP-003",
+      "nome": "Closet Privativo Exclusivo",
+      "ambiente_id": "AMB-003",
+      "area_liquida_est": 6.3,
+      "area_bruta_est": 7.25,
+      "confidence": "high",
+      "notes": "Módulos de armário em 'U' com corredor central de 1.00m."
+    },
+    {
+      "id": "CMP-004",
+      "nome": "Sala de Estar c/ Sofá 3L e TV",
+      "ambiente_id": "AMB-004",
+      "area_liquida_est": 12.0,
+      "area_bruta_est": 13.8,
+      "confidence": "high",
+      "notes": "Estar funcional com distância de TV de 2.50m."
+    },
+    {
+      "id": "CMP-005",
+      "nome": "Sala de Jantar 6 Lugares",
+      "ambiente_id": "AMB-005",
+      "area_liquida_est": 9.9,
+      "area_bruta_est": 11.39,
+      "confidence": "high",
+      "notes": "Mesa 1.80x0.90m com cadeiras e circulação posterior."
+    },
+    {
+      "id": "CMP-006",
+      "nome": "Lavabo Social Compacto",
+      "ambiente_id": "AMB-006",
+      "area_liquida_est": 1.5,
+      "area_bruta_est": 1.73,
+      "confidence": "high",
+      "notes": "Lavabo com bacia e lavatório (1.00m x 1.50m)."
+    },
+    {
+      "id": "CMP-007",
+      "nome": "Banheiro Suíte Completo",
+      "ambiente_id": "AMB-007",
+      "area_liquida_est": 3.4,
+      "area_bruta_est": 3.91,
+      "confidence": "high",
+      "notes": "Banheiro residencial de 3 peças em linha."
+    },
+    {
+      "id": "CMP-008",
+      "nome": "Cozinha Residencial em 'L'",
+      "ambiente_id": "AMB-008",
+      "area_liquida_est": 6.5,
+      "area_bruta_est": 7.48,
+      "confidence": "high",
+      "notes": "Triângulo de trabalho com geladeira, fogão e bancada."
+    },
+    {
+      "id": "CMP-009",
+      "nome": "Área de Serviço / Lavanderia",
+      "ambiente_id": "AMB-009",
+      "area_liquida_est": 3.8,
+      "area_bruta_est": 4.37,
+      "confidence": "high",
+      "notes": "Tanque e máquina de lavar lado a lado com circulação."
+    },
+    {
+      "id": "CMP-010",
+      "nome": "Home Office Privativo",
+      "ambiente_id": "AMB-010",
+      "area_liquida_est": 5.5,
+      "area_bruta_est": 6.33,
+      "confidence": "high",
+      "notes": "Mesa de trabalho, cadeira giratória e estante de arquivos."
+    },
+    {
+      "id": "CMP-011",
+      "nome": "Varanda Gourmet com Churrasqueira",
+      "ambiente_id": "AMB-011",
+      "area_liquida_est": 8.0,
+      "area_bruta_est": 9.2,
+      "confidence": "inferred",
+      "notes": "Churrasqueira, bancada com pia e balcão com banquetas."
+    },
+    {
+      "id": "CMP-012",
+      "nome": "Hall de Entrada Residencial",
+      "ambiente_id": "AMB-012",
+      "area_liquida_est": 2.5,
+      "area_bruta_est": 2.88,
+      "confidence": "high",
+      "notes": "Aparador e área livre de recepção de visitantes."
+    },
+    {
+      "id": "CMP-013",
+      "nome": "Vaga de Garagem para Carro Médio",
+      "ambiente_id": "AMB-013",
+      "area_liquida_est": 12.5,
+      "area_bruta_est": 14.38,
+      "confidence": "high",
+      "notes": "Vaga de 2.50m x 5.00m com circulação lateral (Pronk p. 21)."
+    },
+    {
+      "id": "CMP-014",
+      "nome": "Escada Residencial Reta 2 Lances",
+      "ambiente_id": "AMB-014",
+      "area_liquida_est": 6.0,
+      "area_bruta_est": 6.9,
+      "confidence": "high",
+      "notes": "Caixa de escada de 0.90m de largura com patamar central."
+    }
+  ],
+  "regras_calculo": [
+    {
+      "id": "REG-001",
+      "nome": "Fator de Perda Geométrica e Paredes",
+      "escopo": "Geral",
+      "algoritmo": "Area_Bruta = Area_Liquida * 1.15",
+      "descricao": "Adiciona 15% à área líquida estritamente somada para cobrir espessuras de paredes e cantos mortos.",
+      "fonte_id": "FNT-003",
+      "pagina": 26
+    },
+    {
+      "id": "REG-002",
+      "nome": "Fórmula de Blondel para Escadas",
+      "escopo": "Circulação",
+      "algoritmo": "2 * Espelho + Piso = 0.63m a 0.65m",
+      "descricao": "Dimensionamento ergonômico de degraus de escada residencial.",
+      "fonte_id": "FNT-002",
+      "pagina": 27
+    },
+    {
+      "id": "REG-003",
+      "nome": "Dimensionamento Mínimo de Vaga de Garagem",
+      "escopo": "Apoio",
+      "algoritmo": "Largura_Vaga = Largura_Carro + 0.80m; Comprimento_Vaga = Comp_Carro + 0.50m",
+      "descricao": "Garante espaço para abertura de portas e circulação ao redor do veículo.",
+      "fonte_id": "FNT-002",
+      "pagina": 21
+    }
+  ],
+  "conflitos": [
+    {
+      "id": "CFL-001",
+      "parametro": "Comprimento da Cama de Casal Padrão",
+      "fonte_A": "PRONK_2003 p.19 (1.90m)",
+      "fonte_B": "NEUFERT_2022 p.319 (2.00m)",
+      "descricao_conflito": "Pronk registra o padrão brasileiro tradicional (1.90m), enquanto Neufert adota o padrão europeu (2.00m).",
+      "resolucao_adotada": "Preservados ambos. A calculadora adota 1.90m para modelos nacionais/Pronk e 2.00m para modelos europeus/Neufert.",
+      "confidence": "conflicting_sources"
+    },
+    {
+      "id": "CFL-002",
+      "parametro": "Corredor de Trabalho na Cozinha",
+      "fonte_A": "PRONK_2003 p.12 (0.80m - 1.10m)",
+      "fonte_B": "PANERO_2008 p.158 (1.02m - 1.22m)",
+      "descricao_conflito": "Panero exige folga maior (1.02-1.22m) para abertura de porta do forno/geladeira do que Pronk (0.80-1.10m).",
+      "resolucao_adotada": "Adotado 0.80m para nível Mínimo/Compacto e 1.10m/1.20m para nível Confortável.",
+      "confidence": "conflicting_sources"
+    }
+  ],
+  "avisos": [
+    {
+      "id": "AVS-001",
+      "codigo": "W-DOOR-SWING",
+      "titulo": "Conflito de Varredura de Porta de Abrir",
+      "mensagem": "Portas de abrir de guarda-roupas exigem no mínimo 0.80m de espaço livre frontal. Caso o espaço seja < 0.70m, altere obrigatoriamente para armário com portas de correr.",
+      "severidade": "Alerta de Projeto"
+    },
+    {
+      "id": "AVS-002",
+      "codigo": "W-PCD-CIRCULATION",
+      "titulo": "Incompatibilidade Acessibilidade PCD",
+      "mensagem": "Ambientes configurados com Nível de Conforto NCF-003 (Acessível) devem possuir no mínimo um círculo desobstruído de 1.50m de diâmetro para giro de 360° da cadeira de rodas.",
+      "severidade": "Erro Normativo"
+    }
+  ]
+}
