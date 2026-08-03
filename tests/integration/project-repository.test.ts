@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { IndexedDbProjectRepository } from "../../src/data/indexed-db-project-repository";
 import { createEmptyProject } from "../../src/domain/project-master-record";
+import { IndexedDbParametricStudyRepository } from "../../src/features/cap/repositories/indexed-db-parametric-study-repository";
+import { createParametricStudy } from "../../src/features/cap/services/cap-scenario-service";
 
 test("IndexedDB repository supports CRUD, ordering, uniqueness, archive and single seed", async () => {
   await new Promise<void>((resolve, reject) => {
@@ -27,6 +29,23 @@ test("IndexedDB repository supports CRUD, ordering, uniqueness, archive and sing
   assert.equal((await repository.list())[0]?.code, "TH-2030-001");
   await assert.rejects(() => repository.replaceAll([restored, { ...restored, id: "duplicate-restored" }]));
   assert.equal((await repository.list())[0]?.code, "TH-2030-001");
+  const studyRepository = new IndexedDbParametricStudyRepository();
+  const study = createParametricStudy(restored.id, "AMB-001", null, "2030-01-01T00:00:00.000Z");
+  await studyRepository.create(study);
+  assert.equal((await studyRepository.listByProject(restored.id)).length, 1);
+  const duplicateStudy = await studyRepository.duplicate(study.id);
+  assert.equal((await studyRepository.listByProject(restored.id)).length, 2);
+  assert.equal((await studyRepository.archive(duplicateStudy.id)).status, "archived");
+  assert.equal((await studyRepository.restore(duplicateStudy.id)).status, "draft");
+  await studyRepository.delete(duplicateStudy.id);
+  assert.equal((await studyRepository.listByProject(restored.id)).length, 1);
+  const restoredData = await repository.restoreAll([restored], [study]);
+  assert.equal(restoredData.studies.length, 1);
+  await assert.rejects(() => repository.restoreAll([restored], [{ ...study, projectId: "missing-project" }]));
+  assert.equal((await studyRepository.listByProject(restored.id)).length, 1);
+  await assert.rejects(() => studyRepository.create({ ...study, id: "orphan-study", projectId: "missing-project" }));
+  await repository.remove(restored.id);
+  assert.equal((await studyRepository.listByProject(restored.id)).length, 0);
   await repository.remove(updated.id);
   assert.equal(await repository.get(updated.id), undefined);
 });

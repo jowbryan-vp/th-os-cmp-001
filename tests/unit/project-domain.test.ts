@@ -70,6 +70,8 @@ test("summarizes needs areas and quantities", () => {
     intervention: "expand", existingAreaM2: 10, desiredAreaM2: 18, quantity: 2,
     priority: "essential", users: "", needs: "", lighting: "", ventilation: "", privacy: "",
     accessibility: "", furniture: "", equipment: "", connections: "", notes: "", order: 0,
+    parametricStudyId: null, parametricScenarioId: null, appliedAreaType: null, appliedAreaM2: null,
+    capLibraryVersion: null, calculationEngineVersion: null, calculatedAt: null,
   });
   assert.deepEqual(summarizeAreas(project), {
     existing: 20, desired: 36, expansion: 16, demolition: 0,
@@ -89,8 +91,8 @@ test("exports and validates a consolidated backup", () => {
   const second = createEmptyProject("TH-2026-003");
   const backup = exportConsolidatedBackup([first, second]);
   assert.equal(backup.kind, "consolidated-backup");
-  assert.equal(parseConsolidatedBackup(backup).length, 2);
-  assert.throws(() => parseConsolidatedBackup({ ...backup, projects: [first, { ...second, code: first.code }] }),
+  assert.equal(parseConsolidatedBackup(backup).projects.length, 2);
+  assert.throws(() => parseConsolidatedBackup({ ...backup, projectRecords: [first, { ...second, code: first.code }] }),
     /ID ou código duplicado/);
   assert.throws(() => parseConsolidatedBackup({ ...backup, schemaVersion: PROJECT_SCHEMA_VERSION + 1 }),
     /versão futura/);

@@ -8,8 +8,10 @@ async function resetDatabase(page: import("@playwright/test").Page) {
       new Promise<void>((resolve, reject) => {
         const request = indexedDB.open("th-os");
         request.onsuccess = () => {
-          const transaction = request.result.transaction("project-master-records", "readwrite");
+          const stores = ["project-master-records", "parametric-studies"].filter((name) => request.result.objectStoreNames.contains(name));
+          const transaction = request.result.transaction(stores, "readwrite");
           transaction.objectStore("project-master-records").clear();
+          if (stores.includes("parametric-studies")) transaction.objectStore("parametric-studies").clear();
           transaction.oncomplete = () => resolve();
           transaction.onerror = () => reject(transaction.error);
         };
@@ -136,6 +138,7 @@ test("exports the versioned project envelope", async ({ page }) => {
   expect(envelope.application).toBe("TH-OS-CMP-001");
   expect(envelope.schemaVersion).toBe(2);
   expect(envelope.project.code).toBe("TH-2026-001");
+  expect(envelope.parametricStudies).toEqual([]);
 });
 
 test("exports and restores a complete browser backup", async ({ page }) => {
@@ -153,7 +156,10 @@ test("exports and restores a complete browser backup", async ({ page }) => {
   const buffer = Buffer.concat(chunks);
   const envelope = JSON.parse(buffer.toString());
   expect(envelope.kind).toBe("consolidated-backup");
-  expect(envelope.projects).toHaveLength(2);
+  expect(envelope.backupSchemaVersion).toBe(2);
+  expect(envelope.projectRecords).toHaveLength(2);
+  expect(envelope.parametricStudies).toEqual([]);
+  expect(envelope.capLibraryReferences).toHaveLength(1);
 
   await page.evaluate(() => new Promise<void>((resolve, reject) => {
     const request = indexedDB.open("th-os");
@@ -170,7 +176,7 @@ test("exports and restores a complete browser backup", async ({ page }) => {
   await page.getByRole("button", { name: "Restaurar backup" }).click();
   const chooser = await chooserPromise;
   await chooser.setFiles({ name: "backup.json", mimeType: "application/json", buffer });
-  await expect(page.getByText("Backup restaurado com 2 cadastro(s).")).toBeVisible();
+  await expect(page.getByText("Backup restaurado com 2 cadastro(s) e 0 estudo(s).")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Projeto do backup E2E" })).toBeVisible();
   await expect(page.getByText("TH-2026-001", { exact: true })).toBeVisible();
 });
@@ -188,6 +194,75 @@ test("keeps functional content available on tablet and mobile", async ({ page })
   await page.getByRole("button", { name: "Exportar JSON" }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe("th-2026-001-cmp.json");
+});
+
+test("calculates, compares, applies and restores CAP-001 scenarios", async ({ page }) => {
+  const pilot = page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" });
+  await pilot.locator("button.project-card__open").click();
+  await page.getByRole("button", { name: "+ Ambiente" }).click();
+  await page.getByLabel("Ambiente").last().fill("Suíte");
+  await expect(page.getByText("Salvo neste dispositivo")).toBeVisible();
+  await page.getByRole("button", { name: "Pré-dimensionar com CAP-001" }).click();
+  await expect(page.getByRole("heading", { name: "Biblioteca e Calculadora Paramétrica" })).toBeVisible();
+
+  await page.getByLabel("Nome do cenário").fill("King + armário");
+  await page.getByRole("button", { name: "Calcular cenário" }).click();
+  await expect(page.getByText("Cenário calculado. Revise premissas e alertas.")).toBeVisible();
+  await page.getByRole("button", { name: "Duplicar cenário" }).click();
+  await page.getByLabel("Nome do cenário").fill("Queen + closet");
+  await page.getByRole("checkbox", { name: "Cama King Size" }).uncheck();
+  await page.getByRole("checkbox", { name: "Guarda-Roupas Porta de Abrir" }).uncheck();
+  await page.getByRole("checkbox", { name: "Cama Queen Size" }).check();
+  await page.getByRole("checkbox", { name: "Módulo de Closet Aberto" }).check();
+  await page.getByRole("button", { name: "Calcular cenário" }).click();
+
+  await page.getByRole("button", { name: "Comparador" }).click();
+  await expect(page.getByRole("columnheader", { name: "King + armário" })).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: /Queen \+ closet/ })).toBeVisible();
+  await expect(page.getByRole("rowheader", { name: "Diferença vs. cenário A" })).toBeVisible();
+  await page.getByRole("button", { name: "Calculadora" }).click();
+  await page.getByRole("button", { name: "Área recomendada" }).click();
+  await expect(page.getByText(/Área CAP-001 de .* aplicada/)).toBeVisible();
+  await expect(page.getByText(/biblioteca 1\.1\.0 · motor 1\.0\.0/)).toBeVisible();
+
+  await page.reload();
+  await page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" }).locator("button.project-card__open").click();
+  await expect(page.getByText(/biblioteca 1\.1\.0 · motor 1\.0\.0/)).toBeVisible();
+  await page.getByRole("button", { name: /Projetos/ }).click();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Exportar backup completo" }).click();
+  const download = await downloadPromise;
+  const stream = await download.createReadStream(); const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+  const buffer = Buffer.concat(chunks); const envelope = JSON.parse(buffer.toString());
+  expect(envelope.parametricStudies).toHaveLength(1);
+  expect(envelope.projectRecords[0].needsProgram.some((item: { parametricStudyId: string | null }) => item.parametricStudyId)).toBe(true);
+
+  await page.evaluate(() => new Promise<void>((resolve, reject) => {
+    const request = indexedDB.open("th-os"); request.onsuccess = () => {
+      const transaction = request.result.transaction(["project-master-records", "parametric-studies"], "readwrite");
+      transaction.objectStore("project-master-records").clear(); transaction.objectStore("parametric-studies").clear();
+      transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error);
+    }; request.onerror = () => reject(request.error);
+  }));
+  page.once("dialog", (dialog) => dialog.accept());
+  const chooserPromise = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Restaurar backup" }).click();
+  const chooser = await chooserPromise;
+  await chooser.setFiles({ name: "cap-backup.json", mimeType: "application/json", buffer });
+  await expect(page.getByText("Backup restaurado com 1 cadastro(s) e 1 estudo(s).")).toBeVisible();
+  await page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" }).locator("button.project-card__open").click();
+  await expect(page.getByText(/biblioteca 1\.1\.0 · motor 1\.0\.0/)).toBeVisible();
+});
+
+test("keeps the CAP-001 library usable on tablet and mobile", async ({ page }) => {
+  for (const viewport of [{ width: 820, height: 1000 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport); await page.reload();
+    await page.getByRole("button", { name: "CAP-001" }).click();
+    await expect(page.getByRole("heading", { name: "Biblioteca e Calculadora Paramétrica" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Dormitório Casal/ })).toBeVisible();
+    await page.getByRole("button", { name: "← Voltar ao CMP" }).click();
+  }
 });
 
 test("keeps projects isolated between browser contexts", async ({ browser }) => {

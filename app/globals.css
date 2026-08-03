@@ -1190,6 +1190,10 @@ button {
     display: inline-flex;
   }
 
+  .topbar-actions .cap-entry {
+    display: inline-flex;
+  }
+
   .topbar-actions .button {
     min-height: 2.45rem;
     padding: 0 var(--space-4);

@@ -50,6 +50,42 @@ for (const collection of collections) {
   }
 }
 
+const allowedFields: Record<string, Set<string>> = {
+  fontes: new Set(["id", "codigo", "titulo", "autores", "editora", "edicao", "ano", "isbn"]),
+  tipos_ambientes: new Set(["id", "nome", "categoria", "descricao"]),
+  mobiliarios: new Set(["id", "nome", "categoria", "largura", "comprimento", "altura", "fonte_id", "pagina", "tabela_figura", "confidence", "notes"]),
+  equipamentos: new Set(["id", "nome", "categoria", "largura", "comprimento", "altura", "fonte_id", "pagina", "tabela_figura", "confidence", "notes"]),
+  zonas_funcionais: new Set(["id", "nome", "descricao", "folga_min"]),
+  perfis_circulacao: new Set(["id", "nome", "largura_minima", "aplicacao", "confidence"]),
+  niveis_conforto: new Set(["id", "nome", "fator_folga", "descricao"]),
+  composicoes: new Set(["id", "nome", "ambiente_id", "area_liquida_est", "area_bruta_est", "confidence", "notes"]),
+  regras_calculo: new Set(["id", "nome", "escopo", "algoritmo", "descricao", "fonte_id", "pagina"]),
+  conflitos: new Set(["id", "parametro", "fonte_A", "fonte_B", "descricao_conflito", "resolucao_adotada", "confidence"]),
+  avisos: new Set(["id", "codigo", "titulo", "mensagem", "severidade"]),
+};
+for (const collection of collections) {
+  const seenNames = new Map<string, string>();
+  for (const item of raw[collection] ?? []) {
+    for (const field of Object.keys(item)) if (!allowedFields[collection]?.has(field)) add({ code: "CAP-W-UNKNOWN-FIELD",
+      entity: item.id ?? collection, field, value: item[field], severity: "warning", explanation: "Campo não reconhecido pelo contrato da biblioteca.",
+      action: "Revisar e mapear explicitamente antes de utilizar.", status: "open" });
+    const name = String(item.nome ?? item.titulo ?? "").trim().toLocaleLowerCase("pt-BR");
+    if (name && seenNames.has(name)) add({ code: "CAP-W-DUPLICATE-NAME", entity: item.id ?? collection, field: "nome",
+      value: item.nome ?? item.titulo, severity: "warning", explanation: `Nome também utilizado por ${seenNames.get(name)}.`,
+      action: "Confirmar se representa variante legítima ou duplicidade.", status: "open" });
+    else if (name) seenNames.set(name, item.id ?? collection);
+  }
+}
+const categorySpellings = new Map<string, Set<string>>();
+for (const item of [...raw.tipos_ambientes, ...raw.mobiliarios, ...raw.equipamentos]) {
+  if (!item.categoria) continue;
+  const canonical = String(item.categoria).trim().toLocaleLowerCase("pt-BR");
+  const spellings = categorySpellings.get(canonical) ?? new Set<string>(); spellings.add(item.categoria); categorySpellings.set(canonical, spellings);
+}
+for (const [canonical, spellings] of categorySpellings) if (spellings.size > 1) add({ code: "CAP-W-CATEGORY",
+  entity: "categories", field: canonical, value: [...spellings], severity: "warning", explanation: "Categoria possui grafias inconsistentes.",
+  action: "Padronizar somente na saída normalizada e documentar o mapeamento.", status: "open" });
+
 const sourceIds = new Set(raw.fontes.map((item: { id: string }) => item.id));
 const environmentIds = new Set(raw.tipos_ambientes.map((item: { id: string }) => item.id));
 for (const [, items] of [["mobiliarios", raw.mobiliarios], ["equipamentos", raw.equipamentos], ["regras_calculo", raw.regras_calculo]] as const) {

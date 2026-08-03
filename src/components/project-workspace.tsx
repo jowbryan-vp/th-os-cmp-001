@@ -199,7 +199,7 @@ function Header({ record, autosave, onHome, onNew, onImport, onExport, onCap }: 
     </button>
     <div className="product-signature"><strong>TH OS</strong><span>Cadastro Mestre do Projeto · CMP-001</span></div>
     <div className="topbar-actions">
-      <button className="button button--ghost" onClick={onCap}>CAP-001</button>
+      <button className="button button--ghost cap-entry" onClick={onCap}>CAP-001</button>
       {record && saveLabel && <span className={`save-status save-status--${autosave.state}`}>{saveLabel}</span>}
       {autosave.state === "error" && <button className="button button--ghost" onClick={() => void autosave.retry()}>Tentar novamente</button>}
       {record ? <button className="button button--ghost record-export" onClick={onExport}>Exportar JSON</button>
