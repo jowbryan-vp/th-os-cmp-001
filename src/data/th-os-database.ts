@@ -36,7 +36,13 @@ export function openThOsDatabase() {
       if (!catalogStore.indexNames.contains("active")) catalogStore.createIndex("active", "active");
       if (!catalogStore.indexNames.contains("projectId")) catalogStore.createIndex("projectId", "projectId");
     };
-    request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const database = request.result;
+      database.onversionchange = () => database.close();
+      resolve(database);
+    };
+    request.onblocked = () => reject(new Error("Atualização do armazenamento bloqueada por outra aba. Feche as outras abas do TH OS e recarregue."));
+    request.onerror = () => reject(request.error);
   });
   return databasePromise;
 }
