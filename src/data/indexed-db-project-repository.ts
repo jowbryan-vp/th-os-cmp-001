@@ -60,6 +60,23 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     await done(transaction);
     return parsed;
   }
+  async replaceAll(projects: ProjectMasterRecord[]) {
+    const parsed = projects.map((project) => projectMasterRecordSchema.parse(migrateProject(project)));
+    const ids = new Set<string>(); const codes = new Set<string>();
+    for (const project of parsed) {
+      if (ids.has(project.id) || codes.has(project.code)) {
+        throw new Error("O backup contém projetos com ID ou código duplicado.");
+      }
+      ids.add(project.id); codes.add(project.code);
+    }
+    const database = await this.open();
+    const transaction = database.transaction(STORE_NAME, "readwrite");
+    const store = transaction.objectStore(STORE_NAME);
+    store.clear();
+    for (const project of parsed) store.put(project);
+    await done(transaction);
+    return parsed.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
   async remove(id: string) {
     const database = await this.open();
     const transaction = database.transaction(STORE_NAME, "readwrite");

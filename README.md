@@ -81,6 +81,10 @@ baixado fora do navegador. Para restaurar, volte à lista, selecione
 data da exportação e projeto; a importação valida tipos e enums, migra v1,
 rejeita versões futuras e trata conflitos.
 
+Para proteger toda a base local de uma vez, use **Exportar backup completo** na
+lista de projetos. **Restaurar backup** valida o envelope e todos os cadastros
+antes de substituir, em uma única transação, a base deste navegador.
+
 Para apagar todos os dados locais, abra as configurações do navegador, localize
 os dados do site da URL utilizada e remova o armazenamento desse site. Essa
 operação é irreversível sem um JSON exportado.
