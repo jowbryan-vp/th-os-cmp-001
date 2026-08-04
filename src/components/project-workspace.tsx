@@ -23,8 +23,10 @@ import { CapApplyPayload, CapDeleteNeedsItemResult, CapSaveOptionsPayload, CapWo
 import { applyScenarioToNeedsProgram, saveScenarioOptionsToNeedsProgram, summarizeCapAreaOptions } from "../features/cap/services/cap-program-service";
 import { CatalogCombobox } from "../features/catalogs/components/catalog-combobox";
 import { getReferenceCatalogRepository } from "../features/catalogs/repositories/reference-catalog-repository";
+import { HonWorkspace } from "../features/hon/components/hon-workspace";
+import { readHonBackupData } from "../features/hon/repositories/hon-repositories";
 
-type View = "list" | "record" | "cap";
+type View = "list" | "record" | "cap" | "hon";
 const sections = [
   ["identification", "Identificação"], ["clients", "Clientes"], ["property", "Imóvel"],
   ["context", "Contexto"], ["scope", "Escopo"], ["program", "Programa inicial"],
@@ -124,7 +126,8 @@ export function ProjectWorkspace() {
   async function downloadBackup() {
     const studies = await studyRepository.listAll();
     const catalogs = await catalogRepository.list();
-    const blob = new Blob([JSON.stringify(exportConsolidatedBackup(projects, studies, catalogs), null, 2)], { type: "application/json" });
+    const hon = await readHonBackupData();
+    const blob = new Blob([JSON.stringify(exportConsolidatedBackup(projects, studies, catalogs, hon), null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob); const anchor = document.createElement("a");
     anchor.href = url; anchor.download = `th-os-cmp-backup-${new Date().toISOString().slice(0, 10)}.json`; anchor.click();
     URL.revokeObjectURL(url); setNotice(`Backup completo exportado com ${projects.length} cadastro(s).`);
@@ -133,8 +136,8 @@ export function ProjectWorkspace() {
     const file = event.target.files?.[0]; event.target.value = ""; if (!file) return;
     try {
       const restored = parseConsolidatedBackup(JSON.parse(await file.text()));
-      if (!window.confirm(`Restaurar ${restored.projects.length} cadastro(s) e ${restored.studies.length} estudo(s)? Isso substituirá todos os dados locais atuais.`)) return;
-      const saved = await repository.restoreAll(restored.projects, restored.studies, restored.catalogs);
+      if (!window.confirm(`Restaurar ${restored.projects.length} cadastro(s), ${restored.studies.length} estudo(s) CAP e ${restored.hon.feeStudies.length} estudo(s) HON? Isso substituirá todos os dados locais atuais.`)) return;
+      const saved = await repository.restoreAll(restored.projects, restored.studies, restored.catalogs, restored.hon);
       setProjects(saved.projects); setCurrent(null); setView("list");
       setNotice(`Backup restaurado com ${saved.projects.length} cadastro(s) e ${saved.studies.length} estudo(s).`);
     } catch (reason) { setNotice(reason instanceof Error ? reason.message : "Falha ao restaurar backup."); }
@@ -203,6 +206,7 @@ export function ProjectWorkspace() {
         onHome={() => setView("list")} onNew={newProject}
         onImport={() => importInput.current?.click()} onExport={() => void download()}
         onCap={() => openCap(current?.id)}
+        onHon={() => setView("hon")}
       />
       <aside className="pilot-notice" aria-label="Aviso sobre armazenamento local">
         <strong>Versão piloto.</strong>{" "}
@@ -212,6 +216,8 @@ export function ProjectWorkspace() {
         <CapWorkspace projects={projects} initialProjectId={capContext.projectId} initialNeedsItemId={capContext.needsItemId}
           onBack={() => setView(current ? "record" : "list")} onApply={applyCapResult} onSaveOptions={saveCapOptions}
           onDeleteNeedsItem={deleteCapNeedsItem} />
+      ) : view === "hon" ? (
+        <HonWorkspace projects={projects} initialProjectId={current?.id} onBack={() => setView(current ? "record" : "list")} />
       ) : view === "list" ? (
         <ProjectList projects={projects} onOpen={open} onArchive={archive} onDuplicate={duplicate} onDelete={remove}
           onBackup={() => void downloadBackup()} onRestore={() => backupInput.current?.click()} />
@@ -226,9 +232,9 @@ export function ProjectWorkspace() {
   );
 }
 
-function Header({ record, autosave, onHome, onNew, onImport, onExport, onCap }: {
+function Header({ record, autosave, onHome, onNew, onImport, onExport, onCap, onHon }: {
   record: boolean; autosave: ReturnType<typeof useProjectAutosave>; onHome: () => void;
-  onNew: () => void; onImport: () => void; onExport: () => void; onCap: () => void;
+  onNew: () => void; onImport: () => void; onExport: () => void; onCap: () => void; onHon: () => void;
 }) {
   const saveLabel = autosave.state === "saving" ? "Salvando…" : autosave.state === "dirty" ? "Alterações pendentes"
     : autosave.state === "error" ? "Erro ao salvar" : autosave.state === "saved" ? "Salvo neste dispositivo" : "";
@@ -241,6 +247,7 @@ function Header({ record, autosave, onHome, onNew, onImport, onExport, onCap }: 
     <div className="product-signature"><strong>TH OS</strong><span>Cadastro Mestre do Projeto · CMP-001</span></div>
     <div className="topbar-actions">
       <button className="button button--ghost cap-entry" onClick={onCap}>CAP-001</button>
+      <button className="button button--ghost hon-entry" onClick={onHon}>HON-001</button>
       {record && saveLabel && <span className={`save-status save-status--${autosave.state}`}>{saveLabel}</span>}
       {autosave.state === "error" && <button className="button button--ghost" onClick={() => void autosave.retry()}>Tentar novamente</button>}
       {record ? <button className="button button--ghost record-export" onClick={onExport}>Exportar JSON</button>
