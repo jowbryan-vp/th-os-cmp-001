@@ -76,8 +76,17 @@ export function summarizeCapAreaOptions(needsProgram: NeedsItem[]) {
     recommendedAreaM2: 0,
     preliminaryGrossAreaM2: 0,
     calculatedEnvironments: 0,
-    totalEnvironments: needsProgram.reduce((total, item) => total + Math.max(1, item.quantity), 0),
+    totalEnvironments: needsProgram.reduce((total, item) => isConfiguredNeedsItem(item)
+      ? total + Math.max(1, item.quantity) : total, 0),
   });
+}
+
+export function isConfiguredNeedsItem(item: NeedsItem) {
+  return Boolean(item.environment.trim() || item.parametricStudyId || item.parametricScenarioId
+    || item.existingAreaM2 !== null || item.desiredAreaM2 !== null
+    || item.capMinimumAreaM2 !== null || item.capRecommendedAreaM2 !== null || item.capPreliminaryGrossAreaM2 !== null
+    || [item.sector, item.floor, item.users, item.needs, item.furniture, item.equipment, item.notes]
+      .some((value) => value.trim()));
 }
 
 export function applyScenarioToNeedsProgram(

@@ -22,7 +22,7 @@ export interface CapApplyPayload {
 export interface CapSaveOptionsPayload {
   study: ParametricEnvironmentStudy; scenario: ParametricScenario; continueToNext?: boolean;
 }
-export interface CapSaveOptionsResult { savedNeedsItemId: string; nextNeedsItemId?: string; }
+export interface CapSaveOptionsResult { savedNeedsItemId: string; }
 export interface CapDeleteNeedsItemResult { deletedStudyIds: string[]; }
 interface Props {
   projects: ProjectMasterRecord[]; initialProjectId?: string; initialNeedsItemId?: string;
@@ -118,7 +118,10 @@ export function CapWorkspace({ projects, initialProjectId, initialNeedsItemId, o
   }, [selectedEnvironmentId]);
   const itemGroups = useMemo(() => {
     const groups = new Map<string, typeof relevantItems>();
-    for (const item of relevantItems) groups.set(item.group, [...(groups.get(item.group) ?? []), item]);
+    for (const item of relevantItems) {
+      const groupLabel = item.group === "Área gourmet" && item.subgroup ? item.subgroup : item.group;
+      groups.set(groupLabel, [...(groups.get(groupLabel) ?? []), item]);
+    }
     return [...groups.entries()];
   }, [relevantItems]);
 
@@ -145,7 +148,9 @@ export function CapWorkspace({ projects, initialProjectId, initialNeedsItemId, o
     const withoutConflicts = checked && libraryItem?.selectionType === "unica"
       ? currentScenario.selectedItems.filter((selected) => {
         const candidate = selected.libraryItemId ? relevantItems.find((item) => item.id === selected.libraryItemId) : undefined;
-        return candidate?.group !== libraryItem.group || candidate.selectionType !== "unica";
+        const candidateSet = candidate?.subgroup || candidate?.group;
+        const selectedSet = libraryItem.subgroup || libraryItem.group;
+        return candidateSet !== selectedSet || candidate?.selectionType !== "unica";
       }) : currentScenario.selectedItems;
     const selectedItems = checked && !existing ? [...withoutConflicts, createSelectedLibraryItem(itemId, sourceType)]
       : !checked ? currentScenario.selectedItems.filter((item) => item.libraryItemId !== itemId) : currentScenario.selectedItems;
@@ -235,6 +240,12 @@ export function CapWorkspace({ projects, initialProjectId, initialNeedsItemId, o
     setResultStale(false); setTab("calculator"); setNotice(`Editando ${item.environment || "ambiente"}.`);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
+  function selectNeedsItem(nextNeedsItemId: string) {
+    if (nextNeedsItemId) { editNeedsItem(nextNeedsItemId); return; }
+    setNeedsItemId("");
+    setStudy(scenarioWithDefaults(createParametricStudy(projectId, selectedEnvironmentId, null), selectedEnvironmentId));
+    setResultStale(false); setNotice("Novo ambiente: escolha as opções e registre quando terminar.");
+  }
   async function deleteNeedsItem(nextNeedsItemId: string) {
     const item = selectedProject?.needsProgram.find((candidate) => candidate.id === nextNeedsItemId); if (!item) return;
     const label = item.environment || "este ambiente";
@@ -258,12 +269,11 @@ export function CapWorkspace({ projects, initialProjectId, initialNeedsItemId, o
   }
   async function calculateAndContinue() {
     const output = calculateCurrent(); if (!output) return;
-    const saved = await onSaveOptions({ study: output.calculatedStudy, scenario: output.calculated, continueToNext: true });
+    await onSaveOptions({ study: output.calculatedStudy, scenario: output.calculated, continueToNext: true });
     setStudies(await repository.listByProject(projectId));
-    if (!saved.nextNeedsItemId) return;
     const nextEnvironmentId = "AMB-001";
-    setNeedsItemId(saved.nextNeedsItemId); setSelectedEnvironmentId(nextEnvironmentId);
-    setStudy(scenarioWithDefaults(createParametricStudy(projectId, nextEnvironmentId, saved.nextNeedsItemId), nextEnvironmentId));
+    setNeedsItemId(""); setSelectedEnvironmentId(nextEnvironmentId);
+    setStudy(scenarioWithDefaults(createParametricStudy(projectId, nextEnvironmentId, null), nextEnvironmentId));
     setResultStale(false); setNotice("Ambiente registrado. Configure agora o próximo ambiente.");
   }
   return <main className="cap-shell">
@@ -285,7 +295,7 @@ export function CapWorkspace({ projects, initialProjectId, initialNeedsItemId, o
           <button className="button button--primary" onClick={() => { selectEnvironment(selectedEnvironment.id); setTab("calculator"); }}>Usar na calculadora</button></aside></div></section>}
     {tab === "calculator" && <section className="cap-calculator"><div className="cap-config-panel"><h2>Monte este ambiente</h2><p className="cap-step-intro">Escolha as opções abaixo. Ao finalizar, registre as três áreas e avance diretamente para o próximo ambiente.</p>
       <label>Projeto<select value={projectId} onChange={(event) => selectProject(event.target.value)}><option value="">Selecione</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.code} · {project.internalName}</option>)}</select></label>
-      <label>Item do programa<select value={needsItemId} onChange={(event) => { setNeedsItemId(event.target.value); setStudy((value) => value ? { ...value, needsProgramItemId: event.target.value || null } : value); }}><option value="">Sem vínculo</option>{selectedProject?.needsProgram.map((item) => <option key={item.id} value={item.id}>{item.environment || "Ambiente sem nome"}</option>)}</select></label>
+      <label>Ambiente que será calculado<select value={needsItemId} onChange={(event) => selectNeedsItem(event.target.value)}><option value="">+ Criar novo ambiente</option>{selectedProject?.needsProgram.map((item) => <option key={item.id} value={item.id}>Editar: {item.environment || "ambiente ainda não configurado"}</option>)}</select></label>
       <label>Ambiente<select value={selectedEnvironmentId} onChange={(event) => selectEnvironment(event.target.value)}>{capLibrary.environments.map((environment) => <option key={environment.id} value={environment.id}>{environment.label}</option>)}</select></label>
       <span className={`cap-maturity cap-maturity--${selectedEnvironment.capability}`}>{capabilityLabels[selectedEnvironment.capability]}</span>
       {currentScenario && <><label>Nome do cenário<input value={currentScenario.name} onChange={(event) => updateScenario({ name: event.target.value })} /></label>
@@ -293,7 +303,7 @@ export function CapWorkspace({ projects, initialProjectId, initialNeedsItemId, o
         <fieldset className="cap-choice-group"><legend>Acessibilidade</legend>{accessibilityChoices.map((choice) => <label key={choice.value} className={currentScenario.accessibilityProfile === choice.value ? "is-selected" : ""}><input type="radio" name="accessibility-profile" value={choice.value} checked={currentScenario.accessibilityProfile === choice.value} onChange={() => updateScenario({ accessibilityProfile: choice.value })} /><span><strong>{choice.label}</strong><small>{choice.description}</small></span></label>)}<p>A opção acessível é uma referência preliminar e não certifica atendimento integral à NBR 9050.</p></fieldset>
         <label>{selectedEnvironmentId === "AMB-015" ? "Reserva estrutural preliminar (%)" : selectedEnvironmentId === "AMB-016" ? "Reserva de bordas/ajustes (%)" : "Reserva geométrica para paredes/ajustes (%)"}<input type="number" min="0" max="100" value={currentScenario.geometricReservePercentage} onChange={(event) => { const value = parsePtBrDecimal(event.target.value); if (value !== null) updateScenario({ geometricReservePercentage: Math.min(100, Math.max(0, value)) }); }} /></label>
         {(selectedEnvironmentId === "AMB-003" || selectedEnvironmentId === "AMB-006" || selectedEnvironmentId === "AMB-007") && <label>Arranjo<select value={currentScenario.arrangement} onChange={(event) => updateScenario({ arrangement: event.target.value })}><option value="one_face">Uma face</option><option value="two_faces">Duas faces</option><option value="l">Em L</option><option value="u">Em U</option><option value="linear">Linear</option><option value="lateral">Lateral</option></select></label>}
-        {selectedEnvironmentId === "AMB-015" && <div className="cap-parameter-grid"><label>Largura do espelho d’água (m)<input type="number" step="0.1" min="0.1" value={currentScenario.customParameters.poolWidthM ?? ""} onChange={(event) => updateScenario({ customParameters: { ...currentScenario.customParameters, poolWidthM: Number(event.target.value) } })} /></label><label>Comprimento do espelho d’água (m)<input type="number" step="0.1" min="0.1" value={currentScenario.customParameters.poolLengthM ?? ""} onChange={(event) => updateScenario({ customParameters: { ...currentScenario.customParameters, poolLengthM: Number(event.target.value) } })} /></label></div>}
+        {selectedEnvironmentId === "AMB-015" && <><div className="cap-parameter-grid"><label>Largura do espelho d’água (m)<input type="number" step="0.1" min="0.1" value={currentScenario.customParameters.poolWidthM ?? ""} onChange={(event) => updateScenario({ customParameters: { ...currentScenario.customParameters, poolWidthM: Number(event.target.value) } })} /></label><label>Comprimento do espelho d’água (m)<input type="number" step="0.1" min="0.1" value={currentScenario.customParameters.poolLengthM ?? ""} onChange={(event) => updateScenario({ customParameters: { ...currentScenario.customParameters, poolLengthM: Number(event.target.value) } })} /></label></div><p className="cap-warning">Este ambiente calcula o espelho d’água e sua reserva estrutural preliminar. Para completar o conjunto, adicione também Deck / Solário e Casa de Máquinas como ambientes separados.</p></>}
         {["AMB-016", "AMB-017", "AMB-018", "AMB-019"].includes(selectedEnvironmentId) && <div className="cap-parameter-grid"><label>Área útil de referência (m²)<input type="number" step="0.1" min="0.1" value={currentScenario.customParameters.referenceNetAreaM2 ?? ""} onChange={(event) => updateScenario({ customParameters: { ...currentScenario.customParameters, referenceNetAreaM2: Number(event.target.value) } })} /></label></div>}
         <><fieldset className="cap-items cap-items--accordion"><legend>Mobiliários e equipamentos</legend>{itemGroups.map(([group, items], groupIndex) => { const selectedCount = items.filter((item) => currentScenario.selectedItems.some((entry) => entry.libraryItemId === item.id)).length; return <details key={`${selectedEnvironmentId}-${group}`} className="cap-item-group" open={groupIndex === 0 || selectedCount > 0 || openItemGroups.has(group)} onToggle={(event) => { const isOpen = event.currentTarget.open; setOpenItemGroups((current) => { const next = new Set(current); if (isOpen) next.add(group); else next.delete(group); return next; }); }}><summary><strong>{group}</strong><span>{selectedCount ? `${selectedCount} selecionado(s)` : "Escolher"}</span></summary><div className="cap-item-group__options">{items.map((item) => { const selected = currentScenario.selectedItems.find((entry) => entry.libraryItemId === item.id); return <div className={selected ? "cap-item-option is-selected" : "cap-item-option"} key={item.id}><label><input type="checkbox" checked={Boolean(selected)} onChange={(event) => toggleItem(item.id, event.target.checked)} /><span><strong>{item.label}</strong><small>{format(item.widthM)} × {format(item.lengthM)} m{item.peopleCapacity ? ` · ${item.peopleCapacity} pessoa(s)` : ""}{item.inferred ? " · referência preliminar" : ""}</small></span></label>{selected && item.selectionType !== "unica" && item.selectionType !== "parametrica" && <input aria-label={`Quantidade de ${item.label}`} type="number" min="1" value={selected.quantity} onChange={(event) => setQuantity(item.id, Number(event.target.value))} />}</div>; })}</div></details>; })}</fieldset>
         <fieldset className="cap-custom-item"><legend>Item com dimensões personalizadas</legend>

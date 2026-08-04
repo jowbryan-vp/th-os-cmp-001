@@ -284,29 +284,36 @@ test("shows comfort and accessibility choices and advances to the next environme
   await expect(page.getByRole("checkbox", { name: /Mesa de Jantar 6 Lugares Retangular/ })).toBeChecked();
   await page.getByRole("checkbox", { name: /Mesa de Jantar Retangular 12 Lugares/ }).check();
   await expect(page.getByRole("checkbox", { name: /Mesa de Jantar 6 Lugares Retangular/ })).not.toBeChecked();
+  await page.locator("details").filter({ hasText: /^Ilhas/ }).locator("summary").click();
+  await page.locator("details").filter({ hasText: /^Fornos/ }).locator("summary").click();
+  await page.getByRole("checkbox", { name: /Ilha Gourmet com Cooktop e Pia/ }).check();
+  await page.getByRole("checkbox", { name: /Forno de Pizza a Lenha/ }).check();
+  await expect(page.getByRole("checkbox", { name: /Churrasqueira em Alvenaria/ })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: /Ilha Gourmet com Cooktop e Pia/ })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: /Forno de Pizza a Lenha/ })).toBeChecked();
   await page.getByRole("radio", { name: /Mínimo \/ compacto/ }).check();
   await page.getByRole("radio", { name: /Acessível — referência NBR 9050/ }).check();
   await page.getByRole("button", { name: "Calcular, registrar e próximo ambiente →" }).click();
 
   await expect(page.getByText("Ambiente registrado. Configure agora o próximo ambiente.")).toBeVisible();
-  await expect(report.getByText("1 de 2 ambiente(s) calculado(s)")).toBeVisible();
-  await expect(report.locator("article")).toHaveCount(2);
-  await expect(report.locator("article.is-current")).toContainText("Dormitório Casal / Suíte");
+  await expect(report.getByText("1 de 1 ambiente(s) calculado(s)")).toBeVisible();
+  await expect(report.locator("article")).toHaveCount(1);
   await expect(report.locator("article").first()).toContainText("Varanda Gourmet");
-  await expect(page.getByLabel("Item do programa").locator("option")).toHaveCount(3);
-  await expect(page.getByLabel("Item do programa").locator("option:checked")).toHaveText("Ambiente sem nome");
+  await expect(page.getByLabel("Ambiente que será calculado").locator("option")).toHaveCount(2);
+  await expect(page.getByLabel("Ambiente que será calculado").locator("option:checked")).toHaveText("+ Criar novo ambiente");
   await expect(page.getByText("Configure os itens e calcule o cenário.")).toBeVisible();
 
   await report.locator("article").first().getByRole("button", { name: "Editar" }).click();
   await expect(report.locator("article").first()).toHaveClass(/is-current/);
-  await expect(page.getByLabel("Item do programa").locator("option:checked")).toHaveText("Varanda Gourmet");
+  await expect(page.getByLabel("Ambiente que será calculado").locator("option:checked")).toHaveText("Editar: Varanda Gourmet");
   page.once("dialog", (dialog) => dialog.accept());
   await report.locator("article").first().getByRole("button", { name: "Excluir" }).click();
-  await expect(report.locator("article")).toHaveCount(1);
+  await expect(report.locator("article")).toHaveCount(0);
   await expect(page.getByText(/Varanda Gourmet excluído/)).toBeVisible();
 
   const environment = page.getByRole("combobox", { name: "Ambiente", exact: true });
   await environment.selectOption({ label: "Piscina — Espelho d’água" });
+  await expect(page.getByText(/Para completar o conjunto, adicione também Deck \/ Solário e Casa de Máquinas/)).toBeVisible();
   await expect(page.getByLabel("Largura do espelho d’água (m)")).toBeVisible();
   await page.getByRole("checkbox", { name: /Piscina Residencial Média/ }).check();
   await expect(page.getByLabel("Largura do espelho d’água (m)")).toHaveValue("4");
@@ -319,17 +326,59 @@ test("registers and advances when CAP-001 starts without a linked program item",
   await page.getByRole("button", { name: "CAP-001" }).click();
   await page.getByRole("button", { name: "Calculadora", exact: true }).click();
 
-  await expect(page.getByLabel("Item do programa").locator("option:checked")).toHaveText("Sem vínculo");
+  await expect(page.getByLabel("Ambiente que será calculado").locator("option:checked")).toHaveText("+ Criar novo ambiente");
   const advance = page.getByRole("button", { name: "Calcular, registrar e próximo ambiente →" });
   await expect(advance).toBeEnabled();
   await advance.click();
 
   const report = page.getByLabel("Relatório acumulado do Programa de Necessidades");
   await expect(page.getByText("Ambiente registrado. Configure agora o próximo ambiente.")).toBeVisible();
-  await expect(report.getByText("1 de 2 ambiente(s) calculado(s)")).toBeVisible();
-  await expect(report.locator("article")).toHaveCount(2);
+  await expect(report.getByText("1 de 1 ambiente(s) calculado(s)")).toBeVisible();
+  await expect(report.locator("article")).toHaveCount(1);
   await expect(report.locator("article").first()).toContainText("Dormitório Casal / Suíte");
-  await expect(page.getByLabel("Item do programa").locator("option:checked")).toHaveText("Ambiente sem nome");
+  await expect(page.getByLabel("Ambiente que será calculado").locator("option:checked")).toHaveText("+ Criar novo ambiente");
+
+  await page.getByRole("button", { name: "Calcular e revisar" }).click();
+  await page.getByRole("button", { name: "Área mínima", exact: true }).click();
+  await expect(page.getByText(/Área CAP-001 de .* m² aplicada ao Programa de Necessidades/)).toBeVisible();
+});
+
+test("creates five intervention environments without a persisted empty placeholder", async ({ page }) => {
+  await page.getByRole("button", { name: "CAP-001" }).click();
+  await page.getByRole("button", { name: "Calculadora", exact: true }).click();
+  const environment = page.getByRole("combobox", { name: "Ambiente", exact: true });
+  const report = page.getByLabel("Relatório acumulado do Programa de Necessidades");
+
+  await environment.selectOption("AMB-011");
+  await page.locator("details").filter({ hasText: /^Ilhas/ }).locator("summary").click();
+  await page.locator("details").filter({ hasText: /^Fornos/ }).locator("summary").click();
+  await page.getByRole("checkbox", { name: /Ilha Gourmet com Cooktop e Pia/ }).check();
+  await page.getByRole("checkbox", { name: /Forno de Pizza a Lenha/ }).check();
+  await expect(page.getByRole("checkbox", { name: /Churrasqueira em Alvenaria/ })).toBeChecked();
+
+  for (const [index, environmentId] of ["AMB-011", "AMB-015", "AMB-007", "AMB-018", "AMB-009"].entries()) {
+    if (index > 0) await environment.selectOption(environmentId);
+    await page.getByRole("button", { name: "Calcular, registrar e próximo ambiente →" }).click();
+    await expect(page.locator(".toast")).toHaveCount(1);
+    await page.getByRole("button", { name: "Fechar aviso" }).click();
+  }
+
+  await expect(report.getByText("5 de 5 ambiente(s) calculado(s)")).toBeVisible();
+  await expect(report.locator("article")).toHaveCount(5);
+  for (const label of ["Varanda Gourmet / Churrasqueira", "Piscina — Espelho d’água", "Banheiro Completo / Suíte", "Despensa", "Área de Serviço / Lavanderia"]) {
+    await expect(report.locator("article").filter({ hasText: label })).toHaveCount(1);
+  }
+  await expect(report).not.toContainText("Próximo ambiente");
+  await expect(report).not.toContainText("Ambiente ainda não configurado");
+
+  await page.reload();
+  await page.getByRole("button", { name: "CAP-001" }).click();
+  await page.getByRole("button", { name: "Calculadora", exact: true }).click();
+  await expect(report.getByText("5 de 5 ambiente(s) calculado(s)")).toBeVisible();
+  await expect(report.locator("article")).toHaveCount(5);
+  await report.locator("article").filter({ hasText: "Despensa" }).getByRole("button", { name: "Editar" }).click();
+  await expect(page.getByLabel("Ambiente que será calculado").locator("option:checked")).toHaveText("Editar: Despensa");
+  await expect(environment.locator("option:checked")).toHaveText("Despensa");
 });
 
 test("CAP accepts 0,60 x 1,60 and stays usable across desktop, zoom equivalents, tablet and mobile", async ({ page }) => {

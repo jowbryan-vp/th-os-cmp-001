@@ -146,13 +146,14 @@ export function ProjectWorkspace() {
   async function applyCapResult(payload: CapApplyPayload) {
     const project = projects.find((item) => item.id === payload.study.projectId);
     if (!project) throw new Error("Projeto vinculado ao estudo não encontrado.");
-    const needsItem = project.needsProgram.find((item) => item.id === payload.study.needsProgramItemId);
+    const linked = ensureCapNeedsLink(project, payload.study);
+    const needsItem = linked.project.needsProgram.find((item) => item.id === linked.savedNeedsItemId);
     if (needsItem?.desiredAreaM2 !== null && needsItem?.desiredAreaM2 !== undefined
       && !window.confirm(`A área desejada atual é ${needsItem.desiredAreaM2.toLocaleString("pt-BR")} m². Substituir por ${payload.areaM2.toLocaleString("pt-BR")} m²?`)) return;
     const calculatedAt = new Date().toISOString();
-    const updatedProject = applyScenarioToNeedsProgram(project, payload.study, payload.scenario, payload.areaType, calculatedAt);
+    const updatedProject = applyScenarioToNeedsProgram(linked.project, linked.study, payload.scenario, payload.areaType, calculatedAt);
     const savedProject = await save(updatedProject);
-    const appliedStudy = { ...payload.study, status: "applied" as const, updatedAt: calculatedAt };
+    const appliedStudy = { ...linked.study, status: "applied" as const, updatedAt: calculatedAt };
     const existingStudy = await studyRepository.findById(appliedStudy.id);
     if (existingStudy) await studyRepository.update(appliedStudy); else await studyRepository.create(appliedStudy);
     setCurrent(savedProject); setView("record");
@@ -162,29 +163,20 @@ export function ProjectWorkspace() {
     const project = projects.find((item) => item.id === payload.study.projectId);
     if (!project) throw new Error("Projeto vinculado ao estudo não encontrado.");
     const calculatedAt = new Date().toISOString();
-    const linkedNeedExists = payload.study.needsProgramItemId
-      ? project.needsProgram.some((item) => item.id === payload.study.needsProgramItemId)
-      : false;
-    const currentNeed = linkedNeedExists ? null : emptyNeed(project.needsProgram.length);
-    const savedNeedsItemId = payload.study.needsProgramItemId && linkedNeedExists
-      ? payload.study.needsProgramItemId
-      : currentNeed!.id;
-    const linkedStudy = { ...payload.study, needsProgramItemId: savedNeedsItemId };
-    const projectWithCurrentNeed = currentNeed
-      ? { ...project, needsProgram: [...project.needsProgram, currentNeed] }
-      : project;
-    let updatedProject = saveScenarioOptionsToNeedsProgram(projectWithCurrentNeed, linkedStudy, payload.scenario, calculatedAt);
-    const nextNeed = payload.continueToNext ? emptyNeed(updatedProject.needsProgram.length) : null;
-    if (nextNeed) updatedProject = { ...updatedProject, needsProgram: [...updatedProject.needsProgram, nextNeed] };
+    const linked = ensureCapNeedsLink(project, payload.study);
+    const savedNeedsItemId = linked.savedNeedsItemId;
+    const linkedStudy = linked.study;
+    const updatedProject = saveScenarioOptionsToNeedsProgram(linked.project, linkedStudy, payload.scenario, calculatedAt);
     const savedProject = await save(updatedProject);
     const savedStudy = { ...linkedStudy, status: "calculated" as const, updatedAt: calculatedAt };
     const existingStudy = await studyRepository.findById(savedStudy.id);
     if (existingStudy) await studyRepository.update(savedStudy); else await studyRepository.create(savedStudy);
     setCurrent(savedProject);
     if (!payload.continueToNext) setView("record");
-    setNotice(payload.continueToNext ? "Ambiente registrado. Configure o próximo ambiente."
-      : "As três áreas CAP-001 foram registradas. Escolha uma opção no ambiente quando estiver pronto.");
-    return { savedNeedsItemId, nextNeedsItemId: nextNeed?.id };
+    if (!payload.continueToNext) {
+      setNotice("As três áreas CAP-001 foram registradas. Escolha uma opção no ambiente quando estiver pronto.");
+    }
+    return { savedNeedsItemId };
   }
   async function deleteCapNeedsItem(projectId: string, needsItemId: string): Promise<CapDeleteNeedsItemResult> {
     const project = projects.find((item) => item.id === projectId);
@@ -479,6 +471,24 @@ function ScopeRow({ item, onChange, onRemove }: { item: PreliminaryScopeItem; on
     <Input label="Responsável" value={item.responsible} onChange={(responsible) => onChange({ responsible })} /><Input label="Observações" value={item.notes} onChange={(notes) => onChange({ notes })} /></Grid></Collection>;
 }
 function emptyNeed(order: number): NeedsItem { return { id: createId("need"), environment: "", sector: "", floor: "", currentSituation: "under_review", intervention: "study", existingAreaM2: null, desiredAreaM2: null, quantity: 1, priority: "under_review", users: "", needs: "", lighting: "", ventilation: "", privacy: "", accessibility: "", furniture: "", equipment: "", connections: "", notes: "", order, parametricStudyId: null, parametricScenarioId: null, capMinimumAreaM2: null, capRecommendedAreaM2: null, capPreliminaryGrossAreaM2: null, appliedAreaType: null, appliedAreaM2: null, capLibraryVersion: null, calculationEngineVersion: null, calculatedAt: null }; }
+
+function ensureCapNeedsLink(project: ProjectMasterRecord, study: CapSaveOptionsPayload["study"]) {
+  const linkedNeedExists = study.needsProgramItemId
+    ? project.needsProgram.some((item) => item.id === study.needsProgramItemId)
+    : false;
+  if (linkedNeedExists) {
+    return { project, study, savedNeedsItemId: study.needsProgramItemId! };
+  }
+  const reusableNeed = project.needsProgram.find((item) => !item.environment.trim()
+    && !item.parametricStudyId && item.capMinimumAreaM2 === null && item.capRecommendedAreaM2 === null
+    && item.capPreliminaryGrossAreaM2 === null);
+  const currentNeed = reusableNeed ?? emptyNeed(project.needsProgram.length);
+  return {
+    project: reusableNeed ? project : { ...project, needsProgram: [...project.needsProgram, currentNeed] },
+    study: { ...study, needsProgramItemId: currentNeed.id },
+    savedNeedsItemId: currentNeed.id,
+  };
+}
 function updateNeed(project: ProjectMasterRecord, id: string, patch: Partial<NeedsItem>, mutate: <K extends keyof ProjectMasterRecord>(key: K, value: ProjectMasterRecord[K]) => void) { mutate("needsProgram", project.needsProgram.map((item) => item.id === id ? { ...item, ...patch } : item)); }
 function emptyVisit(): VisitRecord { return { id: createId("visit"), type: "survey", date: "", time: "", city: "", address: "", responsible: "", participants: "", estimatedDurationMinutes: null, actualDurationMinutes: null, purpose: "", notes: "", reportRequired: false, status: "planned", estimatedExpensesCents: null }; }
 function emptyDocument(): DocumentReference { return { id: createId("document"), name: "", category: "", required: false, status: "not_requested", requestedAt: "", receivedAt: "", notes: "", fileName: "", futureLink: "", responsible: "" }; }

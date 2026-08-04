@@ -111,5 +111,14 @@ test("stores all CAP options without choosing one and sums quantities", () => {
     calculatedEnvironments: 2,
     totalEnvironments: 2,
   });
+  assert.deepEqual(summarizeCapAreaOptions([...updated.needsProgram, {
+    ...need, id: "legacy-empty-placeholder", sector: "", floor: "", quantity: 1,
+  }]), {
+    minimumAreaM2: calculated.result!.minimumNetAreaM2 * 2,
+    recommendedAreaM2: calculated.result!.recommendedNetAreaM2 * 2,
+    preliminaryGrossAreaM2: calculated.result!.estimatedGrossAreaM2 * 2,
+    calculatedEnvironments: 2,
+    totalEnvironments: 2,
+  });
   assert.equal(updated.history.at(-1)?.action, "cap_options_saved");
 });
