@@ -6,8 +6,11 @@ import { parametricEnvironmentStudySchema } from "../features/cap/domain/cap-lib
 import { CatalogOption, catalogOptionSchema } from "../features/catalogs/domain/reference-catalog";
 import { ProjectRepository } from "./project-repository";
 import {
-  CAP_STUDY_STORE_NAME, CATALOG_STORE_NAME, PROJECT_STORE_NAME, openThOsDatabase, requestResult, transactionDone,
+  CAP_STUDY_STORE_NAME, CATALOG_STORE_NAME, FEE_CALIBRATION_STORE_NAME, FEE_SCENARIO_STORE_NAME,
+  FEE_SNAPSHOT_STORE_NAME, FEE_STUDY_STORE_NAME, PAYMENT_PLAN_STORE_NAME, PROJECT_STORE_NAME,
+  SERVICE_CATALOG_STORE_NAME, STRUCTURE_PROFILE_STORE_NAME, openThOsDatabase, requestResult, transactionDone,
 } from "./th-os-database";
+import { HonBackupData, parseHonBackupData } from "../features/hon/repositories/hon-repositories";
 
 export { DB_NAME, PROJECT_STORE_NAME as STORE_NAME } from "./th-os-database";
 
@@ -54,7 +57,7 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     await transactionDone(transaction);
     return parsed.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }
-  async restoreAll(projects: ProjectMasterRecord[], studies: ParametricEnvironmentStudy[], catalogs: CatalogOption[] = []) {
+  async restoreAll(projects: ProjectMasterRecord[], studies: ParametricEnvironmentStudy[], catalogs: CatalogOption[] = [], hon: HonBackupData = { feeStudies: [], feeScenarios: [], structureProfiles: [], serviceCatalog: [], feeSnapshots: [], paymentPlans: [], feeCalibrationRecords: [] }) {
     const parsedProjects = projects.map((project) => projectMasterRecordSchema.parse(migrateProject(project)));
     const parsedStudies = studies.map((study) => parametricEnvironmentStudySchema.parse(study));
     const parsedCatalogs = catalogs.map((option) => catalogOptionSchema.parse(option));
@@ -62,15 +65,23 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     if (parsedStudies.some((study) => !projectIds.has(study.projectId))) {
       throw new Error("O backup contém estudo sem projeto correspondente.");
     }
+    const parsedHon = parseHonBackupData(hon, projectIds);
     const database = await openThOsDatabase();
-    const transaction = database.transaction([PROJECT_STORE_NAME, CAP_STUDY_STORE_NAME, CATALOG_STORE_NAME], "readwrite");
+    const transaction = database.transaction([PROJECT_STORE_NAME, CAP_STUDY_STORE_NAME, CATALOG_STORE_NAME, FEE_STUDY_STORE_NAME, FEE_SCENARIO_STORE_NAME, STRUCTURE_PROFILE_STORE_NAME, SERVICE_CATALOG_STORE_NAME, FEE_SNAPSHOT_STORE_NAME, PAYMENT_PLAN_STORE_NAME, FEE_CALIBRATION_STORE_NAME], "readwrite");
     const projectStore = transaction.objectStore(PROJECT_STORE_NAME); const studyStore = transaction.objectStore(CAP_STUDY_STORE_NAME); const catalogStore = transaction.objectStore(CATALOG_STORE_NAME);
     projectStore.clear(); studyStore.clear(); catalogStore.clear();
     for (const project of parsedProjects) projectStore.put(project);
     for (const study of parsedStudies) studyStore.put(study);
     for (const option of parsedCatalogs) catalogStore.put(option);
+    const honStores: Array<[string, Array<{ id: string }>]> = [
+      [FEE_STUDY_STORE_NAME, parsedHon.feeStudies], [FEE_SCENARIO_STORE_NAME, parsedHon.feeScenarios],
+      [STRUCTURE_PROFILE_STORE_NAME, parsedHon.structureProfiles], [SERVICE_CATALOG_STORE_NAME, parsedHon.serviceCatalog],
+      [FEE_SNAPSHOT_STORE_NAME, parsedHon.feeSnapshots], [PAYMENT_PLAN_STORE_NAME, parsedHon.paymentPlans],
+      [FEE_CALIBRATION_STORE_NAME, parsedHon.feeCalibrationRecords],
+    ];
+    for (const [storeName, values] of honStores) { const store = transaction.objectStore(storeName); store.clear(); for (const value of values) store.put(value); }
     await transactionDone(transaction);
-    return { projects: parsedProjects.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)), studies: parsedStudies, catalogs: parsedCatalogs };
+    return { projects: parsedProjects.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)), studies: parsedStudies, catalogs: parsedCatalogs, hon: parsedHon };
   }
   async remove(id: string) {
     const database = await openThOsDatabase();
