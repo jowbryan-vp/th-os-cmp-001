@@ -55,7 +55,8 @@ export const bedroomBoundingBoxStrategy: CapCalculationStrategy = {
   inputs: ["cama", "armazenamento", "circulação", "conforto", "acessibilidade"],
   limitations: ["O arranjo deve ser confirmado em estudo de layout."], validate: requireItems,
   calculate(context) {
-    const bed = context.items.find((item) => /^MOB-00[1-5]$/.test(item.selection.libraryItemId ?? "")) ?? context.items[0]!;
+    const bed = context.items.find((item) => item.group === "Camas")
+      ?? context.items.find((item) => /^MOB-00[1-5]$/.test(item.selection.libraryItemId ?? "")) ?? context.items[0]!;
     const wardrobes = context.items.filter((item) => ["MOB-006", "MOB-007", "MOB-008"].includes(item.selection.libraryItemId ?? ""));
     const wardrobeDepth = wardrobes.length ? Math.max(...wardrobes.map((item) => item.lengthM)) : 0;
     const factor = comfortFactor(context); const minSide = 0.6; const recommendedSide = Math.max(0.6 * factor, accessibleClearance(context));
@@ -121,7 +122,8 @@ export const diningEnvelopeStrategy: CapCalculationStrategy = {
   inputs: ["mesa", "cadeiras", "lados com passagem", "conforto"], limitations: ["Aberturas e aparadores devem ser conferidos no layout."],
   validate: requireItems,
   calculate(context) {
-    const table = context.items.find((item) => item.selection.libraryItemId === "MOB-012") ?? context.items[0]!;
+    const table = context.items.find((item) => item.group === "Mesas de jantar" || item.calculationFunction === "mesa_principal")
+      ?? context.items.find((item) => item.selection.libraryItemId === "MOB-012") ?? context.items[0]!;
     const sides = Math.max(1, Math.min(4, context.scenario.customParameters.circulationSides ?? 4));
     const chair = 0.5; const passMin = 0.6; const passRec = 0.8 * comfortFactor(context);
     const widthSides = sides >= 2 ? 2 : 1; const lengthSides = sides >= 4 ? 2 : sides >= 3 ? 1 : 0;
@@ -208,7 +210,7 @@ export const stairPreliminaryStrategy: CapCalculationStrategy = {
 };
 
 export const pilotAreaReferenceStrategy: CapCalculationStrategy = {
-  id: "pilot-area-reference", version: "1.0.0", environmentIds: ["AMB-015", "AMB-016", "AMB-017", "AMB-018"],
+  id: "pilot-area-reference", version: "1.1.0", environmentIds: ["AMB-015", "AMB-016", "AMB-017", "AMB-018", "AMB-019"],
   inputs: ["dimensões ou área de referência", "reserva geométrica"],
   limitations: ["Extensão técnica do piloto sem composição bibliográfica aprovada.", "Validar estrutura, instalações, legislação e requisitos específicos no projeto."],
   validate(context) {

@@ -1,17 +1,16 @@
-import accessibilityProfilesData from "../data/v1.1.0/accessibility-profiles.json";
-import calculationRulesData from "../data/v1.1.0/calculation-rules.json";
-import circulationProfilesData from "../data/v1.1.0/circulation-profiles.json";
-import comfortLevelsData from "../data/v1.1.0/comfort-levels.json";
-import compositionsData from "../data/v1.1.0/compositions.json";
-import conflictsData from "../data/v1.1.0/conflicts.json";
-import environmentsData from "../data/v1.1.0/environments.json";
-import equipmentData from "../data/v1.1.0/equipment.json";
-import functionalZonesData from "../data/v1.1.0/functional-zones.json";
-import furnitureData from "../data/v1.1.0/furniture.json";
-import metadataData from "../data/v1.1.0/metadata.json";
-import sourcesData from "../data/v1.1.0/sources.json";
-import warningsData from "../data/v1.1.0/warnings.json";
-import { pilotEnvironmentExtensions } from "../data/pilot-environment-extensions";
+import accessibilityProfilesData from "../data/v1.2.0/accessibility-profiles.json";
+import calculationRulesData from "../data/v1.2.0/calculation-rules.json";
+import circulationProfilesData from "../data/v1.2.0/circulation-profiles.json";
+import comfortLevelsData from "../data/v1.2.0/comfort-levels.json";
+import compositionsData from "../data/v1.2.0/compositions.json";
+import conflictsData from "../data/v1.2.0/conflicts.json";
+import environmentsData from "../data/v1.2.0/environments.json";
+import equipmentData from "../data/v1.2.0/equipment.json";
+import functionalZonesData from "../data/v1.2.0/functional-zones.json";
+import furnitureData from "../data/v1.2.0/furniture.json";
+import metadataData from "../data/v1.2.0/metadata.json";
+import sourcesData from "../data/v1.2.0/sources.json";
+import warningsData from "../data/v1.2.0/warnings.json";
 import {
   capAccessibilityProfileDefinitionSchema, capCalculationRuleSchema, capCirculationProfileSchema,
   capComfortLevelSchema, capCompositionSchema, capConflictSchema, capEnvironmentSchema,
@@ -22,7 +21,7 @@ import { CapLibrary } from "../domain/cap-library-types";
 export const capLibrary: CapLibrary = {
   metadata: capLibraryMetadataSchema.parse(metadataData),
   sources: capSourceSchema.array().parse(sourcesData),
-  environments: capEnvironmentSchema.array().parse([...environmentsData, ...pilotEnvironmentExtensions]),
+  environments: capEnvironmentSchema.array().parse(environmentsData),
   furniture: capLibraryItemSchema.array().parse(furnitureData), equipment: capLibraryItemSchema.array().parse(equipmentData),
   functionalZones: capFunctionalZoneSchema.array().parse(functionalZonesData),
   circulationProfiles: capCirculationProfileSchema.array().parse(circulationProfilesData),

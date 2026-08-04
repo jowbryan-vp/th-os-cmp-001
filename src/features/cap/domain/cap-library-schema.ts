@@ -8,12 +8,12 @@ export const capLibraryMetadataSchema = z.object({
   libraryCode: z.literal("CAP-001"), version: z.string().regex(/^\d+\.\d+\.\d+$/), schemaVersion: z.number().int().positive(),
   sourceHash: z.string().regex(/^[a-f0-9]{64}$/), generatedAt: z.string(), status: z.string(),
   supportedApplicationVersion: z.string(), title: z.string(), description: z.string(),
-  units: z.object({ length: z.literal("m"), area: z.literal("m2"), angle: z.literal("degrees") }).strict(),
+  units: z.object({ length: z.literal("m"), area: z.literal("m2"), volume: z.literal("m3"), angle: z.literal("degrees") }).strict(),
   notes: z.array(z.string()),
 }).strict();
 export const capSourceSchema = z.object({
   id: z.string(), code: z.string(), title: z.string(), authors: z.array(z.string()), publisher: z.string(),
-  edition: z.string(), year: z.number().int(), isbn: z.string(),
+  edition: z.string(), year: z.number().int(), isbn: z.string().nullable(), url: z.string().nullable(),
 }).strict();
 export const capEnvironmentSchema = z.object({
   id: z.string(), label: z.string(), category: z.string(), description: z.string(),
@@ -22,8 +22,18 @@ export const capEnvironmentSchema = z.object({
 export const capLibraryItemSchema = z.object({
   id: z.string(), label: z.string(), category: z.string(), widthM: z.number().positive(),
   lengthM: z.number().positive(), heightM: z.number().positive(), footprintAreaM2: z.number().positive(),
-  sourceId: z.string(), page: z.number().int().positive(), tableOrFigure: z.string(),
+  group: z.string(), subgroup: z.string().nullable(), shape: z.string().nullable(), peopleCapacity: z.number().int().nonnegative().nullable(),
+  calculationFunction: z.string().nullable(), selectionType: z.enum(["unica", "multipla", "quantidade", "parametrica"]),
+  dimensionsEditable: z.boolean(), primaryItem: z.boolean(), useLocation: z.string().nullable(),
+  sourceId: z.string().nullable(), page: z.number().int().positive().nullable(), tableOrFigure: z.string().nullable(),
   confidence: capConfidenceSchema, inferred: z.boolean(), notes: z.string(),
+  poolParameters: z.object({
+    minimumDepthM: z.number().nonnegative().nullable(), maximumDepthM: z.number().nonnegative().nullable(),
+    waterSurfaceAreaM2: z.number().positive().nullable(), perimeterM: z.number().positive().nullable(),
+    estimatedVolumeM3: z.number().positive().nullable(), minimumCirculationM: z.number().nonnegative().nullable(),
+    recommendedCirculationM: z.number().nonnegative().nullable(), circulationSides: z.number().int().min(1).max(4).nullable(),
+    structuralReservePercentage: z.number().min(0).max(100).nullable(),
+  }).strict().nullable(),
 }).strict();
 export const capFunctionalZoneSchema = z.object({
   id: z.string(), label: z.string(), description: z.string(), minimumClearanceM: z.number().nonnegative(),
@@ -47,7 +57,7 @@ export const capCompositionSchema = z.object({
 }).strict();
 export const capCalculationRuleSchema = z.object({
   id: z.string(), label: z.string(), scope: z.string(), sourceExpression: z.string(), description: z.string(),
-  sourceId: z.string(), page: z.number().int().positive(), implementationStatus: z.literal("not_operational"),
+  sourceId: z.string().nullable(), page: z.number().int().positive().nullable(), implementationStatus: z.literal("not_operational"),
 }).strict();
 export const capConflictSchema = z.object({
   id: z.string(), parameter: z.string(), sourceA: z.string(), sourceB: z.string(), description: z.string(),

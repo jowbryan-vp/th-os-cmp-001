@@ -1,0 +1,52 @@
+[
+  {
+    "description": "Adiciona 15% à área líquida estritamente somada para cobrir espessuras de paredes e cantos mortos.",
+    "id": "REG-001",
+    "implementationStatus": "not_operational",
+    "label": "Fator de Perda Geométrica e Paredes",
+    "page": 26,
+    "scope": "Geral",
+    "sourceExpression": "Area_Bruta = Area_Liquida * 1.15",
+    "sourceId": "FNT-003"
+  },
+  {
+    "description": "Dimensionamento ergonômico de degraus de escada residencial.",
+    "id": "REG-002",
+    "implementationStatus": "not_operational",
+    "label": "Fórmula de Blondel para Escadas",
+    "page": 27,
+    "scope": "Circulação",
+    "sourceExpression": "2 * Espelho + Piso = 0.63m a 0.65m",
+    "sourceId": "FNT-002"
+  },
+  {
+    "description": "Garante espaço para abertura de portas e circulação ao redor do veículo.",
+    "id": "REG-003",
+    "implementationStatus": "not_operational",
+    "label": "Dimensionamento Mínimo de Vaga de Garagem",
+    "page": 21,
+    "scope": "Apoio",
+    "sourceExpression": "Largura_Vaga = Largura_Carro + 0.80m; Comprimento_Vaga = Comp_Carro + 0.50m",
+    "sourceId": "FNT-002"
+  },
+  {
+    "description": "Calcula separadamente a área útil do deck de solário ao redor do espelho d'água.",
+    "id": "REG-004",
+    "implementationStatus": "not_operational",
+    "label": "Área Total de Deck de Piscina",
+    "page": null,
+    "scope": "Piscina / Área Externa",
+    "sourceExpression": "Area_Total_Deck = (Largura_Espelho + 2*Faixa_Deck) * (Comp_Espelho + 2*Faixa_Deck) - Area_Espelho",
+    "sourceId": null
+  },
+  {
+    "description": "Calcula o volume cúbico de água para dimensionamento do filtro e bomba na casa de máquinas.",
+    "id": "REG-005",
+    "implementationStatus": "not_operational",
+    "label": "Volume da Piscina Residencial",
+    "page": null,
+    "scope": "Piscina",
+    "sourceExpression": "Volume_m3 = Area_Espelho * Profundidade_Media",
+    "sourceId": null
+  }
+]

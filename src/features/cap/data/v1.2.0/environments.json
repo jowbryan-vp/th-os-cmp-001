@@ -1,0 +1,154 @@
+[
+  {
+    "capability": "full_calculator",
+    "category": "Privativo",
+    "description": "Espaço de descanso, vestuário e higiene de casal.",
+    "id": "AMB-001",
+    "label": "Dormitório Casal / Suíte",
+    "maturityNote": null
+  },
+  {
+    "capability": "full_calculator",
+    "category": "Privativo",
+    "description": "Espaço individual de descanso, estudo e brincadeiras.",
+    "id": "AMB-002",
+    "label": "Dormitório Solteiro / Infantil",
+    "maturityNote": null
+  },
+  {
+    "capability": "full_calculator",
+    "category": "Privativo",
+    "description": "Espaço exclusivo para guarda e organização de vestuário e calçados.",
+    "id": "AMB-003",
+    "label": "Closet (Vestuário Dedicado)",
+    "maturityNote": null
+  },
+  {
+    "capability": "preliminary_calculator",
+    "category": "Social",
+    "description": "Espaço de convivência social e entretenimento audiovisual.",
+    "id": "AMB-004",
+    "label": "Sala de Estar / Home Theater",
+    "maturityNote": null
+  },
+  {
+    "capability": "full_calculator",
+    "category": "Social",
+    "description": "Espaço para refeições formais e de recepção de convidados.",
+    "id": "AMB-005",
+    "label": "Sala de Jantar",
+    "maturityNote": null
+  },
+  {
+    "capability": "full_calculator",
+    "category": "Social",
+    "description": "Instalação sanitária compacta social (sem chuveiro).",
+    "id": "AMB-006",
+    "label": "Lavabo / W.C. Social",
+    "maturityNote": null
+  },
+  {
+    "capability": "full_calculator",
+    "category": "Higiene",
+    "description": "Ambiente de higiene pessoal contendo lavatório, bacia e chuveiro.",
+    "id": "AMB-007",
+    "label": "Banheiro Completo / Suíte",
+    "maturityNote": null
+  },
+  {
+    "capability": "preliminary_calculator",
+    "category": "Serviço",
+    "description": "Área de cocção, lavagem e armazenamento de alimentos.",
+    "id": "AMB-008",
+    "label": "Cozinha Residencial",
+    "maturityNote": null
+  },
+  {
+    "capability": "preliminary_calculator",
+    "category": "Serviço",
+    "description": "Espaço de lavagem, secagem e passagem de roupas e limpeza.",
+    "id": "AMB-009",
+    "label": "Área de Serviço / Lavanderia",
+    "maturityNote": null
+  },
+  {
+    "capability": "full_calculator",
+    "category": "Trabalho",
+    "description": "Espaço dedicado a estudo, trabalho remoto e tarefas administrativas.",
+    "id": "AMB-010",
+    "label": "Home Office / Escritório",
+    "maturityNote": null
+  },
+  {
+    "capability": "preliminary_calculator",
+    "category": "Lazer",
+    "description": "Espaço coberto para lazer, churrasco e refeições informais.",
+    "id": "AMB-011",
+    "label": "Varanda Gourmet / Churrasqueira",
+    "maturityNote": null
+  },
+  {
+    "capability": "preliminary_calculator",
+    "category": "Circulação",
+    "description": "Área de transição entre o exterior/acesso e o interior residencial.",
+    "id": "AMB-012",
+    "label": "Hall de Entrada / Vestíbulo",
+    "maturityNote": null
+  },
+  {
+    "capability": "full_calculator",
+    "category": "Apoio",
+    "description": "Espaço coberto para estacionamento e manobra de veículos.",
+    "id": "AMB-013",
+    "label": "Garagem / Vaga de Garagem",
+    "maturityNote": null
+  },
+  {
+    "capability": "experimental",
+    "category": "Circulação",
+    "description": "Núcleo de circulação vertical entre pavimentos.",
+    "id": "AMB-014",
+    "label": "Escadas e Rampas Residencias",
+    "maturityNote": "Consulta e cálculo preliminar de degraus; rampas não calculadas."
+  },
+  {
+    "capability": "preliminary_calculator",
+    "category": "Lazer / Externa",
+    "description": "Espelho d'água privativo para recreação, banho ou natação.",
+    "id": "AMB-015",
+    "label": "Piscina — Espelho d’água",
+    "maturityNote": "Referência preliminar: validar dimensões, circulações, estrutura, instalações e normas no projeto."
+  },
+  {
+    "capability": "preliminary_calculator",
+    "category": "Lazer / Externa",
+    "description": "Área pavimentada/deck seca em torno do espelho d'água para permanência, espreguiçadeiras e solário.",
+    "id": "AMB-016",
+    "label": "Deck / Solário da Piscina",
+    "maturityNote": "Referência preliminar: validar dimensões, circulações, estrutura, instalações e normas no projeto."
+  },
+  {
+    "capability": "preliminary_calculator",
+    "category": "Apoio Técnico",
+    "description": "Compartimento técnico exclusivo para motobombas, filtros, trocadores de calor e quadro de comando.",
+    "id": "AMB-017",
+    "label": "Casa de Máquinas da Piscina",
+    "maturityNote": "Referência preliminar: validar dimensões, circulações, estrutura, instalações e normas no projeto."
+  },
+  {
+    "capability": "preliminary_calculator",
+    "category": "Serviço",
+    "description": "Compartimento destinado ao armazenamento de mantimentos, utensílios e insumos domésticos.",
+    "id": "AMB-018",
+    "label": "Despensa",
+    "maturityNote": "Referência preliminar: validar dimensões, circulações, estrutura, instalações e normas no projeto."
+  },
+  {
+    "capability": "preliminary_calculator",
+    "category": "Lazer / Externa",
+    "description": "Espaço externo paisagístico com circulação, pergolado e mobiliário de jardim.",
+    "id": "AMB-019",
+    "label": "Jardim e Área Externa de Estar",
+    "maturityNote": "Referência preliminar: validar dimensões, circulações, estrutura, instalações e normas no projeto."
+  }
+]

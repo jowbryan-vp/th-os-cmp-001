@@ -1451,6 +1451,18 @@ button {
 .cap-choice-group > p { grid-column: 1 / -1; margin: 2px 0 0; font-size: .78rem; }
 .cap-items { display: grid; gap: 8px; padding: 14px; border: 1px solid #d8dbd0; }
 .cap-items > div { display: grid; grid-template-columns: 1fr 74px; gap: 8px; align-items: center; }
+.cap-items--accordion { align-content: start; }
+.cap-item-group { overflow: clip; border: 1px solid #d8dbd0; border-radius: 10px; background: #fff; }
+.cap-item-group > summary { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 12px; cursor: pointer; color: #30352b; }
+.cap-item-group > summary span { color: #6a6f63; font-size: .78rem; }
+.cap-item-group[open] > summary { background: #f2f5eb; border-bottom: 1px solid #d8dbd0; }
+.cap-item-group__options { display: grid; gap: 8px; padding: 10px; }
+.cap-item-option { display: grid; grid-template-columns: minmax(0, 1fr) 74px; gap: 8px; align-items: center; padding: 9px; border: 1px solid transparent; border-radius: 8px; }
+.cap-item-option.is-selected { border-color: #8b9868; background: #f5f8ed; }
+.cap-item-option label { display: flex; gap: 9px; align-items: flex-start; min-width: 0; }
+.cap-item-option label > span { display: grid; gap: 3px; min-width: 0; }
+.cap-item-option small { color: #64685e; overflow-wrap: anywhere; }
+.cap-item-option > input { width: 100%; }
 .cap-custom-item { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: end; min-width: 0; padding: 14px; border: 1px solid #d8dbd0; }
 .cap-custom-item label { display: grid; gap: 5px; font-size: .8rem; }
 .cap-custom-item__notes { grid-column: span 2; }
@@ -1526,6 +1538,7 @@ button {
   .cap-study-list article { align-items: flex-start; flex-wrap: wrap; }
   .cap-custom-item__notes { grid-column: auto; }
   .cap-choice-group { grid-template-columns: 1fr; }
+  .cap-item-option { grid-template-columns: 1fr; }
   .cap-choice-group > p { grid-column: auto; }
   .toast { right: 10px; bottom: 10px; width: calc(100vw - 20px); max-width: none; }
 }

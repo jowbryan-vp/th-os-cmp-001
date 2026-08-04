@@ -11,24 +11,25 @@ import { calculateScenario, createParametricStudy, createSelectedLibraryItem } f
 
 const root = process.cwd();
 const hash = (file: string) => createHash("sha256").update(readFileSync(file)).digest("hex");
-const generatedDir = path.join(root, "src/features/cap/data/v1.1.0");
+const generatedDir = path.join(root, "src/features/cap/data/v1.2.0");
 
 test("preserves the approved raw hash and exposes a valid versioned library", () => {
-  const raw = path.join(root, "data/cap-001/raw/CAP-001_Biblioteca_Parametrica_v1.1.0.json");
-  assert.equal(hash(raw), "8449321c330345221cf3136cdd7f5e6b2becf88f35215240ff921dcab8319ac2");
-  assert.equal(capLibrary.metadata.version, "1.1.0");
+  const raw = path.join(root, "data/cap-001/raw/CAP-001_Biblioteca_Parametrica_v1.2.0.json");
+  assert.equal(hash(raw), "0c1b377a74713da4a879f8d049ed75a07258b8d19266c415cfeba4260a5e2f33");
+  assert.equal(capLibrary.metadata.version, "1.2.0");
   assert.equal(capLibrary.metadata.sourceHash, hash(raw));
-  assert.equal(capLibrary.environments.length, 18);
-  assert.equal(new Set(capLibrary.environments.map((item) => item.id)).size, 18);
+  assert.equal(capLibrary.environments.length, 19);
+  assert.equal(new Set(capLibrary.environments.map((item) => item.id)).size, 19);
   assert.equal(capLibrary.environments.filter((item) => item.capability === "full_calculator").length, 8);
-  assert.equal(capLibrary.environments.filter((item) => item.capability === "preliminary_calculator").length, 9);
+  assert.equal(capLibrary.environments.filter((item) => item.capability === "preliminary_calculator").length, 10);
   assert.equal(capLibrary.environments.filter((item) => item.capability === "experimental").length, 1);
 });
 
 test("keeps references, inferred data and conflicts traceable", () => {
   const sourceIds = new Set(capLibrary.sources.map((item) => item.id));
   for (const item of [...capLibrary.furniture, ...capLibrary.equipment]) {
-    assert.ok(sourceIds.has(item.sourceId)); assert.ok(item.page > 0);
+    if (item.sourceId) { assert.ok(sourceIds.has(item.sourceId)); assert.ok(item.page && item.page > 0); }
+    else { assert.equal(item.inferred, true); assert.equal(item.page, null); }
   }
   const itemIds = new Set([...capLibrary.furniture, ...capLibrary.equipment].map((item) => item.id));
   for (const composition of capLibrary.compositions) for (const itemId of composition.itemIds) assert.ok(itemIds.has(itemId));
@@ -66,8 +67,20 @@ test("applies a calculated scenario with complete CAP traceability", () => {
   assert.equal(applied.desiredAreaM2, calculated.result!.recommendedNetAreaM2);
   assert.deepEqual([applied.parametricStudyId, applied.parametricScenarioId, applied.appliedAreaType,
     applied.capLibraryVersion, applied.calculationEngineVersion, applied.calculatedAt],
-  [study.id, calculated.id, "recommended", "1.1.0", study.engineVersion, at]);
+  [study.id, calculated.id, "recommended", "1.2.0", study.engineVersion, at]);
   assert.equal(updated.history.at(-1)?.action, "cap_area_applied");
+});
+
+test("exposes grouped furniture variants and numeric pool presets", () => {
+  const diningTables = capLibrary.furniture.filter((item) => item.group === "Mesas de jantar");
+  assert.ok(diningTables.some((item) => item.peopleCapacity === 4));
+  assert.ok(diningTables.some((item) => item.peopleCapacity === 8));
+  assert.ok(diningTables.some((item) => item.peopleCapacity === 12));
+  assert.ok(diningTables.every((item) => item.selectionType === "unica"));
+  const pools = capLibrary.equipment.filter((item) => item.group === "Piscina" && item.primaryItem);
+  assert.ok(pools.length >= 4);
+  assert.ok(pools.every((item) => item.poolParameters?.waterSurfaceAreaM2 === item.widthM * item.lengthM));
+  assert.equal(capLibrary.environments.find((item) => item.id === "AMB-019")?.label, "Jardim e Área Externa de Estar");
 });
 
 test("stores all CAP options without choosing one and sums quantities", () => {

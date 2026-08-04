@@ -12,7 +12,8 @@ function resolveItem(selection: ParametricScenario["selectedItems"][number]): Re
   const heightM = custom ? selection.customHeightM ?? 0.75 : libraryItem?.heightM;
   if (!widthM || !lengthM || !heightM) throw new Error(`Revise as dimensões de “${selection.notes || "item personalizado"}”.`);
   return { selection, label: libraryItem?.label ?? (selection.notes || "Item customizado"), widthM, lengthM, heightM,
-    footprintAreaM2: widthM * lengthM, sourceId: libraryItem?.sourceId ?? null, page: libraryItem?.page ?? null };
+    footprintAreaM2: widthM * lengthM, sourceId: libraryItem?.sourceId ?? null, page: libraryItem?.page ?? null,
+    group: libraryItem?.group ?? null, calculationFunction: libraryItem?.calculationFunction ?? null };
 }
 export function calculateParametricScenario(scenario: ParametricScenario, calculatedAt = new Date().toISOString()) {
   const pending = scenario.selectedItems.filter((item) => item.sourceType === "custom" && (!item.customWidthM || !item.customLengthM));

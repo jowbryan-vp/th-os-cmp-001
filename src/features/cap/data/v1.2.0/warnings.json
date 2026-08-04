@@ -1,0 +1,29 @@
+[
+  {
+    "code": "W-DOOR-SWING",
+    "id": "AVS-001",
+    "message": "Portas de abrir de guarda-roupas exigem no mínimo 0.80m de espaço livre frontal. Caso o espaço seja < 0.70m, altere obrigatoriamente para armário com portas de correr.",
+    "normativeReferenceRequiresReview": false,
+    "severity": "warning",
+    "sourceSeverity": "Alerta de Projeto",
+    "title": "Conflito de Varredura de Porta de Abrir"
+  },
+  {
+    "code": "W-PCD-CIRCULATION",
+    "id": "AVS-002",
+    "message": "Ambientes configurados com Nível de Conforto NCF-003 (Acessível) devem possuir no mínimo um círculo desobstruído de 1.50m de diâmetro para giro de 360° da cadeira de rodas.",
+    "normativeReferenceRequiresReview": true,
+    "severity": "technical_review",
+    "sourceSeverity": "Erro Normativo",
+    "title": "Incompatibilidade Acessibilidade PCD"
+  },
+  {
+    "code": "W-POOL-SAFETY-DECK",
+    "id": "AVS-003",
+    "message": "O espelho d'água da piscina, o deck solário e a casa de máquinas foram cadastrados como entidades paramétricas separadas. Não somar diretamente sem prever faixas de circulação perimetral de segurança (mínimo 1.00m).",
+    "normativeReferenceRequiresReview": true,
+    "severity": "warning",
+    "sourceSeverity": "Alerta Normativo",
+    "title": "Separação Física de Borda de Piscina e Deck"
+  }
+]

@@ -1,6 +1,13 @@
 # Changelog
 
-## Não lançado — CAP-001 v1.1
+## Não lançado — CAP-001 v1.2
+
+- integra biblioteca ampliada com 59 mobiliários, 42 equipamentos e 19 ambientes;
+- preserva os IDs estáveis de piscina, deck/solário, casa de máquinas e despensa e acrescenta jardim como `AMB-019`;
+- organiza camas, mesas, sofás, área gourmet, piscina e demais famílias em seletores tipo sanfona;
+- adiciona mesas de 4 a 12 lugares e faz o cálculo reconhecer a variante selecionada, sem depender de um ID fixo;
+- permite aplicar presets de piscina aos campos de largura, comprimento, profundidade, volume e reserva estrutural;
+- mantém referências sem fonte documental validada como inferidas e pendentes de revisão técnica;
 
 - preserva e audita a fonte CAP-001 com normalização determinística;
 - adiciona 14 ambientes com maturidade explícita e oito estratégias TypeScript;

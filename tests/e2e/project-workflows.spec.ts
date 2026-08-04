@@ -232,11 +232,11 @@ test("calculates, compares, accumulates three CAP-001 areas and restores scenari
   const recommendedOption = page.getByRole("button", { name: /Recomendada · .* m²/ });
   await recommendedOption.click();
   await expect(recommendedOption).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByText(/biblioteca 1\.1\.0 · motor 1\.0\.0/)).toBeVisible();
+  await expect(page.getByText(/biblioteca 1\.2\.0 · motor 1\.0\.0/)).toBeVisible();
 
   await page.reload();
   await page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" }).locator("button.project-card__open").click();
-  await expect(page.getByText(/biblioteca 1\.1\.0 · motor 1\.0\.0/)).toBeVisible();
+  await expect(page.getByText(/biblioteca 1\.2\.0 · motor 1\.0\.0/)).toBeVisible();
   await page.getByRole("button", { name: /Projetos/ }).click();
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Exportar backup completo" }).click();
@@ -261,7 +261,7 @@ test("calculates, compares, accumulates three CAP-001 areas and restores scenari
   await chooser.setFiles({ name: "cap-backup.json", mimeType: "application/json", buffer });
   await expect(page.getByText("Backup restaurado com 1 cadastro(s) e 1 estudo(s).")).toBeVisible();
   await page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" }).locator("button.project-card__open").click();
-  await expect(page.getByText(/biblioteca 1\.1\.0 · motor 1\.0\.0/)).toBeVisible();
+  await expect(page.getByText(/biblioteca 1\.2\.0 · motor 1\.0\.0/)).toBeVisible();
 });
 
 test("shows comfort and accessibility choices and advances to the next environment", async ({ page }) => {
@@ -281,6 +281,9 @@ test("shows comfort and accessibility choices and advances to the next environme
   await expect(page.getByRole("radio", { name: /Confortável \/ recomendado/ })).toBeChecked();
   await expect(page.getByRole("radio", { name: /Generoso/ })).toBeVisible();
   await expect(page.getByRole("radio", { name: /Acessível — referência NBR 9050/ })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: /Mesa de Jantar 6 Lugares Retangular/ })).toBeChecked();
+  await page.getByRole("checkbox", { name: /Mesa de Jantar Retangular 12 Lugares/ }).check();
+  await expect(page.getByRole("checkbox", { name: /Mesa de Jantar 6 Lugares Retangular/ })).not.toBeChecked();
   await page.getByRole("radio", { name: /Mínimo \/ compacto/ }).check();
   await page.getByRole("radio", { name: /Acessível — referência NBR 9050/ }).check();
   await page.getByRole("button", { name: "Calcular, registrar e próximo ambiente →" }).click();
@@ -305,8 +308,9 @@ test("shows comfort and accessibility choices and advances to the next environme
   const environment = page.getByRole("combobox", { name: "Ambiente", exact: true });
   await environment.selectOption({ label: "Piscina — Espelho d’água" });
   await expect(page.getByLabel("Largura do espelho d’água (m)")).toBeVisible();
-  await page.getByLabel("Largura do espelho d’água (m)").fill("4");
-  await page.getByLabel("Comprimento do espelho d’água (m)").fill("8");
+  await page.getByRole("checkbox", { name: /Piscina Residencial Média/ }).check();
+  await expect(page.getByLabel("Largura do espelho d’água (m)")).toHaveValue("4");
+  await expect(page.getByLabel("Comprimento do espelho d’água (m)")).toHaveValue("8");
   await page.getByRole("button", { name: "Calcular e revisar" }).click();
   await expect(page.getByText("32,00 m²", { exact: true }).first()).toBeVisible();
 });

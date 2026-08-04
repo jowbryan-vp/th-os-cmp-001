@@ -1,0 +1,21 @@
+{
+  "description": "Base de dados relacional, abrangente e rastreável para pré-dimensionamento de ambientes residenciais, cobrindo áreas sociais, privativas, serviço, trabalho, lazer, externas, piscinas, garagens e acessibilidade. Valores sem fonte documental validada permanecem identificados como inferidos e pendentes de revisão técnica.",
+  "generatedAt": "2026-08-03T00:00:00.000Z",
+  "libraryCode": "CAP-001",
+  "notes": [
+    "Áreas de composições são presets comparativos.",
+    "Referências normativas exigem verificação vigente."
+  ],
+  "schemaVersion": 2,
+  "sourceHash": "0c1b377a74713da4a879f8d049ed75a07258b8d19266c415cfeba4260a5e2f33",
+  "status": "technical_review",
+  "supportedApplicationVersion": ">=0.2.0-pilot",
+  "title": "Biblioteca Paramétrica Completa de Dimensionamento Residencial",
+  "units": {
+    "angle": "degrees",
+    "area": "m2",
+    "length": "m",
+    "volume": "m3"
+  },
+  "version": "1.2.0"
+}

@@ -18,7 +18,7 @@ test("calculates known bedroom envelopes for casal, queen, king, solteiro and be
   const cases = [
     ["MOB-003", 2.6, 2.5, 2.9, 2.65], ["MOB-002", 2.78, 2.58, 3.08, 2.73],
     ["MOB-001", 3.13, 2.63, 3.43, 2.78], ["MOB-004", 2, 2.5, 2.3, 2.65],
-    ["MOB-005", 2.05, 2.55, 2.35, 2.7],
+    ["MOB-005", 2.05, 2.55, 2.35, 2.7], ["MOB-037", 2.1, 2.5, 2.4, 2.65],
   ] as const;
   for (const [id, minW, minL, recW, recL] of cases) {
     const result = calculateParametricScenario(scenario(id === "MOB-004" || id === "MOB-005" ? "AMB-002" : "AMB-001", [item(id)]), AT);
@@ -91,6 +91,17 @@ test("calculates the experimental stair with adjusted riser and Blondel", () => 
   assert.deepEqual([stair.minimumWidthM, stair.minimumLengthM], [0.9, 2.86]);
   assert.ok(stair.assumptions.some((assumption) => assumption.includes("16 espelhos de 0.18m; Blondel 0.63m")));
   assert.ok(stair.warnings.some((warning) => warning.includes("Não calcula rampas")));
+});
+
+test("uses the selected dining-table variant instead of a fixed six-seat item", () => {
+  const fourSeats = calculateParametricScenario(scenario("AMB-005", [item("MOB-019")],
+    { customParameters: { circulationSides: 4 } }), AT);
+  const twelveSeats = calculateParametricScenario(scenario("AMB-005", [item("MOB-022")],
+    { customParameters: { circulationSides: 4 } }), AT);
+  assert.ok(twelveSeats.minimumNetAreaM2 > fourSeats.minimumNetAreaM2);
+  assert.ok(twelveSeats.recommendedNetAreaM2 > fourSeats.recommendedNetAreaM2);
+  assert.equal(fourSeats.breakdown.primaryAreaDrivers[0], "Mesa de Jantar Retangular 4 Lugares");
+  assert.equal(twelveSeats.breakdown.primaryAreaDrivers[0], "Mesa de Jantar Retangular 12 Lugares");
 });
 
 test("separates pool water, deck and machine room pilot areas", () => {

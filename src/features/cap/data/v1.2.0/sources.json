@@ -1,0 +1,69 @@
+[
+  {
+    "authors": [
+      "Julius Panero",
+      "Martin Zelnik"
+    ],
+    "code": "PANERO_2008",
+    "edition": "1ª edição, 4ª impressão",
+    "id": "FNT-001",
+    "isbn": "978-84-252-1835-4",
+    "publisher": "Editorial Gustavo Gili, SL",
+    "title": "Dimensionamento Humano para Espaços Interiores",
+    "url": null,
+    "year": 2008
+  },
+  {
+    "authors": [
+      "Emile Pronk"
+    ],
+    "code": "PRONK_2003",
+    "edition": "7ª edição",
+    "id": "FNT-002",
+    "isbn": "85-237-0269-5",
+    "publisher": "Editora Universitária / UFPB",
+    "title": "Dimensionamento em Arquitetura",
+    "url": null,
+    "year": 2003
+  },
+  {
+    "authors": [
+      "Ernst Neufert",
+      "Johannes Kister"
+    ],
+    "code": "NEUFERT_2022",
+    "edition": "42ª edição",
+    "id": "FNT-003",
+    "isbn": "978-85-8260-575-2",
+    "publisher": "Bookman",
+    "title": "Arte de Projetar em Arquitetura",
+    "url": null,
+    "year": 2022
+  },
+  {
+    "authors": [
+      "Associação Brasileira de Normas Técnicas - ABNT"
+    ],
+    "code": "NBR_9050_2020",
+    "edition": "3ª edição corrigida 2020",
+    "id": "FNT-004",
+    "isbn": "978-85-07-08244-6",
+    "publisher": "ABNT",
+    "title": "ABNT NBR 9050: Acessibilidade a edificações, mobiliário, espaços e equipamentos urbanos",
+    "url": "https://www.abntcolecao.com.br",
+    "year": 2020
+  },
+  {
+    "authors": [
+      "Dexco / Deca"
+    ],
+    "code": "CATALOGO_DECA_2024",
+    "edition": "Edição 2024",
+    "id": "FNT-005",
+    "isbn": null,
+    "publisher": "Deca Brasil",
+    "title": "Catálogo Técnico de Louças e Metais Sanitários Deca",
+    "url": "https://www.deca.com.br",
+    "year": 2024
+  }
+]

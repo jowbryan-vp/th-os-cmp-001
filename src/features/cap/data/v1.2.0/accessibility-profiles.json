@@ -1,0 +1,27 @@
+[
+  {
+    "id": "standard",
+    "label": "Padrão",
+    "requiredTurningDiameterM": null
+  },
+  {
+    "id": "reduced_mobility",
+    "label": "Mobilidade reduzida",
+    "requiredTurningDiameterM": null
+  },
+  {
+    "id": "wheelchair",
+    "label": "Cadeira de rodas",
+    "requiredTurningDiameterM": 1.5
+  },
+  {
+    "id": "elderly",
+    "label": "Pessoa idosa",
+    "requiredTurningDiameterM": null
+  },
+  {
+    "id": "custom",
+    "label": "Personalizado",
+    "requiredTurningDiameterM": null
+  }
+]
