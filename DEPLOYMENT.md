@@ -1,5 +1,7 @@
 # Implantação do piloto no Cloudflare Workers
 
+> HON-001 deve ser validado em preview isolado da branch. Este documento não autoriza publicar a branch na URL principal.
+
 Este guia publica o CMP-001 como Worker `th-os-cmp-001-pilot`. A aplicação
 continua local-first: os projetos permanecem exclusivamente no IndexedDB do
 navegador e não são enviados ao Cloudflare, GitHub ou outro serviço.

@@ -1,5 +1,13 @@
 # Changelog
 
+## Não lançado — HON-001 v1.0.0
+
+- motor de preço baseado no custo do serviço;
+- perfis, custo-hora, investimentos, serviços, fatores, parceiros, viagens e obra;
+- cenários, pagamentos, snapshots e exportações interna/comercial;
+- integração CMP/CAP, IndexedDB v5 e backup v4;
+- testes financeiros, integração, E2E e documentação técnica.
+
 ## Não lançado — CAP-001 v1.2
 
 - integra biblioteca ampliada com 59 mobiliários, 42 equipamentos e 19 ambientes;

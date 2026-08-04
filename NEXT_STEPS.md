@@ -1,5 +1,13 @@
 # Próximos passos — CMP-001
 
+## Pós HON-001 v1
+
+- calibrar horas com registros reais aprovados;
+- importar referência formal e versionada quando validada;
+- integrar agenda/feriados sem expor finanças;
+- evoluir `ProposalPricingSnapshot` para proposta e contrato;
+- revisar `docs/hon/HON_TECHNICAL_REVIEW.md`.
+
 ## Antes de ampliar o piloto
 
 1. Validar campos e pesos com três projetos reais.

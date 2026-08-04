@@ -1,6 +1,8 @@
 # TH OS — Cadastro Mestre do Projeto
 
-**Produto:** CMP-001 + CAP-001 · **Fase:** piloto
+**Produto:** CMP-001 + CAP-001 + HON-001 · **Fase:** piloto
+
+HON-001 v1.0.0 acrescenta custo-hora sustentável, perfis, serviços, fatores, parceiros, viagens, obra, cenários, pagamentos e snapshots. Consulte [o guia do usuário](docs/hon/HON_USER_GUIDE.md).
 
 Aplicação local da TH Arquitetura para manter uma fonte única de identificação,
 clientes, imóvel, contexto, escopo, programa, planejamento, orçamento de
