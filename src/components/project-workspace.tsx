@@ -162,18 +162,29 @@ export function ProjectWorkspace() {
     const project = projects.find((item) => item.id === payload.study.projectId);
     if (!project) throw new Error("Projeto vinculado ao estudo não encontrado.");
     const calculatedAt = new Date().toISOString();
-    let updatedProject = saveScenarioOptionsToNeedsProgram(project, payload.study, payload.scenario, calculatedAt);
+    const linkedNeedExists = payload.study.needsProgramItemId
+      ? project.needsProgram.some((item) => item.id === payload.study.needsProgramItemId)
+      : false;
+    const currentNeed = linkedNeedExists ? null : emptyNeed(project.needsProgram.length);
+    const savedNeedsItemId = payload.study.needsProgramItemId && linkedNeedExists
+      ? payload.study.needsProgramItemId
+      : currentNeed!.id;
+    const linkedStudy = { ...payload.study, needsProgramItemId: savedNeedsItemId };
+    const projectWithCurrentNeed = currentNeed
+      ? { ...project, needsProgram: [...project.needsProgram, currentNeed] }
+      : project;
+    let updatedProject = saveScenarioOptionsToNeedsProgram(projectWithCurrentNeed, linkedStudy, payload.scenario, calculatedAt);
     const nextNeed = payload.continueToNext ? emptyNeed(updatedProject.needsProgram.length) : null;
     if (nextNeed) updatedProject = { ...updatedProject, needsProgram: [...updatedProject.needsProgram, nextNeed] };
     const savedProject = await save(updatedProject);
-    const savedStudy = { ...payload.study, status: "calculated" as const, updatedAt: calculatedAt };
+    const savedStudy = { ...linkedStudy, status: "calculated" as const, updatedAt: calculatedAt };
     const existingStudy = await studyRepository.findById(savedStudy.id);
     if (existingStudy) await studyRepository.update(savedStudy); else await studyRepository.create(savedStudy);
     setCurrent(savedProject);
     if (!payload.continueToNext) setView("record");
     setNotice(payload.continueToNext ? "Ambiente registrado. Configure o próximo ambiente."
       : "As três áreas CAP-001 foram registradas. Escolha uma opção no ambiente quando estiver pronto.");
-    return { nextNeedsItemId: nextNeed?.id };
+    return { savedNeedsItemId, nextNeedsItemId: nextNeed?.id };
   }
   async function deleteCapNeedsItem(projectId: string, needsItemId: string): Promise<CapDeleteNeedsItemResult> {
     const project = projects.find((item) => item.id === projectId);

@@ -22,7 +22,7 @@ export interface CapApplyPayload {
 export interface CapSaveOptionsPayload {
   study: ParametricEnvironmentStudy; scenario: ParametricScenario; continueToNext?: boolean;
 }
-export interface CapSaveOptionsResult { nextNeedsItemId?: string; }
+export interface CapSaveOptionsResult { savedNeedsItemId: string; nextNeedsItemId?: string; }
 export interface CapDeleteNeedsItemResult { deletedStudyIds: string[]; }
 interface Props {
   projects: ProjectMasterRecord[]; initialProjectId?: string; initialNeedsItemId?: string;
@@ -250,13 +250,16 @@ export function CapWorkspace({ projects, initialProjectId, initialNeedsItemId, o
   }
   async function saveOptions() {
     if (!study || !currentScenario?.result) return;
-    await onSaveOptions({ study, scenario: currentScenario, continueToNext: false });
+    const saved = await onSaveOptions({ study, scenario: currentScenario, continueToNext: false });
+    setNeedsItemId(saved.savedNeedsItemId);
+    setStudy((current) => current ? { ...current, needsProgramItemId: saved.savedNeedsItemId } : current);
+    setStudies(await repository.listByProject(projectId));
     setNotice("As três áreas foram registradas para escolha posterior.");
   }
   async function calculateAndContinue() {
-    if (!needsItemId) { setNotice("Selecione um item do programa antes de avançar."); return; }
     const output = calculateCurrent(); if (!output) return;
     const saved = await onSaveOptions({ study: output.calculatedStudy, scenario: output.calculated, continueToNext: true });
+    setStudies(await repository.listByProject(projectId));
     if (!saved.nextNeedsItemId) return;
     const nextEnvironmentId = "AMB-001";
     setNeedsItemId(saved.nextNeedsItemId); setSelectedEnvironmentId(nextEnvironmentId);
@@ -305,8 +308,8 @@ export function CapWorkspace({ projects, initialProjectId, initialNeedsItemId, o
           {currentScenario.selectedItems.filter((item) => item.sourceType === "custom").map((item) => { const pending = !item.customWidthM || !item.customLengthM; return <div className={`cap-custom-item__row ${pending ? "is-pending" : ""}`} key={item.id}><span><strong>{item.notes || "Item personalizado"}</strong><small>{pending ? "Pendente: informe largura e comprimento" : `${formatPtBrDecimal(item.customWidthM)} × ${formatPtBrDecimal(item.customLengthM)} m · qtd. ${item.quantity}`}</small></span><div><button type="button" onClick={() => editCustomItem(item)}>Editar</button><button type="button" onClick={() => duplicateCustomItem(item)}>Duplicar</button><button type="button" aria-label={`Remover ${item.notes}`} onClick={() => { updateScenario({ selectedItems: currentScenario.selectedItems.filter((candidate) => candidate.id !== item.id) }); setResultStale(Boolean(currentScenario.result)); }}>Remover</button></div></div>; })}</fieldset></>
         {selectedEnvironmentId === "AMB-014" && <div className="cap-parameter-grid">{[["levelHeightM", "Desnível (m)"], ["targetRiserM", "Espelho pretendido (m)"], ["treadM", "Piso (m)"], ["stairWidthM", "Largura (m)"], ["flights", "Lances"], ["landingLengthM", "Patamar (m)"]].map(([key, label]) => <label key={key}>{label}<input type="number" step="0.01" value={currentScenario.customParameters[key] ?? ""} onChange={(event) => { const value = parsePtBrDecimal(event.target.value); if (value !== null) updateScenario({ customParameters: { ...currentScenario.customParameters, [key]: value } }); }} /></label>)}</div>}
         {resultStale && currentScenario.result && <p className="cap-stale-result" role="status">Resultado anterior: os dados mudaram. Recalcule para atualizar.</p>}
-        <div className="cap-actions"><button className="button button--primary" onClick={calculateCurrent}>Calcular e revisar</button><button className="button cap-next-button" disabled={!needsItemId} onClick={() => void calculateAndContinue()}>Calcular, registrar e próximo ambiente →</button><button className="button button--ghost" onClick={() => void saveStudy()}>Salvar estudo</button><button className="button button--ghost" onClick={addScenario}>Duplicar cenário</button></div></>}
-    </div><CapResultPanel scenario={currentScenario} onApply={apply} onSaveOptions={saveOptions} canSaveOptions={Boolean(study?.needsProgramItemId)} />
+        <div className="cap-actions"><button className="button button--primary" onClick={calculateCurrent}>Calcular e revisar</button><button className="button cap-next-button" disabled={!projectId} onClick={() => void calculateAndContinue()}>Calcular, registrar e próximo ambiente →</button><button className="button button--ghost" onClick={() => void saveStudy()}>Salvar estudo</button><button className="button button--ghost" onClick={addScenario}>Duplicar cenário</button></div></>}
+    </div><CapResultPanel scenario={currentScenario} onApply={apply} onSaveOptions={saveOptions} canSaveOptions={Boolean(projectId)} />
       <CapProgramSummaryPanel project={selectedProject} currentNeedsItemId={needsItemId}
         currentEnvironmentLabel={selectedEnvironment.label} studies={studies}
         onEdit={editNeedsItem} onDelete={(itemId) => void deleteNeedsItem(itemId)} /></section>}

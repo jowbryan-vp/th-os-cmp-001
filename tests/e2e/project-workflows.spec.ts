@@ -315,6 +315,23 @@ test("shows comfort and accessibility choices and advances to the next environme
   await expect(page.getByText("32,00 m²", { exact: true }).first()).toBeVisible();
 });
 
+test("registers and advances when CAP-001 starts without a linked program item", async ({ page }) => {
+  await page.getByRole("button", { name: "CAP-001" }).click();
+  await page.getByRole("button", { name: "Calculadora", exact: true }).click();
+
+  await expect(page.getByLabel("Item do programa").locator("option:checked")).toHaveText("Sem vínculo");
+  const advance = page.getByRole("button", { name: "Calcular, registrar e próximo ambiente →" });
+  await expect(advance).toBeEnabled();
+  await advance.click();
+
+  const report = page.getByLabel("Relatório acumulado do Programa de Necessidades");
+  await expect(page.getByText("Ambiente registrado. Configure agora o próximo ambiente.")).toBeVisible();
+  await expect(report.getByText("1 de 2 ambiente(s) calculado(s)")).toBeVisible();
+  await expect(report.locator("article")).toHaveCount(2);
+  await expect(report.locator("article").first()).toContainText("Dormitório Casal / Suíte");
+  await expect(page.getByLabel("Item do programa").locator("option:checked")).toHaveText("Ambiente sem nome");
+});
+
 test("CAP accepts 0,60 x 1,60 and stays usable across desktop, zoom equivalents, tablet and mobile", async ({ page }) => {
   await page.getByRole("button", { name: "CAP-001" }).click();
   await page.getByRole("button", { name: "Calculadora", exact: true }).click();
