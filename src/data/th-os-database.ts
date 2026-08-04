@@ -2,7 +2,14 @@ export const DB_NAME = "th-os";
 export const PROJECT_STORE_NAME = "project-master-records";
 export const CAP_STUDY_STORE_NAME = "parametric-studies";
 export const CATALOG_STORE_NAME = "reference-catalog-options";
-export const DB_VERSION = 4;
+export const FEE_STUDY_STORE_NAME = "fee-studies";
+export const FEE_SCENARIO_STORE_NAME = "fee-scenarios";
+export const STRUCTURE_PROFILE_STORE_NAME = "structure-profiles";
+export const SERVICE_CATALOG_STORE_NAME = "service-catalog";
+export const FEE_SNAPSHOT_STORE_NAME = "fee-snapshots";
+export const PAYMENT_PLAN_STORE_NAME = "payment-plans";
+export const FEE_CALIBRATION_STORE_NAME = "fee-calibration-records";
+export const DB_VERSION = 5;
 
 let databasePromise: Promise<IDBDatabase> | null = null;
 export const requestResult = <T>(request: IDBRequest<T>) => new Promise<T>((resolve, reject) => {
@@ -35,6 +42,18 @@ export function openThOsDatabase() {
       if (!catalogStore.indexNames.contains("catalogType")) catalogStore.createIndex("catalogType", "catalogType");
       if (!catalogStore.indexNames.contains("active")) catalogStore.createIndex("active", "active");
       if (!catalogStore.indexNames.contains("projectId")) catalogStore.createIndex("projectId", "projectId");
+      const ensureStore = (name: string, indexes: Array<[string, string, IDBIndexParameters?]>) => {
+        const store = database.objectStoreNames.contains(name)
+          ? request.transaction!.objectStore(name) : database.createObjectStore(name, { keyPath: "id" });
+        for (const [indexName, keyPath, options] of indexes) if (!store.indexNames.contains(indexName)) store.createIndex(indexName, keyPath, options);
+      };
+      ensureStore(FEE_STUDY_STORE_NAME, [["projectId", "projectId"], ["status", "status"], ["updatedAt", "updatedAt"]]);
+      ensureStore(FEE_SCENARIO_STORE_NAME, [["studyId", "studyId"]]);
+      ensureStore(STRUCTURE_PROFILE_STORE_NAME, [["active", "active"], ["kind", "kind"]]);
+      ensureStore(SERVICE_CATALOG_STORE_NAME, [["code", "code", { unique: true }], ["active", "active"]]);
+      ensureStore(FEE_SNAPSHOT_STORE_NAME, [["studyId", "studyId"], ["projectId", "projectId"]]);
+      ensureStore(PAYMENT_PLAN_STORE_NAME, [["studyId", "studyId"]]);
+      ensureStore(FEE_CALIBRATION_STORE_NAME, [["studyId", "studyId"], ["projectId", "projectId"]]);
     };
     request.onsuccess = () => {
       const database = request.result;

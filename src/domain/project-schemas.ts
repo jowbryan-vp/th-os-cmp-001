@@ -4,6 +4,10 @@ import {
 } from "./project-master-record";
 import { parametricEnvironmentStudySchema } from "../features/cap/domain/cap-library-schema";
 import { catalogOptionSchema } from "../features/catalogs/domain/reference-catalog";
+import {
+  feeCalibrationSchema, feeScenarioSchema, feeSnapshotSchema, feeStudySchema, paymentPlanSchema,
+  serviceCatalogItemSchema, structureProfileSchema,
+} from "../features/hon/domain/hon-schemas";
 
 const nullableNumber = z.number().finite().nonnegative().nullable();
 const id = z.string().min(3);
@@ -149,5 +153,15 @@ const backupV3EnvelopeSchema = z.object({
   projectRecords: z.array(z.unknown()), parametricStudies: z.array(parametricEnvironmentStudySchema),
   referenceCatalogOptions: z.array(catalogOptionSchema), capLibraryReferences: z.array(capLibraryReferenceSchema),
 }).strict();
-export const backupEnvelopeSchema = z.union([backupV3EnvelopeSchema, backupV2EnvelopeSchema, legacyBackupEnvelopeSchema]);
+const backupV4EnvelopeSchema = z.object({
+  kind: z.literal("consolidated-backup"), backupSchemaVersion: z.literal(4), honSchemaVersion: z.literal(1),
+  schemaVersion: z.number().int().positive(), exportedAt: z.string(), application: z.literal("TH-OS-CMP-001"),
+  projectRecords: z.array(z.unknown()), parametricStudies: z.array(parametricEnvironmentStudySchema),
+  referenceCatalogOptions: z.array(catalogOptionSchema), capLibraryReferences: z.array(capLibraryReferenceSchema),
+  feeStudies: z.array(feeStudySchema), feeScenarios: z.array(feeScenarioSchema),
+  structureProfiles: z.array(structureProfileSchema), serviceCatalog: z.array(serviceCatalogItemSchema),
+  feeSnapshots: z.array(feeSnapshotSchema), paymentPlans: z.array(paymentPlanSchema),
+  feeCalibrationRecords: z.array(feeCalibrationSchema),
+}).strict();
+export const backupEnvelopeSchema = z.union([backupV4EnvelopeSchema, backupV3EnvelopeSchema, backupV2EnvelopeSchema, legacyBackupEnvelopeSchema]);
 export const readinessSchema = z.enum(readinessLevels);

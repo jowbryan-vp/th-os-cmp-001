@@ -1,5 +1,9 @@
 # Modelo de dados — CMP-001
 
+## Extensão HON-001
+
+O IndexedDB atual é v5 e o backup consolidado é v4. Entidades financeiras, stores e vínculos estão em [docs/hon/HON_DATA_MODEL.md](docs/hon/HON_DATA_MODEL.md). Monetários são centavos inteiros e snapshots aprovados são imutáveis.
+
 ## Versão e migração
 
 `PROJECT_SCHEMA_VERSION = 2`. A entidade raiz permanece

@@ -1,5 +1,9 @@
 # Resolução da auditoria — CMP-001
 
+## HON-001
+
+O módulo separa custo, mínimo, recomendado, comercial e final; usa centavos; faz gross-up do imposto; separa desconto/doação; preserva snapshots; usa repositórios e não envia dados financeiros a serviços externos.
+
 | Problema | Solução | Arquivo principal | Teste | Status |
 |---|---|---|---|---|
 | Seed fictício | Seed de Cacoal sem dados pessoais inventados | `project-master-record.ts` | domínio | Resolvido |

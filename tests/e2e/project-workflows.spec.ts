@@ -8,11 +8,9 @@ async function resetDatabase(page: import("@playwright/test").Page) {
       new Promise<void>((resolve, reject) => {
         const request = indexedDB.open("th-os");
         request.onsuccess = () => {
-          const stores = ["project-master-records", "parametric-studies", "reference-catalog-options"].filter((name) => request.result.objectStoreNames.contains(name));
+          const stores = ["project-master-records", "parametric-studies", "reference-catalog-options", "fee-studies", "fee-scenarios", "structure-profiles", "service-catalog", "fee-snapshots", "payment-plans", "fee-calibration-records"].filter((name) => request.result.objectStoreNames.contains(name));
           const transaction = request.result.transaction(stores, "readwrite");
-          transaction.objectStore("project-master-records").clear();
-          if (stores.includes("parametric-studies")) transaction.objectStore("parametric-studies").clear();
-          if (stores.includes("reference-catalog-options")) transaction.objectStore("reference-catalog-options").clear();
+          for (const store of stores) transaction.objectStore(store).clear();
           transaction.oncomplete = () => resolve();
           transaction.onerror = () => reject(transaction.error);
         };
@@ -157,7 +155,9 @@ test("exports and restores a complete browser backup", async ({ page }) => {
   const buffer = Buffer.concat(chunks);
   const envelope = JSON.parse(buffer.toString());
   expect(envelope.kind).toBe("consolidated-backup");
-  expect(envelope.backupSchemaVersion).toBe(3);
+  expect(envelope.backupSchemaVersion).toBe(4);
+  expect(envelope.honSchemaVersion).toBe(1);
+  expect(envelope.feeStudies).toEqual([]);
   expect(envelope.referenceCatalogOptions.length).toBeGreaterThan(0);
   expect(envelope.projectRecords).toHaveLength(2);
   expect(envelope.parametricStudies).toEqual([]);
@@ -452,6 +452,48 @@ test("keeps the CAP-001 library usable on tablet and mobile", async ({ page }) =
     await expect(page.getByRole("button", { name: /Dormitório Casal/ })).toBeVisible();
     await page.getByRole("button", { name: "← Voltar ao CMP" }).click();
   }
+});
+
+test("calcula HON-001, compara cenários, gera pagamentos, aprova snapshot e persiste", async ({ page }) => {
+  await page.getByRole("button", { name: "HON-001" }).click();
+  await expect(page.getByRole("heading", { name: "Calculadora de Honorários" })).toBeVisible();
+  await page.getByRole("button", { name: "Criar estudo e importar escopo" }).click();
+  await expect(page.getByRole("heading", { name: "Serviços e estimativa manual de horas" })).toBeVisible();
+  await page.getByLabel(/Horas de Levantamento cadastral/).fill("40");
+  await page.getByRole("button", { name: "Parceiros" }).click();
+  await page.getByRole("button", { name: "+ Parceiro" }).click();
+  await page.getByLabel("Parceiro", { exact: true }).fill("Engenharia estrutural");
+  await page.getByLabel("Serviço", { exact: true }).fill("Projeto estrutural");
+  await page.getByLabel("Custo", { exact: true }).fill("2.000,00");
+  await page.getByRole("button", { name: "Deslocamentos e visitas" }).click();
+  await page.getByRole("button", { name: "+ Deslocamento/visita" }).click();
+  await page.getByLabel("Cidade", { exact: true }).fill("Vilhena");
+  await page.getByLabel("Km ida e volta").fill("450");
+  await page.getByLabel("Horas de viagem").fill("8");
+  await page.getByRole("button", { name: "Resultado" }).click();
+  await page.getByRole("button", { name: "Calcular honorários" }).click();
+  await expect(page.getByText("E. Valor final negociado")).toBeVisible();
+  await expect(page.getByText("Gestão", { exact: false })).toBeAttached();
+  await page.getByRole("button", { name: "Cenários" }).click();
+  await page.getByRole("button", { name: "+ Salvar cenário atual" }).click();
+  await page.getByRole("button", { name: "+ Salvar cenário atual" }).click();
+  await expect(page.locator(".hon-scenario-grid article")).toHaveCount(2);
+  await page.getByRole("button", { name: "Pagamentos" }).click();
+  await page.getByRole("button", { name: "30% + etapas" }).click();
+  await expect(page.getByRole("cell", { name: "30%" }).first()).toBeVisible();
+  await page.getByRole("button", { name: "Histórico e snapshots" }).click();
+  await page.getByRole("button", { name: "Aprovar snapshot imutável" }).click();
+  await expect(page.getByText("Snapshot imutável aprovado.")).toBeVisible();
+  await expect(page.getByText("approved", { exact: true })).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "HON-001" }).click();
+  await expect(page.getByRole("heading", { name: "Calculadora de Honorários" })).toBeVisible();
+  await page.getByRole("button", { name: "Histórico e snapshots" }).click();
+  await expect(page.getByText("approved", { exact: true })).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Resultado" }).click();
+  await expect(page.getByText("E. Valor final negociado")).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
 });
 
 test("keeps projects isolated between browser contexts", async ({ browser }) => {
