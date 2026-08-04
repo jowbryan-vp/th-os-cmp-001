@@ -1,0 +1,26 @@
+[
+  {
+    "clearanceFactor": 1,
+    "description": "Adota folgas mínimas operacionais (0.55m a 0.60m).",
+    "id": "NCF-001",
+    "label": "Compacto",
+    "legacyAccessibilityCoupling": false,
+    "level": "compact"
+  },
+  {
+    "clearanceFactor": 1.25,
+    "description": "Adota folgas generosas e confortáveis (0.80m a 0.90m).",
+    "id": "NCF-002",
+    "label": "Confortável",
+    "legacyAccessibilityCoupling": false,
+    "level": "comfortable"
+  },
+  {
+    "clearanceFactor": 1.5,
+    "description": "Adota diretrizes universais de acessibilidade (giro 1.50m).",
+    "id": "NCF-003",
+    "label": "Generoso",
+    "legacyAccessibilityCoupling": true,
+    "level": "generous"
+  }
+]

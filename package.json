@@ -12,6 +12,7 @@
     "preview": "vinext start",
     "deploy": "vinext deploy",
     "deploy:dry-run": "pnpm build && wrangler deploy --dry-run --outdir .wrangler/dry-run",
+    "cap:normalize": "node --import tsx scripts/cap/normalize.ts",
     "typecheck": "tsc --noEmit",
     "test": "pnpm test:unit && pnpm test:integration",
     "test:unit": "node --import tsx --test tests/unit/*.test.ts",

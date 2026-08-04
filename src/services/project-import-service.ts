@@ -1,39 +1,53 @@
 import { APPLICATION_ID, PROJECT_SCHEMA_VERSION, ProjectMasterRecord, createHistoryEvent, createId } from "../domain/project-master-record";
 import { migrateProject } from "../domain/project-migrations";
 import { backupEnvelopeSchema, importEnvelopeSchema } from "../domain/project-schemas";
+import { parametricEnvironmentStudySchema } from "../features/cap/domain/cap-library-schema";
+import { ParametricEnvironmentStudy } from "../features/cap/domain/cap-library-types";
+import { capLibrary } from "../features/cap/services/cap-library-service";
+import { CatalogOption, catalogOptionSchema, normalizeCatalogValue } from "../features/catalogs/domain/reference-catalog";
 
 export interface ExportEnvelope {
   schemaVersion: number; exportedAt: string; application: typeof APPLICATION_ID;
-  project: ProjectMasterRecord;
+  project: ProjectMasterRecord; parametricStudies: ParametricEnvironmentStudy[];
 }
 export interface ConsolidatedBackupEnvelope {
-  kind: "consolidated-backup"; schemaVersion: number; exportedAt: string;
-  application: typeof APPLICATION_ID; projects: ProjectMasterRecord[];
+  kind: "consolidated-backup"; backupSchemaVersion: 3; schemaVersion: number; exportedAt: string;
+  application: typeof APPLICATION_ID; projectRecords: ProjectMasterRecord[];
+  parametricStudies: ParametricEnvironmentStudy[];
+  referenceCatalogOptions: CatalogOption[];
+  capLibraryReferences: Array<{ libraryCode: "CAP-001"; version: string; sourceHash: string }>;
 }
 export type ImportConflict = "none" | "id" | "code" | "both";
-export function exportProject(project: ProjectMasterRecord): ExportEnvelope {
+export function exportProject(project: ProjectMasterRecord, studies: ParametricEnvironmentStudy[] = []): ExportEnvelope {
   return {
     schemaVersion: project.schemaVersion, exportedAt: new Date().toISOString(),
     application: APPLICATION_ID,
     project: { ...project, history: [...project.history, createHistoryEvent("exported", "Cadastro exportado em JSON.")] },
+    parametricStudies: studies.filter((study) => study.projectId === project.id),
   };
 }
-export function exportConsolidatedBackup(projects: ProjectMasterRecord[]): ConsolidatedBackupEnvelope {
+export function exportConsolidatedBackup(projects: ProjectMasterRecord[], studies: ParametricEnvironmentStudy[] = [], catalogs: CatalogOption[] = []): ConsolidatedBackupEnvelope {
   return {
-    kind: "consolidated-backup", schemaVersion: PROJECT_SCHEMA_VERSION,
+    kind: "consolidated-backup", backupSchemaVersion: 3, schemaVersion: PROJECT_SCHEMA_VERSION,
     exportedAt: new Date().toISOString(), application: APPLICATION_ID,
-    projects: projects.map((project) => ({
+    projectRecords: projects.map((project) => ({
       ...project,
       history: [...project.history, createHistoryEvent("exported", "Incluído em backup consolidado.")],
     })),
+    parametricStudies: studies,
+    referenceCatalogOptions: catalogs,
+    capLibraryReferences: [{ libraryCode: "CAP-001", version: capLibrary.metadata.version, sourceHash: capLibrary.metadata.sourceHash }],
   };
 }
-export function parseConsolidatedBackup(input: unknown): ProjectMasterRecord[] {
+export function parseConsolidatedBackup(input: unknown): { projects: ProjectMasterRecord[]; studies: ParametricEnvironmentStudy[]; catalogs: CatalogOption[] } {
   const envelope = backupEnvelopeSchema.parse(input);
   if (envelope.schemaVersion > PROJECT_SCHEMA_VERSION) {
     throw new Error("O backup foi criado por uma versão futura do CMP.");
   }
-  const projects = envelope.projects.map(migrateProject);
+  const legacy = "projects" in envelope;
+  const projects = (legacy ? envelope.projects : envelope.projectRecords).map(migrateProject);
+  const studies = legacy ? [] : parametricEnvironmentStudySchema.array().parse(envelope.parametricStudies);
+  const catalogs = !legacy && envelope.backupSchemaVersion === 3 ? catalogOptionSchema.array().parse(envelope.referenceCatalogOptions) : [];
   const ids = new Set<string>(); const codes = new Set<string>();
   for (const project of projects) {
     if (ids.has(project.id) || codes.has(project.code)) {
@@ -41,14 +55,38 @@ export function parseConsolidatedBackup(input: unknown): ProjectMasterRecord[] {
     }
     ids.add(project.id); codes.add(project.code);
   }
-  return projects;
+  const projectIds = new Set(projects.map((project) => project.id));
+  if (studies.some((study) => !projectIds.has(study.projectId))) throw new Error("O backup contém estudo sem projeto correspondente.");
+  if (!legacy) {
+    const references = new Set(envelope.capLibraryReferences.map((reference) => `${reference.libraryCode}:${reference.version}:${reference.sourceHash}`));
+    for (const study of studies) {
+      if (!references.has(`${study.libraryCode}:${study.libraryVersion}:${study.libraryHash}`)) {
+        throw new Error("O backup contém estudo sem referência de biblioteca compatível.");
+      }
+    }
+  }
+  const catalogKeys = new Set<string>();
+  for (const option of catalogs) {
+    const key = `${option.catalogType}:${option.projectId ?? "global"}:${normalizeCatalogValue(option.value)}`;
+    if (catalogKeys.has(key)) throw new Error("O backup contém opções de catálogo duplicadas.");
+    catalogKeys.add(key);
+  }
+  const catalogIds = new Set(catalogs.map((option) => option.id));
+  if (catalogs.some((option) => option.parentId && !catalogIds.has(option.parentId))) throw new Error("O backup contém cidade sem estado correspondente.");
+  return { projects, studies, catalogs };
 }
 export function parseProjectImport(input: unknown) {
+  return parseProjectImportBundle(input).project;
+}
+export function parseProjectImportBundle(input: unknown): { project: ProjectMasterRecord; studies: ParametricEnvironmentStudy[] } {
   const envelope = importEnvelopeSchema.safeParse(input);
   if (envelope.success && envelope.data.schemaVersion > PROJECT_SCHEMA_VERSION) {
     throw new Error("O arquivo foi criado por uma versão futura do CMP.");
   }
-  return migrateProject(envelope.success ? envelope.data.project : input);
+  const project = migrateProject(envelope.success ? envelope.data.project : input);
+  const studies = envelope.success ? envelope.data.parametricStudies : [];
+  if (studies.some((study) => study.projectId !== project.id)) throw new Error("O arquivo contém estudo sem vínculo com o projeto exportado.");
+  return { project, studies };
 }
 export function detectImportConflict(project: ProjectMasterRecord, existing: ProjectMasterRecord[]): ImportConflict {
   const id = existing.some((item) => item.id === project.id);

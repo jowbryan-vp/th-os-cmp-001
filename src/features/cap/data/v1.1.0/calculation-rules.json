@@ -1,0 +1,32 @@
+[
+  {
+    "description": "Adiciona 15% à área líquida estritamente somada para cobrir espessuras de paredes e cantos mortos.",
+    "id": "REG-001",
+    "implementationStatus": "not_operational",
+    "label": "Fator de Perda Geométrica e Paredes",
+    "page": 26,
+    "scope": "Geral",
+    "sourceExpression": "Area_Bruta = Area_Liquida * 1.15",
+    "sourceId": "FNT-003"
+  },
+  {
+    "description": "Dimensionamento ergonômico de degraus de escada residencial.",
+    "id": "REG-002",
+    "implementationStatus": "not_operational",
+    "label": "Fórmula de Blondel para Escadas",
+    "page": 27,
+    "scope": "Circulação",
+    "sourceExpression": "2 * Espelho + Piso = 0.63m a 0.65m",
+    "sourceId": "FNT-002"
+  },
+  {
+    "description": "Garante espaço para abertura de portas e circulação ao redor do veículo.",
+    "id": "REG-003",
+    "implementationStatus": "not_operational",
+    "label": "Dimensionamento Mínimo de Vaga de Garagem",
+    "page": 21,
+    "scope": "Apoio",
+    "sourceExpression": "Largura_Vaga = Largura_Carro + 0.80m; Comprimento_Vaga = Comp_Carro + 0.50m",
+    "sourceId": "FNT-002"
+  }
+]

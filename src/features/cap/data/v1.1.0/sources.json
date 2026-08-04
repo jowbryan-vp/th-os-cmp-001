@@ -1,0 +1,40 @@
+[
+  {
+    "authors": [
+      "Julius Panero",
+      "Martin Zelnik"
+    ],
+    "code": "PANERO_2008",
+    "edition": "1ª edição, 4ª impressão",
+    "id": "FNT-001",
+    "isbn": "978-84-252-1835-4",
+    "publisher": "Editorial Gustavo Gili, SL",
+    "title": "Dimensionamento Humano para Espaços Interiores",
+    "year": 2008
+  },
+  {
+    "authors": [
+      "Emile Pronk"
+    ],
+    "code": "PRONK_2003",
+    "edition": "7ª edição",
+    "id": "FNT-002",
+    "isbn": "85-237-0269-5",
+    "publisher": "Editora Universitária / UFPB",
+    "title": "Dimensionamento em Arquitetura",
+    "year": 2003
+  },
+  {
+    "authors": [
+      "Ernst Neufert",
+      "Johannes Kister"
+    ],
+    "code": "NEUFERT_2022",
+    "edition": "42ª edição",
+    "id": "FNT-003",
+    "isbn": "978-85-8260-575-2",
+    "publisher": "Bookman",
+    "title": "Arte de Projetar em Arquitetura",
+    "year": 2022
+  }
+]

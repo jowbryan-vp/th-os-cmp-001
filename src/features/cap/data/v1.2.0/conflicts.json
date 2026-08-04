@@ -1,0 +1,32 @@
+[
+  {
+    "confidence": "conflicting_sources",
+    "description": "Pronk registra o padrão brasileiro tradicional (1.90m), enquanto Neufert adota o padrão europeu (2.00m).",
+    "id": "CFL-001",
+    "parameter": "Comprimento da Cama de Casal Padrão",
+    "preserved": true,
+    "sourceA": "PRONK_2003 p.19 (1.90m)",
+    "sourceB": "NEUFERT_2022 p.319 (2.00m)",
+    "sourceResolutionNote": "Preservados ambos. A calculadora adota 1.90m para modelos nacionais/Pronk e 2.00m para modelos europeus/Neufert."
+  },
+  {
+    "confidence": "conflicting_sources",
+    "description": "Panero exige folga maior (1.02-1.22m) para abertura de porta do forno/geladeira do que Pronk (0.80-1.10m).",
+    "id": "CFL-002",
+    "parameter": "Corredor de Trabalho na Cozinha",
+    "preserved": true,
+    "sourceA": "PRONK_2003 p.12 (0.80m - 1.10m)",
+    "sourceB": "PANERO_2008 p.158 (1.02m - 1.22m)",
+    "sourceResolutionNote": "Adotado 0.80m para nível Mínimo/Compacto e 1.10m/1.20m para nível Confortável."
+  },
+  {
+    "confidence": "conflicting_sources",
+    "description": "Neufert recomenda faixa mínima de 1.20m a 1.50m por segurança em piscinas coletivas/residenciais grandes, enquanto manuais comerciais de piscinas aceitam 1.00m em bordas compactas.",
+    "id": "CFL-003",
+    "parameter": "Faixa de Circulação ao Redor de Piscinas",
+    "preserved": true,
+    "sourceA": "NEUFERT_2022 p.477 (1.20m a 1.50m)",
+    "sourceB": "MANUAL_PISCINAS_SULFABRIL_2023 p.16 (1.00m a 1.20m)",
+    "sourceResolutionNote": "Preservados ambos. Adotado 1.00m para piscinas compactas e 1.20m/1.50m para padrão confortável/alto padrão."
+  }
+]

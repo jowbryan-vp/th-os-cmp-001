@@ -1,5 +1,27 @@
 # Changelog
 
+## Não lançado — CAP-001 v1.2
+
+- integra biblioteca ampliada com 59 mobiliários, 42 equipamentos e 19 ambientes;
+- preserva os IDs estáveis de piscina, deck/solário, casa de máquinas e despensa e acrescenta jardim como `AMB-019`;
+- organiza camas, mesas, sofás, área gourmet, piscina e demais famílias em seletores tipo sanfona;
+- adiciona mesas de 4 a 12 lugares e faz o cálculo reconhecer a variante selecionada, sem depender de um ID fixo;
+- permite aplicar presets de piscina aos campos de largura, comprimento, profundidade, volume e reserva estrutural;
+- mantém referências sem fonte documental validada como inferidas e pendentes de revisão técnica;
+
+- preserva e audita a fonte CAP-001 com normalização determinística;
+- adiciona 14 ambientes com maturidade explícita e oito estratégias TypeScript;
+- separa conforto de acessibilidade, preserva inferências e conflitos;
+- inclui calculadora, estudos, comparador de quatro cenários e breakdown rastreável;
+- aplica resultados ao Programa de Necessidades com confirmação e metadados;
+- registra as três opções de área por ambiente, acumula os três totais com quantidade e permite escolher depois;
+- transforma a configuração em fluxo sequencial com conforto e acessibilidade sempre visíveis e avanço automático para o próximo ambiente;
+- adiciona extensões técnicas separadas para piscina, deck/solário, casa de máquinas e despensa;
+- adiciona terceira coluna com relatório vivo dos ambientes, quantidades e totais líquidos e bruto preliminar;
+- sincroniza o nome escolhido na calculadora com o Programa de Necessidades e recupera nomes de estudos já salvos;
+- permite editar ou excluir ambientes diretamente no relatório acumulado, com confirmação e remoção dos estudos vinculados;
+- migra o IndexedDB para v3 e inclui estudos no backup/restauração atômicos.
+
 ## Não lançado — Backup consolidado
 
 - exportação versionada de todos os cadastros em um único JSON;
@@ -68,3 +90,9 @@
 - decisões válidas de identidade, tipografia substituta e uso das marcas;
 - fundamentos visuais genéricos de botões, formulários, cartões,
   responsividade e impressão.
+# Não publicado — correções do PR #5
+
+- Layout CAP responsivo e toast acessível.
+- Entrada decimal pt-BR e ciclo completo de itens personalizados.
+- Catálogos referenciais reutilizáveis com combobox e IndexedDB v4.
+- Backup consolidado v3 com catálogos e compatibilidade de leitura anterior.

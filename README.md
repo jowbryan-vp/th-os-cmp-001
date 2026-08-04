@@ -1,6 +1,6 @@
 # TH OS — Cadastro Mestre do Projeto
 
-**Produto:** CMP-001 · **Fase:** piloto
+**Produto:** CMP-001 + CAP-001 · **Fase:** piloto
 
 Aplicação local da TH Arquitetura para manter uma fonte única de identificação,
 clientes, imóvel, contexto, escopo, programa, planejamento, orçamento de
@@ -17,6 +17,8 @@ financeiro, login ou upload real.
 - `src/hooks`: carregamento e autosave serializado;
 - `src/components`: lista, filtros e workspace das 14 seções;
 - `tests`: unitários, integração, smoke e Playwright.
+- `src/features/cap`: biblioteca versionada, motor de estratégias, estudos e interface paramétrica;
+- `data/cap-001`: fonte bruta auditável; `docs/cap`: método, auditoria e revisão técnica.
 
 ## Executar localmente
 
@@ -42,6 +44,7 @@ pnpm typecheck
 pnpm test
 pnpm test:e2e
 pnpm verify
+pnpm cap:normalize
 ```
 
 Na lista, use **Novo projeto**. O código `TH-AAAA-NNN` é gerado localmente.
@@ -70,7 +73,8 @@ O deploy não é executado automaticamente em cada push.
 
 ## Persistência, exportação e importação
 
-Os dados ficam no IndexedDB `th-os`, store `project-master-records`. Não há
+Os dados ficam no IndexedDB `th-os`, stores `project-master-records` e
+`parametric-studies`. Não há
 sincronização externa: cada navegador, perfil e dispositivo mantém uma base
 independente. Atualizar a página preserva os dados no mesmo navegador, mas
 limpar os dados do site ou usar outro dispositivo não transfere projetos.
@@ -83,7 +87,15 @@ rejeita versões futuras e trata conflitos.
 
 Para proteger toda a base local de uma vez, use **Exportar backup completo** na
 lista de projetos. **Restaurar backup** valida o envelope e todos os cadastros
-antes de substituir, em uma única transação, a base deste navegador.
+antes de substituir, em uma única transação, projetos e estudos deste navegador.
+
+## CAP-001
+
+O menu **CAP-001** abre a Biblioteca e Calculadora Paramétrica v1.1.0. O módulo
+consulta 14 ambientes, calcula cenários conforme maturidade, compara até quatro
+alternativas e aplica uma área rastreável ao Programa de Necessidades. Consulte
+[o guia](./docs/cap/CAP_USER_GUIDE.md) e [a revisão técnica](./docs/cap/CAP_TECHNICAL_REVIEW.md).
+Os resultados são preliminares e não comprovam conformidade normativa.
 
 Para apagar todos os dados locais, abra as configurações do navegador, localize
 os dados do site da URL utilizada e remova o armazenamento desse site. Essa

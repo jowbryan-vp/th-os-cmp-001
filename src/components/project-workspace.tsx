@@ -15,11 +15,16 @@ import { useProjectAutosave } from "../hooks/use-project-autosave";
 import { useProjects } from "../hooks/use-projects";
 import {
   detectImportConflict, exportConsolidatedBackup, exportProject, importAsNew,
-  parseConsolidatedBackup, parseProjectImport,
+  parseConsolidatedBackup, parseProjectImportBundle,
 } from "../services/project-import-service";
 import { changeArchiveState, duplicateProject } from "../services/project-lifecycle-service";
+import { getParametricStudyRepository } from "../features/cap/repositories/parametric-study-repository";
+import { CapApplyPayload, CapDeleteNeedsItemResult, CapSaveOptionsPayload, CapWorkspace } from "../features/cap/components/cap-workspace";
+import { applyScenarioToNeedsProgram, saveScenarioOptionsToNeedsProgram, summarizeCapAreaOptions } from "../features/cap/services/cap-program-service";
+import { CatalogCombobox } from "../features/catalogs/components/catalog-combobox";
+import { getReferenceCatalogRepository } from "../features/catalogs/repositories/reference-catalog-repository";
 
-type View = "list" | "record";
+type View = "list" | "record" | "cap";
 const sections = [
   ["identification", "Identificação"], ["clients", "Clientes"], ["property", "Imóvel"],
   ["context", "Contexto"], ["scope", "Escopo"], ["program", "Programa inicial"],
@@ -47,9 +52,12 @@ export function ProjectWorkspace() {
   const [view, setView] = useState<View>("list");
   const [current, setCurrent] = useState<ProjectMasterRecord | null>(null);
   const [notice, setNotice] = useState("");
+  const [capContext, setCapContext] = useState<{ projectId?: string; needsItemId?: string }>({});
   const [validation, setValidation] = useState<ReturnType<typeof calculateReadiness> | null>(null);
   const importInput = useRef<HTMLInputElement>(null);
   const backupInput = useRef<HTMLInputElement>(null);
+  const studyRepository = getParametricStudyRepository();
+  const catalogRepository = getReferenceCatalogRepository();
   const save = useCallback(async (project: ProjectMasterRecord) => {
     const saved = await repository.save(project); upsert(saved); return saved;
   }, [repository, upsert]);
@@ -79,32 +87,44 @@ export function ProjectWorkspace() {
   async function importJson(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]; event.target.value = ""; if (!file) return;
     try {
-      let imported = parseProjectImport(JSON.parse(await file.text()));
+      const bundle = parseProjectImportBundle(JSON.parse(await file.text()));
+      let imported = bundle.project; let importedStudies = bundle.studies;
       const conflict = detectImportConflict(imported, projects);
       if (conflict !== "none") {
         const replace = window.confirm("Há conflito de ID ou código. OK: substituir existente. Cancelar: escolher importar como novo.");
         if (replace) {
           const target = projects.find((item) => item.id === imported.id || item.code === imported.code);
-          if (target) imported = { ...imported, id: target.id, code: target.code };
+          if (target) { importedStudies = importedStudies.map((study) => ({ ...study, projectId: target.id })); imported = { ...imported, id: target.id, code: target.code }; }
         } else {
           if (!window.confirm("Importar como novo projeto? Cancelar interrompe a importação.")) return;
-          imported = importAsNew(imported, await repository.nextCode());
+          const originalId = imported.id; imported = importAsNew(imported, await repository.nextCode());
+          importedStudies = importedStudies.map((study) => ({ ...study, id: createId("cap-study"), projectId: imported.id,
+            name: `${study.name} — importado`, needsProgramItemId: study.needsProgramItemId && originalId === bundle.project.id ? study.needsProgramItemId : null }));
         }
       }
       imported = { ...imported, history: [...imported.history, createHistoryEvent("imported", "Cadastro importado.")] };
-      const saved = await save(imported); setCurrent(saved); setView("record");
-      setNotice(`Cadastro ${saved.code} importado.`);
+      const saved = await save(imported);
+      for (const study of importedStudies) {
+        const existing = await studyRepository.findById(study.id);
+        if (existing) await studyRepository.update(study); else await studyRepository.create(study);
+      }
+      setCurrent(saved); setView("record");
+      setNotice(importedStudies.length ? `Cadastro ${saved.code} importado com ${importedStudies.length} estudo(s).`
+        : `Cadastro ${saved.code} importado.`);
     } catch (reason) { setNotice(reason instanceof Error ? reason.message : "Falha ao importar."); }
   }
-  function download() {
+  async function download() {
     if (!current) return;
-    const blob = new Blob([JSON.stringify(exportProject(current), null, 2)], { type: "application/json" });
+    const studies = await studyRepository.listByProject(current.id);
+    const blob = new Blob([JSON.stringify(exportProject(current, studies), null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob); const anchor = document.createElement("a");
     anchor.href = url; anchor.download = `${current.code.toLowerCase()}-cmp.json`; anchor.click();
     URL.revokeObjectURL(url); setNotice("Cadastro exportado em JSON.");
   }
-  function downloadBackup() {
-    const blob = new Blob([JSON.stringify(exportConsolidatedBackup(projects), null, 2)], { type: "application/json" });
+  async function downloadBackup() {
+    const studies = await studyRepository.listAll();
+    const catalogs = await catalogRepository.list();
+    const blob = new Blob([JSON.stringify(exportConsolidatedBackup(projects, studies, catalogs), null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob); const anchor = document.createElement("a");
     anchor.href = url; anchor.download = `th-os-cmp-backup-${new Date().toISOString().slice(0, 10)}.json`; anchor.click();
     URL.revokeObjectURL(url); setNotice(`Backup completo exportado com ${projects.length} cadastro(s).`);
@@ -113,11 +133,66 @@ export function ProjectWorkspace() {
     const file = event.target.files?.[0]; event.target.value = ""; if (!file) return;
     try {
       const restored = parseConsolidatedBackup(JSON.parse(await file.text()));
-      if (!window.confirm(`Restaurar ${restored.length} cadastro(s)? Isso substituirá todos os dados locais atuais.`)) return;
-      const saved = await repository.replaceAll(restored);
-      setProjects(saved); setCurrent(null); setView("list");
-      setNotice(`Backup restaurado com ${saved.length} cadastro(s).`);
+      if (!window.confirm(`Restaurar ${restored.projects.length} cadastro(s) e ${restored.studies.length} estudo(s)? Isso substituirá todos os dados locais atuais.`)) return;
+      const saved = await repository.restoreAll(restored.projects, restored.studies, restored.catalogs);
+      setProjects(saved.projects); setCurrent(null); setView("list");
+      setNotice(`Backup restaurado com ${saved.projects.length} cadastro(s) e ${saved.studies.length} estudo(s).`);
     } catch (reason) { setNotice(reason instanceof Error ? reason.message : "Falha ao restaurar backup."); }
+  }
+  function openCap(projectId?: string, needsItemId?: string) {
+    setCapContext({ projectId, needsItemId });
+    setView("cap");
+  }
+  async function applyCapResult(payload: CapApplyPayload) {
+    const project = projects.find((item) => item.id === payload.study.projectId);
+    if (!project) throw new Error("Projeto vinculado ao estudo não encontrado.");
+    const linked = ensureCapNeedsLink(project, payload.study);
+    const needsItem = linked.project.needsProgram.find((item) => item.id === linked.savedNeedsItemId);
+    if (needsItem?.desiredAreaM2 !== null && needsItem?.desiredAreaM2 !== undefined
+      && !window.confirm(`A área desejada atual é ${needsItem.desiredAreaM2.toLocaleString("pt-BR")} m². Substituir por ${payload.areaM2.toLocaleString("pt-BR")} m²?`)) return;
+    const calculatedAt = new Date().toISOString();
+    const updatedProject = applyScenarioToNeedsProgram(linked.project, linked.study, payload.scenario, payload.areaType, calculatedAt);
+    const savedProject = await save(updatedProject);
+    const appliedStudy = { ...linked.study, status: "applied" as const, updatedAt: calculatedAt };
+    const existingStudy = await studyRepository.findById(appliedStudy.id);
+    if (existingStudy) await studyRepository.update(appliedStudy); else await studyRepository.create(appliedStudy);
+    setCurrent(savedProject); setView("record");
+    setNotice(`Área CAP-001 de ${payload.areaM2.toLocaleString("pt-BR")} m² aplicada ao Programa de Necessidades.`);
+  }
+  async function saveCapOptions(payload: CapSaveOptionsPayload) {
+    const project = projects.find((item) => item.id === payload.study.projectId);
+    if (!project) throw new Error("Projeto vinculado ao estudo não encontrado.");
+    const calculatedAt = new Date().toISOString();
+    const linked = ensureCapNeedsLink(project, payload.study);
+    const savedNeedsItemId = linked.savedNeedsItemId;
+    const linkedStudy = linked.study;
+    const updatedProject = saveScenarioOptionsToNeedsProgram(linked.project, linkedStudy, payload.scenario, calculatedAt);
+    const savedProject = await save(updatedProject);
+    const savedStudy = { ...linkedStudy, status: "calculated" as const, updatedAt: calculatedAt };
+    const existingStudy = await studyRepository.findById(savedStudy.id);
+    if (existingStudy) await studyRepository.update(savedStudy); else await studyRepository.create(savedStudy);
+    setCurrent(savedProject);
+    if (!payload.continueToNext) setView("record");
+    if (!payload.continueToNext) {
+      setNotice("As três áreas CAP-001 foram registradas. Escolha uma opção no ambiente quando estiver pronto.");
+    }
+    return { savedNeedsItemId };
+  }
+  async function deleteCapNeedsItem(projectId: string, needsItemId: string): Promise<CapDeleteNeedsItemResult> {
+    const project = projects.find((item) => item.id === projectId);
+    if (!project) throw new Error("Projeto do ambiente não encontrado.");
+    const target = project.needsProgram.find((item) => item.id === needsItemId);
+    if (!target) throw new Error("Ambiente não encontrado no Programa de Necessidades.");
+    const linkedStudies = (await studyRepository.listByProject(projectId))
+      .filter((study) => study.needsProgramItemId === needsItemId || study.id === target.parametricStudyId);
+    const updatedAt = new Date().toISOString();
+    const savedProject = await save({ ...project, updatedAt,
+      needsProgram: project.needsProgram.filter((item) => item.id !== needsItemId),
+      history: [...project.history, createHistoryEvent("edited", `Ambiente ${target.environment || "sem nome"} excluído do Programa de Necessidades.`, updatedAt)],
+    });
+    await Promise.all(linkedStudies.map((study) => studyRepository.delete(study.id)));
+    setCurrent(savedProject);
+    return { deletedStudyIds: linkedStudies.map((study) => study.id) };
   }
   if (loading) return <main className="loading-state">Carregando Cadastro Mestre…</main>;
   if (error) return <main className="loading-state" role="alert">{error.message}</main>;
@@ -126,29 +201,34 @@ export function ProjectWorkspace() {
       <Header
         record={view === "record"} autosave={autosave}
         onHome={() => setView("list")} onNew={newProject}
-        onImport={() => importInput.current?.click()} onExport={download}
+        onImport={() => importInput.current?.click()} onExport={() => void download()}
+        onCap={() => openCap(current?.id)}
       />
       <aside className="pilot-notice" aria-label="Aviso sobre armazenamento local">
         <strong>Versão piloto.</strong>{" "}
         Os dados ficam armazenados somente neste navegador e dispositivo. Exporte o projeto em JSON para manter uma cópia de segurança.
       </aside>
-      {view === "list" ? (
+      {view === "cap" ? (
+        <CapWorkspace projects={projects} initialProjectId={capContext.projectId} initialNeedsItemId={capContext.needsItemId}
+          onBack={() => setView(current ? "record" : "list")} onApply={applyCapResult} onSaveOptions={saveCapOptions}
+          onDeleteNeedsItem={deleteCapNeedsItem} />
+      ) : view === "list" ? (
         <ProjectList projects={projects} onOpen={open} onArchive={archive} onDuplicate={duplicate} onDelete={remove}
-          onBackup={downloadBackup} onRestore={() => backupInput.current?.click()} />
+          onBackup={() => void downloadBackup()} onRestore={() => backupInput.current?.click()} />
       ) : current ? (
         <ProjectRecord project={current} update={update} validation={validation}
-          setValidation={setValidation} onBack={() => setView("list")} />
+          setValidation={setValidation} onBack={() => setView("list")} onOpenCap={(needsItemId) => openCap(current.id, needsItemId)} />
       ) : null}
       <input ref={importInput} className="sr-only" type="file" accept=".json,application/json" onChange={importJson} />
       <input ref={backupInput} className="sr-only" type="file" accept=".json,application/json" onChange={restoreBackup} />
-      {notice && <div className="toast" role="status"><strong>{notice}</strong><button onClick={() => setNotice("")}>Fechar</button></div>}
+      {notice && <div className="toast" role="status" aria-live="polite"><strong>{notice}</strong><button type="button" aria-label="Fechar aviso" onClick={() => setNotice("")}>Fechar</button></div>}
     </div>
   );
 }
 
-function Header({ record, autosave, onHome, onNew, onImport, onExport }: {
+function Header({ record, autosave, onHome, onNew, onImport, onExport, onCap }: {
   record: boolean; autosave: ReturnType<typeof useProjectAutosave>; onHome: () => void;
-  onNew: () => void; onImport: () => void; onExport: () => void;
+  onNew: () => void; onImport: () => void; onExport: () => void; onCap: () => void;
 }) {
   const saveLabel = autosave.state === "saving" ? "Salvando…" : autosave.state === "dirty" ? "Alterações pendentes"
     : autosave.state === "error" ? "Erro ao salvar" : autosave.state === "saved" ? "Salvo neste dispositivo" : "";
@@ -160,6 +240,7 @@ function Header({ record, autosave, onHome, onNew, onImport, onExport }: {
     </button>
     <div className="product-signature"><strong>TH OS</strong><span>Cadastro Mestre do Projeto · CMP-001</span></div>
     <div className="topbar-actions">
+      <button className="button button--ghost cap-entry" onClick={onCap}>CAP-001</button>
       {record && saveLabel && <span className={`save-status save-status--${autosave.state}`}>{saveLabel}</span>}
       {autosave.state === "error" && <button className="button button--ghost" onClick={() => void autosave.retry()}>Tentar novamente</button>}
       {record ? <button className="button button--ghost record-export" onClick={onExport}>Exportar JSON</button>
@@ -231,15 +312,27 @@ function ProjectList({ projects, onOpen, onArchive, onDuplicate, onDelete, onBac
   </main>;
 }
 
-function ProjectRecord({ project, update, validation, setValidation, onBack }: {
+function ProjectRecord({ project, update, validation, setValidation, onBack, onOpenCap }: {
   project: ProjectMasterRecord; update: (patch: Partial<ProjectMasterRecord>) => void;
   validation: ReturnType<typeof calculateReadiness> | null;
   setValidation: (v: ReturnType<typeof calculateReadiness>) => void; onBack: () => void;
+  onOpenCap: (needsItemId: string) => void;
 }) {
   const areas = summarizeAreas(project);
+  const capAreas = summarizeCapAreaOptions(project.needsProgram);
   const mutate = <K extends keyof ProjectMasterRecord>(key: K, value: ProjectMasterRecord[K]) => update({ [key]: value } as Pick<ProjectMasterRecord, K>);
   const updateClient = (id: string, patch: Partial<ClientRecord>) => mutate("clients", project.clients.map((item) =>
     item.id === id ? { ...item, ...patch } : patch.primary ? { ...item, primary: false } : item));
+  const selectCapArea = (item: NeedsItem, areaType: NonNullable<NeedsItem["appliedAreaType"]>) => {
+    const areaM2 = areaType === "minimum" ? item.capMinimumAreaM2
+      : areaType === "recommended" ? item.capRecommendedAreaM2 : item.capPreliminaryGrossAreaM2;
+    if (areaM2 === null) return;
+    update({
+      needsProgram: project.needsProgram.map((candidate) => candidate.id === item.id
+        ? { ...candidate, desiredAreaM2: areaM2, appliedAreaType: areaType, appliedAreaM2: areaM2 } : candidate),
+      history: [...project.history, createHistoryEvent("cap_area_applied", `CAP-001: ${areaM2.toFixed(2)} m² (${areaType}) escolhidos para ${item.environment || "ambiente"}.`)],
+    });
+  };
   return <main className="workspace expanded-workspace">
     <aside className="section-nav" aria-label="Seções do cadastro"><button className="back-action" onClick={onBack}>← Projetos</button>
       {sections.map(([id, label]) => <a key={id} href={`#${id}`}>{label}</a>)}</aside>
@@ -253,7 +346,7 @@ function ProjectRecord({ project, update, validation, setValidation, onBack }: {
           <Select label="Fase" value={project.projectPhase} onChange={(projectPhase) => update({ projectPhase: projectPhase as ProjectPhase, history: [...project.history, createHistoryEvent("phase_changed", `Fase alterada para ${phaseLabels[projectPhase as ProjectPhase]}.`)] })} options={projectPhases.map((p) => [p, phaseLabels[p]])} />
           <Select label="Prioridade" value={project.priority} onChange={(priority) => update({ priority: priority as ProjectMasterRecord["priority"] })} options={[["low", "Baixa"], ["medium", "Média"], ["high", "Alta"], ["urgent", "Urgente"]]} />
           <Input label="Responsável principal" value={project.primaryResponsible} onChange={(primaryResponsible) => update({ primaryResponsible })} />
-          <Input label="Origem do contato" value={project.contactOrigin} onChange={(contactOrigin) => update({ contactOrigin })} />
+          <CatalogCombobox label="Origem do contato" catalogType="contactOrigin" value={project.contactOrigin} onChange={(contactOrigin) => update({ contactOrigin })} />
           <Textarea label="Notas internas" value={project.internalNotes} onChange={(internalNotes) => update({ internalNotes })} /></Grid>
       </Section>
       <Section id="clients" title="2. Clientes" action={<button onClick={() => mutate("clients", [...project.clients, { ...createEmptyClient(), primary: project.clients.length === 0 }])}>+ Cliente</button>}>
@@ -261,17 +354,17 @@ function ProjectRecord({ project, update, validation, setValidation, onBack }: {
           <Grid><Input label="Nome" value={client.name} onChange={(name) => updateClient(client.id, { name })} />
             <Input label="Nome preferido" value={client.preferredName} onChange={(preferredName) => updateClient(client.id, { preferredName })} />
             <Select label="Pessoa" value={client.personType} onChange={(personType) => updateClient(client.id, { personType: personType as ClientRecord["personType"] })} options={[["individual", "Pessoa física"], ["company", "Empresa"]]} />
-            <Input label="Papel no projeto" value={client.projectRole} onChange={(projectRole) => updateClient(client.id, { projectRole })} />
+            <CatalogCombobox label="Papel no projeto" catalogType="professionalRole" value={client.projectRole} onChange={(projectRole) => updateClient(client.id, { projectRole })} />
             <Input label="Telefone" value={client.phone} onChange={(phone) => updateClient(client.id, { phone })} /><Input label="E-mail" value={client.email} onChange={(email) => updateClient(client.id, { email })} />
             <label className="check-row"><input type="checkbox" checked={client.primary} onChange={(e) => updateClient(client.id, { primary: e.target.checked })} /> Contato principal</label></Grid>
         </Collection>)}
       </Section>
       <Section id="property" title="3. Imóvel"><Grid>
-        <Input label="Tipo" value={project.property.type} onChange={(type) => mutate("property", { ...project.property, type })} />
-        <Input label="Situação" value={project.property.condition} onChange={(condition) => mutate("property", { ...project.property, condition })} />
+        <CatalogCombobox label="Tipo" catalogType="propertyType" value={project.property.type} onChange={(type) => mutate("property", { ...project.property, type })} />
+        <CatalogCombobox label="Situação" catalogType="propertyCondition" value={project.property.condition} onChange={(condition) => mutate("property", { ...project.property, condition })} />
         <Input label="Endereço/localização" value={project.property.address} onChange={(address) => mutate("property", { ...project.property, address })} />
-        <Input label="Cidade" value={project.property.city} onChange={(city) => mutate("property", { ...project.property, city })} />
-        <Input label="Estado" value={project.property.state} onChange={(state) => mutate("property", { ...project.property, state })} />
+        <CatalogCombobox label="Cidade" catalogType="city" parentId={project.property.state === "RO" ? "catalog-state-ro" : null} value={project.property.city} onChange={(city) => mutate("property", { ...project.property, city })} />
+        <CatalogCombobox label="Estado" catalogType="state" value={project.property.state} onChange={(state) => mutate("property", { ...project.property, state })} />
         <Input label="Área existente (m²)" value={project.property.existingBuiltAreaM2?.toLocaleString("pt-BR") ?? ""} onChange={(v) => mutate("property", { ...project.property, existingBuiltAreaM2: numberPt(v) })} />
         <Input label="Ampliação estimada (m²)" value={project.property.estimatedExpansionAreaM2?.toLocaleString("pt-BR") ?? ""} onChange={(v) => mutate("property", { ...project.property, estimatedExpansionAreaM2: numberPt(v) })} />
         <Textarea label="Condição aparente" value={project.property.apparentCondition} onChange={(apparentCondition) => mutate("property", { ...project.property, apparentCondition })} />
@@ -291,14 +384,26 @@ function ProjectRecord({ project, update, validation, setValidation, onBack }: {
       </Section>
       <Section id="program" title="6. Programa inicial" action={<button onClick={() => mutate("needsProgram", [...project.needsProgram, emptyNeed(project.needsProgram.length)])}>+ Ambiente</button>}>
         <div className="summary-strip"><span>Existente: {areas.existing} m²</span><span>Desejada: {areas.desired} m²</span><span>Ampliação: {areas.expansion} m²</span><span>Ambientes: {areas.environments}</span><span>Essenciais: {areas.essential}</span><span>Sob análise: {areas.underReview}</span></div>
+        <div className="cap-total-options" aria-label="Totais das opções calculadas pelo CAP-001">
+          <div><span>Total mínimo</span><strong>{capAreas.minimumAreaM2.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} m²</strong></div>
+          <div><span>Total recomendado</span><strong>{capAreas.recommendedAreaM2.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} m²</strong></div>
+          <div><span>Total bruto preliminar</span><strong>{capAreas.preliminaryGrossAreaM2.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} m²</strong></div>
+          <p>Somente ambientes calculados pelo CAP-001: {capAreas.calculatedEnvironments} de {capAreas.totalEnvironments}. Os totais consideram a quantidade.</p>
+        </div>
         {project.needsProgram.map((item) => <Collection key={item.id} onRemove={() => mutate("needsProgram", project.needsProgram.filter((n) => n.id !== item.id))}><Grid>
-          <Input label="Ambiente" value={item.environment} onChange={(environment) => updateNeed(project, item.id, { environment }, mutate)} />
-          <Input label="Setor" value={item.sector} onChange={(sector) => updateNeed(project, item.id, { sector }, mutate)} />
-          <Input label="Pavimento" value={item.floor} onChange={(floor) => updateNeed(project, item.id, { floor }, mutate)} />
+          <CatalogCombobox label="Ambiente" catalogType="environmentType" projectId={project.id} value={item.environment} onChange={(environment) => updateNeed(project, item.id, { environment }, mutate)} />
+          <CatalogCombobox label="Setor" catalogType="environmentSector" value={item.sector} onChange={(sector) => updateNeed(project, item.id, { sector }, mutate)} />
+          <CatalogCombobox label="Pavimento" catalogType="floor" projectId={project.id} value={item.floor} onChange={(floor) => updateNeed(project, item.id, { floor }, mutate)} />
           <Input label="Área existente m²" value={item.existingAreaM2?.toLocaleString("pt-BR") ?? ""} onChange={(v) => updateNeed(project, item.id, { existingAreaM2: numberPt(v) }, mutate)} />
           <Input label="Área desejada m²" value={item.desiredAreaM2?.toLocaleString("pt-BR") ?? ""} onChange={(v) => updateNeed(project, item.id, { desiredAreaM2: numberPt(v) }, mutate)} />
+          <Input type="number" label="Quantidade" value={String(item.quantity)} onChange={(v) => updateNeed(project, item.id, { quantity: Math.max(1, Number(v) || 1) }, mutate)} />
           <Select label="Prioridade" value={item.priority} onChange={(priority) => updateNeed(project, item.id, { priority: priority as NeedsItem["priority"] }, mutate)} options={[["essential", "Essencial"], ["important", "Importante"], ["desirable", "Desejável"], ["under_review", "Sob análise"]]} />
-        </Grid></Collection>)}
+        </Grid>{item.capMinimumAreaM2 !== null && item.capRecommendedAreaM2 !== null && item.capPreliminaryGrossAreaM2 !== null && <div className="cap-program-options"><strong>Escolha a área deste ambiente</strong><div>
+          <button aria-pressed={item.appliedAreaType === "minimum"} onClick={() => selectCapArea(item, "minimum")}>Mínima · {item.capMinimumAreaM2.toLocaleString("pt-BR")} m²</button>
+          <button aria-pressed={item.appliedAreaType === "recommended"} onClick={() => selectCapArea(item, "recommended")}>Recomendada · {item.capRecommendedAreaM2.toLocaleString("pt-BR")} m²</button>
+          <button aria-pressed={item.appliedAreaType === "preliminary_gross"} onClick={() => selectCapArea(item, "preliminary_gross")}>Bruta preliminar · {item.capPreliminaryGrossAreaM2.toLocaleString("pt-BR")} m²</button>
+        </div></div>}<div className="cap-program-link"><button className="button button--ghost" onClick={() => onOpenCap(item.id)}>{item.parametricStudyId ? "Recalcular com CAP-001" : "Pré-dimensionar com CAP-001"}</button>
+          {item.parametricStudyId && <small>{item.appliedAreaM2 !== null ? `Escolhida: ${item.appliedAreaM2.toLocaleString("pt-BR")} m²` : "3 opções registradas; escolha pendente"} · biblioteca {item.capLibraryVersion} · motor {item.calculationEngineVersion}</small>}</div></Collection>)}
       </Section>
       <Section id="planning" title="7. Prazos"><Grid>
         <Input type="date" label="Primeiro contato" value={project.planning.firstContactDate} onChange={(firstContactDate) => mutate("planning", { ...project.planning, firstContactDate })} />
@@ -318,13 +423,13 @@ function ProjectRecord({ project, update, validation, setValidation, onBack }: {
       </Grid><p className="helper-text">Este cadastro não calcula honorários.</p></Section>
       <GenericCollection id="visits" title="9. Visitas" items={project.visits} addLabel="Visita"
         onAdd={() => mutate("visits", [...project.visits, emptyVisit()])} onRemove={(id) => mutate("visits", project.visits.filter((v) => v.id !== id))}
-        render={(item: VisitRecord) => <Grid><Input label="Finalidade" value={item.purpose} onChange={(purpose) => mutate("visits", project.visits.map((v) => v.id === item.id ? { ...v, purpose } : v))} /><Input type="date" label="Data" value={item.date} onChange={(date) => mutate("visits", project.visits.map((v) => v.id === item.id ? { ...v, date } : v))} /><Input label="Responsável" value={item.responsible} onChange={(responsible) => mutate("visits", project.visits.map((v) => v.id === item.id ? { ...v, responsible } : v))} /></Grid>} />
+        render={(item: VisitRecord) => <Grid><Select label="Tipo" value={item.type} onChange={(type) => mutate("visits", project.visits.map((v) => v.id === item.id ? { ...v, type: type as VisitRecord["type"] } : v))} options={[["first_meeting", "Primeira reunião"], ["survey", "Levantamento"], ["technical_visit", "Visita técnica"], ["construction_monitoring", "Acompanhamento de obra"], ["client_meeting", "Reunião com cliente"], ["other", "Outra"]]} /><Input label="Finalidade" value={item.purpose} onChange={(purpose) => mutate("visits", project.visits.map((v) => v.id === item.id ? { ...v, purpose } : v))} /><Input type="date" label="Data" value={item.date} onChange={(date) => mutate("visits", project.visits.map((v) => v.id === item.id ? { ...v, date } : v))} /><Input label="Responsável" value={item.responsible} onChange={(responsible) => mutate("visits", project.visits.map((v) => v.id === item.id ? { ...v, responsible } : v))} /></Grid>} />
       <GenericCollection id="documents" title="10. Documentos" items={project.documents} addLabel="Documento"
         onAdd={() => mutate("documents", [...project.documents, emptyDocument()])} onRemove={(id) => mutate("documents", project.documents.filter((v) => v.id !== id))}
-        render={(item: DocumentReference) => <Grid><Input label="Documento" value={item.name} onChange={(name) => mutate("documents", project.documents.map((v) => v.id === item.id ? { ...v, name } : v))} /><Input label="Categoria" value={item.category} onChange={(category) => mutate("documents", project.documents.map((v) => v.id === item.id ? { ...v, category } : v))} /><label className="check-row"><input type="checkbox" checked={item.required} onChange={(e) => mutate("documents", project.documents.map((v) => v.id === item.id ? { ...v, required: e.target.checked } : v))} /> Obrigatório</label></Grid>} />
+        render={(item: DocumentReference) => <Grid><Input label="Documento" value={item.name} onChange={(name) => mutate("documents", project.documents.map((v) => v.id === item.id ? { ...v, name } : v))} /><CatalogCombobox label="Categoria" catalogType="documentCategory" value={item.category} onChange={(category) => mutate("documents", project.documents.map((v) => v.id === item.id ? { ...v, category } : v))} /><label className="check-row"><input type="checkbox" checked={item.required} onChange={(e) => mutate("documents", project.documents.map((v) => v.id === item.id ? { ...v, required: e.target.checked } : v))} /> Obrigatório</label></Grid>} />
       <GenericCollection id="team" title="11. Responsáveis e parceiros" items={project.team} addLabel="Participante"
         onAdd={() => mutate("team", [...project.team, emptyTeam()])} onRemove={(id) => mutate("team", project.team.filter((v) => v.id !== id))}
-        render={(item: TeamMember) => <Grid><Input label="Nome" value={item.name} onChange={(name) => mutate("team", project.team.map((v) => v.id === item.id ? { ...v, name } : v))} /><Input label="Profissão" value={item.profession} onChange={(profession) => mutate("team", project.team.map((v) => v.id === item.id ? { ...v, profession } : v))} /><Select label="Status" value={item.status} onChange={(status) => mutate("team", project.team.map((v) => v.id === item.id ? { ...v, status: status as TeamMember["status"] } : v))} options={[["suggested", "Sugerido"], ["invited", "Convidado"], ["active", "Ativo"], ["inactive", "Inativo"]]} /></Grid>} />
+        render={(item: TeamMember) => <Grid><Input label="Nome" value={item.name} onChange={(name) => mutate("team", project.team.map((v) => v.id === item.id ? { ...v, name } : v))} /><CatalogCombobox label="Profissão" catalogType="professionalRole" value={item.profession} onChange={(profession) => mutate("team", project.team.map((v) => v.id === item.id ? { ...v, profession } : v))} /><Select label="Status" value={item.status} onChange={(status) => mutate("team", project.team.map((v) => v.id === item.id ? { ...v, status: status as TeamMember["status"] } : v))} options={[["suggested", "Sugerido"], ["invited", "Convidado"], ["active", "Ativo"], ["inactive", "Inativo"]]} /></Grid>} />
       <GenericCollection id="decisions" title="12. Decisões" items={project.decisions} addLabel="Decisão"
         onAdd={() => mutate("decisions", [...project.decisions, emptyDecision(project.projectPhase)])} onRemove={(id) => mutate("decisions", project.decisions.filter((v) => v.id !== id))}
         render={(item: DecisionRecord) => <Grid><Input label="Assunto" value={item.subject} onChange={(subject) => mutate("decisions", project.decisions.map((v) => v.id === item.id ? { ...v, subject } : v))} /><Textarea label="Decisão" value={item.decision} onChange={(decision) => mutate("decisions", project.decisions.map((v) => v.id === item.id ? { ...v, decision } : v))} /></Grid>} />
@@ -365,7 +470,25 @@ function ScopeRow({ item, onChange, onRemove }: { item: PreliminaryScopeItem; on
     <Select label="Execução" value={item.executionMode} onChange={(executionMode) => onChange({ executionMode: executionMode as PreliminaryScopeItem["executionMode"] })} options={[["internal", "Interna"], ["partner", "Parceiro"], ["outsourced", "Terceirizada"], ["client", "Cliente"], ["not_defined", "Não definida"]]} />
     <Input label="Responsável" value={item.responsible} onChange={(responsible) => onChange({ responsible })} /><Input label="Observações" value={item.notes} onChange={(notes) => onChange({ notes })} /></Grid></Collection>;
 }
-function emptyNeed(order: number): NeedsItem { return { id: createId("need"), environment: "", sector: "", floor: "", currentSituation: "under_review", intervention: "study", existingAreaM2: null, desiredAreaM2: null, quantity: 1, priority: "under_review", users: "", needs: "", lighting: "", ventilation: "", privacy: "", accessibility: "", furniture: "", equipment: "", connections: "", notes: "", order }; }
+function emptyNeed(order: number): NeedsItem { return { id: createId("need"), environment: "", sector: "", floor: "", currentSituation: "under_review", intervention: "study", existingAreaM2: null, desiredAreaM2: null, quantity: 1, priority: "under_review", users: "", needs: "", lighting: "", ventilation: "", privacy: "", accessibility: "", furniture: "", equipment: "", connections: "", notes: "", order, parametricStudyId: null, parametricScenarioId: null, capMinimumAreaM2: null, capRecommendedAreaM2: null, capPreliminaryGrossAreaM2: null, appliedAreaType: null, appliedAreaM2: null, capLibraryVersion: null, calculationEngineVersion: null, calculatedAt: null }; }
+
+function ensureCapNeedsLink(project: ProjectMasterRecord, study: CapSaveOptionsPayload["study"]) {
+  const linkedNeedExists = study.needsProgramItemId
+    ? project.needsProgram.some((item) => item.id === study.needsProgramItemId)
+    : false;
+  if (linkedNeedExists) {
+    return { project, study, savedNeedsItemId: study.needsProgramItemId! };
+  }
+  const reusableNeed = project.needsProgram.find((item) => !item.environment.trim()
+    && !item.parametricStudyId && item.capMinimumAreaM2 === null && item.capRecommendedAreaM2 === null
+    && item.capPreliminaryGrossAreaM2 === null);
+  const currentNeed = reusableNeed ?? emptyNeed(project.needsProgram.length);
+  return {
+    project: reusableNeed ? project : { ...project, needsProgram: [...project.needsProgram, currentNeed] },
+    study: { ...study, needsProgramItemId: currentNeed.id },
+    savedNeedsItemId: currentNeed.id,
+  };
+}
 function updateNeed(project: ProjectMasterRecord, id: string, patch: Partial<NeedsItem>, mutate: <K extends keyof ProjectMasterRecord>(key: K, value: ProjectMasterRecord[K]) => void) { mutate("needsProgram", project.needsProgram.map((item) => item.id === id ? { ...item, ...patch } : item)); }
 function emptyVisit(): VisitRecord { return { id: createId("visit"), type: "survey", date: "", time: "", city: "", address: "", responsible: "", participants: "", estimatedDurationMinutes: null, actualDurationMinutes: null, purpose: "", notes: "", reportRequired: false, status: "planned", estimatedExpensesCents: null }; }
 function emptyDocument(): DocumentReference { return { id: createId("document"), name: "", category: "", required: false, status: "not_requested", requestedAt: "", receivedAt: "", notes: "", fileName: "", futureLink: "", responsible: "" }; }

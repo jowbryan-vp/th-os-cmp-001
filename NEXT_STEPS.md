@@ -6,6 +6,8 @@
 2. Definir política formal de retenção e exclusão.
 3. Realizar auditoria assistiva com leitor de tela.
 4. Treinar a equipe no fluxo de exportação e restauração.
+5. Concluir os itens de revisão arquitetônica listados em `docs/cap/CAP_TECHNICAL_REVIEW.md`.
+6. Validar os presets CAP-001 em casos reais antes de elevar maturidade.
 
 ## Evoluções seguras
 
@@ -14,6 +16,8 @@
 3. Testes de componentes e variações de conflito de importação.
 4. Automatizar deploy somente após estabilizar o piloto manual, usando secrets
    protegidos `CLOUDFLARE_API_TOKEN` e `CLOUDFLARE_ACCOUNT_ID`.
+5. Criar cálculo específico de cozinha, sala, lavanderia, varanda e hall após revisão.
+6. Tratar rampas em módulo próprio somente com base normativa vigente validada.
 
 ## Concluído após o piloto
 

@@ -15,9 +15,17 @@
 | Lista limitada | Busca, filtros, ordenação e alertas | `project-workspace.tsx` | E2E/manual | Resolvido |
 | Testes textuais | Domínio, fake IndexedDB, smoke e Playwright | `tests/` | CI | Resolvido |
 | Sem CI/typecheck | Scripts e dois jobs | `package.json`, `ci.yml` | Actions | Resolvido |
+| Biblioteca sem auditoria | Fonte imutável, hash e relatório reproduzível | `scripts/cap/normalize.ts`, `docs/cap/` | CAP biblioteca | Resolvido |
+| Fórmulas textuais inseguras | Registry com estratégias TypeScript explícitas | `src/features/cap/services/` | CAP motor | Resolvido |
+| Conforto acoplado à acessibilidade | Domínios e controles independentes | `cap-library-schema.ts` | CAP biblioteca/motor | Resolvido |
+| Estudos fora do backup | Envelope v2 e transação em duas stores | `project-import-service.ts`, `th-os-database.ts` | integração/E2E | Resolvido |
+| Referências técnicas indiretas | Aviso obrigatório e revisão técnica documentada | `CAP_TECHNICAL_REVIEW.md` | CAP biblioteca | Pendente de arquiteto |
 
 ## Limitações aceitas
 
-Reordenação por drag-and-drop, agrupamento avançado do programa e backup
-consolidado permanecem próximos passos. Proposta, contrato, honorários,
+Reordenação por drag-and-drop e agrupamento avançado do programa permanecem
+próximos passos. A revisão técnica CAP-001 continua aberta. Proposta, contrato, honorários,
 financeiro, login e upload seguem fora do produto.
+# Complemento — revisão visual e funcional do PR #5
+
+Foram tratados os achados de corte em larguras intermediárias, aviso ilegível, entrada decimal com vírgula, erro técnico em item personalizado incompleto, ausência de edição/duplicação e falta de catálogo central. A evidência automatizada fica nos testes unitários, de integração e E2E; a evidência visual é produzida como artefato do Playwright.

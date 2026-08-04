@@ -21,6 +21,18 @@ canônico de Cacoal; demais registros preservam os dados legados mapeáveis.
 Schemas Zod estritos rejeitam campos desconhecidos. Áreas usam `number | null`;
 dinheiro usa inteiros em centavos.
 
+## CAP-001 e banco local v3
+
+O IndexedDB está na versão 3 e adiciona `parametric-studies`, com índices por
+projeto, status e atualização. `ParametricEnvironmentStudy` contém cenários,
+versão/hash CAP e versão do motor. `NeedsItem` registra o estudo e cenário
+aplicados, tipo/valor da área e timestamps. A criação da store é a migração
+explícita v2 → v3; os campos novos do projeto são retrocompatíveis no schema v2.
+
+O backup consolidado v2 usa `projectRecords`, `parametricStudies`,
+`capLibraryReferences` e `backupSchemaVersion`. A restauração valida tudo antes
+de uma transação atômica nas duas stores; remover um projeto remove seus estudos.
+
 ## Progresso ponderado
 
 | Grupo | Peso |
@@ -46,3 +58,6 @@ Ter pendências não aumenta o progresso; bloqueios o reduzem.
 `calculateReadiness` cobre rascunho, reunião, levantamento e proposta sem
 alterar o ciclo de vida. `useProjectAutosave` usa debounce configurável, fila,
 token de versão, retry, último salvamento e aviso de saída.
+# Catálogos de referência (IndexedDB v4)
+
+O store `reference-catalog-options` persiste `CatalogOption` global ou por projeto. `parentId` preserva relações como cidade–estado. O backup consolidado v3 restaura projetos, estudos CAP e catálogos na mesma transação.

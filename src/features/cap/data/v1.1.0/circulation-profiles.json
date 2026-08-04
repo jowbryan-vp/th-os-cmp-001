@@ -1,0 +1,34 @@
+[
+  {
+    "application": "Passagem estreita móvel/parede",
+    "confidence": "high",
+    "id": "CIR-001",
+    "label": "Passagem Individual Mínima",
+    "minimumWidthM": 0.6,
+    "normativeReferenceRequiresReview": false
+  },
+  {
+    "application": "Corredores internos e acessos principais",
+    "confidence": "high",
+    "id": "CIR-002",
+    "label": "Circulação Confortável Individual",
+    "minimumWidthM": 0.8,
+    "normativeReferenceRequiresReview": false
+  },
+  {
+    "application": "Corredores sociais e áreas de grande tráfego",
+    "confidence": "high",
+    "id": "CIR-003",
+    "label": "Passagem de Duas Pessoas (Cruzamento)",
+    "minimumWidthM": 1.2,
+    "normativeReferenceRequiresReview": false
+  },
+  {
+    "application": "Área de manobra acessível NBR 9050",
+    "confidence": "high",
+    "id": "CIR-004",
+    "label": "Giro de Cadeira de Rodas (PCD 360°)",
+    "minimumWidthM": 1.5,
+    "normativeReferenceRequiresReview": true
+  }
+]

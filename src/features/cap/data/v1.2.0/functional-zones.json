@@ -1,0 +1,72 @@
+[
+  {
+    "description": "Cama somada à folga lateral de circulação.",
+    "id": "ZON-001",
+    "label": "Zona de Repouso (Cama)",
+    "minimumClearanceM": 0.6,
+    "overlapPolicy": "unknown"
+  },
+  {
+    "description": "Uso frontal para guarda-roupas de abrir.",
+    "id": "ZON-002",
+    "label": "Zona de Vestuário (Guarda-Roupas de Abrir)",
+    "minimumClearanceM": 0.8,
+    "overlapPolicy": "unknown"
+  },
+  {
+    "description": "Mesa + cadeira ocupada + passagem atrás.",
+    "id": "ZON-003",
+    "label": "Zona de Refeição (Mesa + Cadeira Ocupada)",
+    "minimumClearanceM": 0.8,
+    "overlapPolicy": "unknown"
+  },
+  {
+    "description": "Perímetro entre Pia, Fogão e Geladeira.",
+    "id": "ZON-004",
+    "label": "Triângulo de Trabalho da Cozinha",
+    "minimumClearanceM": 1.2,
+    "overlapPolicy": "unknown"
+  },
+  {
+    "description": "Espaço frontal para abaixar e manusear roupas.",
+    "id": "ZON-005",
+    "label": "Zona de Uso do Tanque / Lavadora",
+    "minimumClearanceM": 0.8,
+    "overlapPolicy": "unknown"
+  },
+  {
+    "description": "Espaço lateral para entrar e sair do carro.",
+    "id": "ZON-006",
+    "label": "Abertura de Porta de Veículo (Garagem)",
+    "minimumClearanceM": 0.5,
+    "overlapPolicy": "unknown"
+  },
+  {
+    "description": "Espaço frontal para o churrasqueiro manipular espetos e grelha.",
+    "id": "ZON-007",
+    "label": "Zona de Operação de Churrasqueira",
+    "minimumClearanceM": 0.9,
+    "overlapPolicy": "unknown"
+  },
+  {
+    "description": "Faixa livre em torno do espelho d'água para segurança e circulação.",
+    "id": "ZON-008",
+    "label": "Faixa de Circulação Perimetral de Piscina",
+    "minimumClearanceM": 1,
+    "overlapPolicy": "unknown"
+  },
+  {
+    "description": "Espaço para afastamento da cadeira giratória da mesa de trabalho.",
+    "id": "ZON-009",
+    "label": "Zona de Uso do Espaço de Estudo / Home Office",
+    "minimumClearanceM": 0.8,
+    "overlapPolicy": "unknown"
+  },
+  {
+    "description": "Espaço frontal e de manobra para manutenção técnica de bombas e filtros.",
+    "id": "ZON-010",
+    "label": "Zona de Acesso à Casa de Máquinas",
+    "minimumClearanceM": 0.8,
+    "overlapPolicy": "unknown"
+  }
+]

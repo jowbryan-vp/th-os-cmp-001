@@ -1,51 +1,28 @@
 import { PROJECT_SCHEMA_VERSION, ProjectMasterRecord, pilotProject } from "../domain/project-master-record";
 import { migrateProject } from "../domain/project-migrations";
 import { projectMasterRecordSchema } from "../domain/project-schemas";
+import { ParametricEnvironmentStudy } from "../features/cap/domain/cap-library-types";
+import { parametricEnvironmentStudySchema } from "../features/cap/domain/cap-library-schema";
+import { CatalogOption, catalogOptionSchema } from "../features/catalogs/domain/reference-catalog";
 import { ProjectRepository } from "./project-repository";
+import {
+  CAP_STUDY_STORE_NAME, CATALOG_STORE_NAME, PROJECT_STORE_NAME, openThOsDatabase, requestResult, transactionDone,
+} from "./th-os-database";
 
-export const DB_NAME = "th-os";
-export const STORE_NAME = "project-master-records";
-const DB_VERSION = 2;
-const result = <T>(request: IDBRequest<T>) => new Promise<T>((resolve, reject) => {
-  request.onsuccess = () => resolve(request.result);
-  request.onerror = () => reject(request.error);
-});
-const done = (transaction: IDBTransaction) => new Promise<void>((resolve, reject) => {
-  transaction.oncomplete = () => resolve();
-  transaction.onerror = () => reject(transaction.error);
-  transaction.onabort = () => reject(transaction.error);
-});
+export { DB_NAME, PROJECT_STORE_NAME as STORE_NAME } from "./th-os-database";
 
 export class IndexedDbProjectRepository implements ProjectRepository {
-  private databasePromise: Promise<IDBDatabase> | null = null;
-  private open() {
-    this.databasePromise ??= new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
-      request.onupgradeneeded = () => {
-        const database = request.result;
-        const store = database.objectStoreNames.contains(STORE_NAME)
-          ? request.transaction!.objectStore(STORE_NAME)
-          : database.createObjectStore(STORE_NAME, { keyPath: "id" });
-        if (!store.indexNames.contains("code")) store.createIndex("code", "code", { unique: true });
-        if (!store.indexNames.contains("recordStatus")) store.createIndex("recordStatus", "recordStatus");
-        if (!store.indexNames.contains("updatedAt")) store.createIndex("updatedAt", "updatedAt");
-      };
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-    return this.databasePromise;
-  }
   async list() {
-    const database = await this.open();
-    const transaction = database.transaction(STORE_NAME, "readonly");
-    const raw = await result(transaction.objectStore(STORE_NAME).getAll());
+    const database = await openThOsDatabase();
+    const transaction = database.transaction(PROJECT_STORE_NAME, "readonly");
+    const raw = await requestResult(transaction.objectStore(PROJECT_STORE_NAME).getAll());
     const records = raw.map(migrateProject);
     return records.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }
   async get(id: string) {
-    const database = await this.open();
-    const transaction = database.transaction(STORE_NAME, "readonly");
-    const raw = await result(transaction.objectStore(STORE_NAME).get(id));
+    const database = await openThOsDatabase();
+    const transaction = database.transaction(PROJECT_STORE_NAME, "readonly");
+    const raw = await requestResult(transaction.objectStore(PROJECT_STORE_NAME).get(id));
     return raw ? migrateProject(raw) : undefined;
   }
   async save(project: ProjectMasterRecord) {
@@ -54,10 +31,10 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     const parsed = projectMasterRecordSchema.parse({
       ...project, schemaVersion: PROJECT_SCHEMA_VERSION, updatedAt: new Date().toISOString(),
     });
-    const database = await this.open();
-    const transaction = database.transaction(STORE_NAME, "readwrite");
-    transaction.objectStore(STORE_NAME).put(parsed);
-    await done(transaction);
+    const database = await openThOsDatabase();
+    const transaction = database.transaction(PROJECT_STORE_NAME, "readwrite");
+    transaction.objectStore(PROJECT_STORE_NAME).put(parsed);
+    await transactionDone(transaction);
     return parsed;
   }
   async replaceAll(projects: ProjectMasterRecord[]) {
@@ -69,19 +46,40 @@ export class IndexedDbProjectRepository implements ProjectRepository {
       }
       ids.add(project.id); codes.add(project.code);
     }
-    const database = await this.open();
-    const transaction = database.transaction(STORE_NAME, "readwrite");
-    const store = transaction.objectStore(STORE_NAME);
+    const database = await openThOsDatabase();
+    const transaction = database.transaction(PROJECT_STORE_NAME, "readwrite");
+    const store = transaction.objectStore(PROJECT_STORE_NAME);
     store.clear();
     for (const project of parsed) store.put(project);
-    await done(transaction);
+    await transactionDone(transaction);
     return parsed.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }
+  async restoreAll(projects: ProjectMasterRecord[], studies: ParametricEnvironmentStudy[], catalogs: CatalogOption[] = []) {
+    const parsedProjects = projects.map((project) => projectMasterRecordSchema.parse(migrateProject(project)));
+    const parsedStudies = studies.map((study) => parametricEnvironmentStudySchema.parse(study));
+    const parsedCatalogs = catalogs.map((option) => catalogOptionSchema.parse(option));
+    const projectIds = new Set(parsedProjects.map((project) => project.id));
+    if (parsedStudies.some((study) => !projectIds.has(study.projectId))) {
+      throw new Error("O backup contém estudo sem projeto correspondente.");
+    }
+    const database = await openThOsDatabase();
+    const transaction = database.transaction([PROJECT_STORE_NAME, CAP_STUDY_STORE_NAME, CATALOG_STORE_NAME], "readwrite");
+    const projectStore = transaction.objectStore(PROJECT_STORE_NAME); const studyStore = transaction.objectStore(CAP_STUDY_STORE_NAME); const catalogStore = transaction.objectStore(CATALOG_STORE_NAME);
+    projectStore.clear(); studyStore.clear(); catalogStore.clear();
+    for (const project of parsedProjects) projectStore.put(project);
+    for (const study of parsedStudies) studyStore.put(study);
+    for (const option of parsedCatalogs) catalogStore.put(option);
+    await transactionDone(transaction);
+    return { projects: parsedProjects.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)), studies: parsedStudies, catalogs: parsedCatalogs };
+  }
   async remove(id: string) {
-    const database = await this.open();
-    const transaction = database.transaction(STORE_NAME, "readwrite");
-    transaction.objectStore(STORE_NAME).delete(id);
-    await done(transaction);
+    const database = await openThOsDatabase();
+    const transaction = database.transaction([PROJECT_STORE_NAME, CAP_STUDY_STORE_NAME], "readwrite");
+    transaction.objectStore(PROJECT_STORE_NAME).delete(id);
+    const studyStore = transaction.objectStore(CAP_STUDY_STORE_NAME);
+    const studyIds = await requestResult(studyStore.index("projectId").getAllKeys(id));
+    for (const studyId of studyIds) studyStore.delete(studyId);
+    await transactionDone(transaction);
   }
   async nextCode(year = new Date().getFullYear()) {
     const prefix = `TH-${year}-`;
@@ -91,9 +89,9 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     return `${prefix}${String(highest + 1).padStart(3, "0")}`;
   }
   async ensurePilot() {
-    const database = await this.open();
-    const transaction = database.transaction(STORE_NAME, "readonly");
-    const raw = await result(transaction.objectStore(STORE_NAME).get(pilotProject.id)) as { schemaVersion?: number } | undefined;
+    const database = await openThOsDatabase();
+    const transaction = database.transaction(PROJECT_STORE_NAME, "readonly");
+    const raw = await requestResult(transaction.objectStore(PROJECT_STORE_NAME).get(pilotProject.id)) as { schemaVersion?: number } | undefined;
     if (!raw || (raw.schemaVersion ?? 1) < PROJECT_SCHEMA_VERSION) await this.save(pilotProject);
   }
 }

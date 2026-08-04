@@ -1,0 +1,626 @@
+{
+  "findings": [
+    {
+      "action": "Exibir ambas as referências na interface.",
+      "code": "CAP-I-CONFLICT",
+      "entity": "CFL-001",
+      "explanation": "Divergência entre fontes preservada.",
+      "field": "parametro",
+      "severity": "info",
+      "status": "accepted",
+      "value": "Comprimento da Cama de Casal Padrão"
+    },
+    {
+      "action": "Exibir ambas as referências na interface.",
+      "code": "CAP-I-CONFLICT",
+      "entity": "CFL-002",
+      "explanation": "Divergência entre fontes preservada.",
+      "field": "parametro",
+      "severity": "info",
+      "status": "accepted",
+      "value": "Corredor de Trabalho na Cozinha"
+    },
+    {
+      "action": "Exibir ambas as referências na interface.",
+      "code": "CAP-I-CONFLICT",
+      "entity": "CFL-003",
+      "explanation": "Divergência entre fontes preservada.",
+      "field": "parametro",
+      "severity": "info",
+      "status": "accepted",
+      "value": "Faixa de Circulação ao Redor de Piscinas"
+    },
+    {
+      "action": "Normalizar como conforto generoso e criar perfis de acessibilidade separados.",
+      "code": "CAP-T-COMFORT-ACCESS",
+      "entity": "NCF-003",
+      "explanation": "A fonte combina padrão de conforto e acessibilidade, conceitos independentes.",
+      "field": "nome",
+      "severity": "technical_review",
+      "status": "resolved",
+      "value": "Alto Padrão / Acessível"
+    },
+    {
+      "action": "Definir itens e arranjo em revisão técnica; não usar como cálculo geométrico.",
+      "code": "CAP-T-COMP-ITEMS",
+      "entity": "CMP-001",
+      "explanation": "A composição fornece apenas áreas de referência e não identifica seus itens.",
+      "field": "items",
+      "severity": "technical_review",
+      "status": "open",
+      "value": []
+    },
+    {
+      "action": "Definir itens e arranjo em revisão técnica; não usar como cálculo geométrico.",
+      "code": "CAP-T-COMP-ITEMS",
+      "entity": "CMP-002",
+      "explanation": "A composição fornece apenas áreas de referência e não identifica seus itens.",
+      "field": "items",
+      "severity": "technical_review",
+      "status": "open",
+      "value": []
+    },
+    {
+      "action": "Definir itens e arranjo em revisão técnica; não usar como cálculo geométrico.",
+      "code": "CAP-T-COMP-ITEMS",
+      "entity": "CMP-003",
+      "explanation": "A composição fornece apenas áreas de referência e não identifica seus itens.",
+      "field": "items",
+      "severity": "technical_review",
+      "status": "open",
+      "value": []
+    },
+    {
+      "action": "Definir itens e arranjo em revisão técnica; não usar como cálculo geométrico.",
+      "code": "CAP-T-COMP-ITEMS",
+      "entity": "CMP-004",
+      "explanation": "A composição fornece apenas áreas de referência e não identifica seus itens.",
+      "field": "items",
+      "severity": "technical_review",
+      "status": "open",
+      "value": []
+    },
+    {
+      "action": "Definir itens e arranjo em revisão técnica; não usar como cálculo geométrico.",
+      "code": "CAP-T-COMP-ITEMS",
+      "entity": "CMP-005",
+      "explanation": "A composição fornece apenas áreas de referência e não identifica seus itens.",
+      "field": "items",
+      "severity": "technical_review",
+      "status": "open",
+      "value": []
+    },
+    {
+      "action": "Definir itens e arranjo em revisão técnica; não usar como cálculo geométrico.",
+      "code": "CAP-T-COMP-ITEMS",
+      "entity": "CMP-006",
+      "explanation": "A composição fornece apenas áreas de referência e não identifica seus itens.",
+      "field": "items",
+      "severity": "technical_review",
+      "status": "open",
+      "value": []
+    },
+    {
+      "action": "Definir itens e arranjo em revisão técnica; não usar como cálculo geométrico.",
+      "code": "CAP-T-COMP-ITEMS",
+      "entity": "CMP-007",
+      "explanation": "A composição fornece apenas áreas de referência e não identifica seus itens.",
+      "field": "items",
+      "severity": "technical_review",
+      "status": "open",
+      "value": []
+    },
+    {
+      "action": "Definir itens e arranjo em revisão técnica; não usar como cálculo geométrico.",
+      "code": "CAP-T-COMP-ITEMS",
+      "entity": "CMP-008",
+      "explanation": "A composição fornece apenas áreas de referência e não identifica seus itens.",
+      "field": "items",
+      "severity": "technical_review",
+      "status": "open",
+      "value": []
+    },
+    {
+      "action": "Definir itens e arranjo em revisão técnica; não usar como cálculo geométrico.",
+      "code": "CAP-T-COMP-ITEMS",
+      "entity": "CMP-009",
+      "explanation": "A composição fornece apenas áreas de referência e não identifica seus itens.",
+      "field": "items",
+      "severity": "technical_review",
+      "status": "open",
+      "value": []
+    },
+    {
+      "action": "Definir itens e arranjo em revisão técnica; não usar como cálculo geométrico.",
+      "code": "CAP-T-COMP-ITEMS",
+      "entity": "CMP-010",
+      "explanation": "A composição fornece apenas áreas de referência e não identifica seus itens.",
+      "field": "items",
+      "severity": "technical_review",
+      "status": "open",
+      "value": []
+    },
+    {
+      "action": "Definir itens e arranjo em revisão técnica; não usar como cálculo geométrico.",
+      "code": "CAP-T-COMP-ITEMS",
+      "entity": "CMP-011",
+      "explanation": "A composição fornece apenas áreas de referência e não identifica seus itens.",
+      "field": "items",
+      "severity": "technical_review",
+      "status": "open",
+      "value": []
+    },
+    {
+      "action": "Definir itens e arranjo em revisão técnica; não usar como cálculo geométrico.",
+      "code": "CAP-T-COMP-ITEMS",
+      "entity": "CMP-012",
+      "explanation": "A composição fornece apenas áreas de referência e não identifica seus itens.",
+      "field": "items",
+      "severity": "technical_review",
+      "status": "open",
+      "value": []
+    },
+    {
+      "action": "Definir itens e arranjo em revisão técnica; não usar como cálculo geométrico.",
+      "code": "CAP-T-COMP-ITEMS",
+      "entity": "CMP-013",
+      "explanation": "A composição fornece apenas áreas de referência e não identifica seus itens.",
+      "field": "items",
+      "severity": "technical_review",
+      "status": "open",
+      "value": []
+    },
+    {
+      "action": "Definir itens e arranjo em revisão técnica; não usar como cálculo geométrico.",
+      "code": "CAP-T-COMP-ITEMS",
+      "entity": "CMP-014",
+      "explanation": "A composição fornece apenas áreas de referência e não identifica seus itens.",
+      "field": "items",
+      "severity": "technical_review",
+      "status": "open",
+      "value": []
+    },
+    {
+      "action": "Definir itens e arranjo em revisão técnica; não usar como cálculo geométrico.",
+      "code": "CAP-T-COMP-ITEMS",
+      "entity": "CMP-015",
+      "explanation": "A composição fornece apenas áreas de referência e não identifica seus itens.",
+      "field": "items",
+      "severity": "technical_review",
+      "status": "open",
+      "value": []
+    },
+    {
+      "action": "Definir itens e arranjo em revisão técnica; não usar como cálculo geométrico.",
+      "code": "CAP-T-COMP-ITEMS",
+      "entity": "CMP-016",
+      "explanation": "A composição fornece apenas áreas de referência e não identifica seus itens.",
+      "field": "items",
+      "severity": "technical_review",
+      "status": "open",
+      "value": []
+    },
+    {
+      "action": "Definir itens e arranjo em revisão técnica; não usar como cálculo geométrico.",
+      "code": "CAP-T-COMP-ITEMS",
+      "entity": "CMP-017",
+      "explanation": "A composição fornece apenas áreas de referência e não identifica seus itens.",
+      "field": "items",
+      "severity": "technical_review",
+      "status": "open",
+      "value": []
+    },
+    {
+      "action": "Definir itens e arranjo em revisão técnica; não usar como cálculo geométrico.",
+      "code": "CAP-T-COMP-ITEMS",
+      "entity": "CMP-018",
+      "explanation": "A composição fornece apenas áreas de referência e não identifica seus itens.",
+      "field": "items",
+      "severity": "technical_review",
+      "status": "open",
+      "value": []
+    },
+    {
+      "action": "Definir itens e arranjo em revisão técnica; não usar como cálculo geométrico.",
+      "code": "CAP-T-COMP-ITEMS",
+      "entity": "CMP-019",
+      "explanation": "A composição fornece apenas áreas de referência e não identifica seus itens.",
+      "field": "items",
+      "severity": "technical_review",
+      "status": "open",
+      "value": []
+    },
+    {
+      "action": "Apresentar como alerta técnico e solicitar verificação normativa.",
+      "code": "CAP-T-NORM",
+      "entity": "AVS-002",
+      "explanation": "O rótulo 'Erro Normativo' excede a evidência secundária disponível.",
+      "field": "severidade",
+      "severity": "technical_review",
+      "status": "resolved",
+      "value": "Erro Normativo"
+    },
+    {
+      "action": "Exibir como referência técnica a verificar conforme norma vigente.",
+      "code": "CAP-T-NORM",
+      "entity": "CIR-004",
+      "explanation": "A menção a NBR 9050 é indireta e não comprova conformidade.",
+      "field": "aplicacao",
+      "severity": "technical_review",
+      "status": "open",
+      "value": "Área de manobra acessível NBR 9050"
+    },
+    {
+      "action": "Mapear para estratégia TypeScript explícita; nunca executar a string.",
+      "code": "CAP-T-TEXT-RULE",
+      "entity": "REG-001",
+      "explanation": "Fórmula textual não possui implementação operacional segura.",
+      "field": "algoritmo",
+      "severity": "technical_review",
+      "status": "open",
+      "value": "Area_Bruta = Area_Liquida * 1.15"
+    },
+    {
+      "action": "Mapear para estratégia TypeScript explícita; nunca executar a string.",
+      "code": "CAP-T-TEXT-RULE",
+      "entity": "REG-002",
+      "explanation": "Fórmula textual não possui implementação operacional segura.",
+      "field": "algoritmo",
+      "severity": "technical_review",
+      "status": "open",
+      "value": "2 * Espelho + Piso = 0.63m a 0.65m"
+    },
+    {
+      "action": "Mapear para estratégia TypeScript explícita; nunca executar a string.",
+      "code": "CAP-T-TEXT-RULE",
+      "entity": "REG-003",
+      "explanation": "Fórmula textual não possui implementação operacional segura.",
+      "field": "algoritmo",
+      "severity": "technical_review",
+      "status": "open",
+      "value": "Largura_Vaga = Largura_Carro + 0.80m; Comprimento_Vaga = Comp_Carro + 0.50m"
+    },
+    {
+      "action": "Mapear para estratégia TypeScript explícita; nunca executar a string.",
+      "code": "CAP-T-TEXT-RULE",
+      "entity": "REG-004",
+      "explanation": "Fórmula textual não possui implementação operacional segura.",
+      "field": "algoritmo",
+      "severity": "technical_review",
+      "status": "open",
+      "value": "Area_Total_Deck = (Largura_Espelho + 2*Faixa_Deck) * (Comp_Espelho + 2*Faixa_Deck) - Area_Espelho"
+    },
+    {
+      "action": "Mapear para estratégia TypeScript explícita; nunca executar a string.",
+      "code": "CAP-T-TEXT-RULE",
+      "entity": "REG-005",
+      "explanation": "Fórmula textual não possui implementação operacional segura.",
+      "field": "algoritmo",
+      "severity": "technical_review",
+      "status": "open",
+      "value": "Volume_m3 = Area_Espelho * Profundidade_Media"
+    },
+    {
+      "action": "Expor reserva geométrica como parâmetro configurável.",
+      "code": "CAP-W-GEOMETRY-15",
+      "entity": "REG-001",
+      "explanation": "O fator fixo de 15% não é universal.",
+      "field": "algoritmo",
+      "severity": "warning",
+      "status": "accepted",
+      "value": "Area_Bruta = Area_Liquida * 1.15"
+    },
+    {
+      "action": "Tratar apenas como preset comparativo.",
+      "code": "CAP-W-INFERRED",
+      "entity": "CMP-001",
+      "explanation": "Área de composição identificada como inferida.",
+      "field": "confidence",
+      "severity": "warning",
+      "status": "open",
+      "value": "inferred"
+    },
+    {
+      "action": "Tratar apenas como preset comparativo.",
+      "code": "CAP-W-INFERRED",
+      "entity": "CMP-011",
+      "explanation": "Área de composição identificada como inferida.",
+      "field": "confidence",
+      "severity": "warning",
+      "status": "open",
+      "value": "inferred"
+    },
+    {
+      "action": "Tratar apenas como preset comparativo.",
+      "code": "CAP-W-INFERRED",
+      "entity": "CMP-016",
+      "explanation": "Área de composição identificada como inferida.",
+      "field": "confidence",
+      "severity": "warning",
+      "status": "open",
+      "value": "inferred"
+    },
+    {
+      "action": "Tratar apenas como preset comparativo.",
+      "code": "CAP-W-INFERRED",
+      "entity": "CMP-018",
+      "explanation": "Área de composição identificada como inferida.",
+      "field": "confidence",
+      "severity": "warning",
+      "status": "open",
+      "value": "inferred"
+    },
+    {
+      "action": "Tratar apenas como preset comparativo.",
+      "code": "CAP-W-INFERRED",
+      "entity": "CMP-019",
+      "explanation": "Área de composição identificada como inferida.",
+      "field": "confidence",
+      "severity": "warning",
+      "status": "open",
+      "value": "inferred"
+    },
+    {
+      "action": "Validar com o arquiteto antes de uso como preset.",
+      "code": "CAP-W-INFERRED",
+      "entity": "EQP-011",
+      "explanation": "Dimensão derivada, sem confirmação direta na fonte.",
+      "field": "confidence",
+      "severity": "warning",
+      "status": "open",
+      "value": "inferred"
+    },
+    {
+      "action": "Validar com o arquiteto antes de uso como preset.",
+      "code": "CAP-W-INFERRED",
+      "entity": "EQP-013",
+      "explanation": "Dimensão derivada, sem confirmação direta na fonte.",
+      "field": "confidence",
+      "severity": "warning",
+      "status": "open",
+      "value": "inferred"
+    },
+    {
+      "action": "Validar com o arquiteto antes de uso como preset.",
+      "code": "CAP-W-INFERRED",
+      "entity": "EQP-015",
+      "explanation": "Dimensão derivada, sem confirmação direta na fonte.",
+      "field": "confidence",
+      "severity": "warning",
+      "status": "open",
+      "value": "inferred"
+    },
+    {
+      "action": "Validar com o arquiteto antes de uso como preset.",
+      "code": "CAP-W-INFERRED",
+      "entity": "EQP-017",
+      "explanation": "Dimensão derivada, sem confirmação direta na fonte.",
+      "field": "confidence",
+      "severity": "warning",
+      "status": "open",
+      "value": "inferred"
+    },
+    {
+      "action": "Validar com o arquiteto antes de uso como preset.",
+      "code": "CAP-W-INFERRED",
+      "entity": "EQP-018",
+      "explanation": "Dimensão derivada, sem confirmação direta na fonte.",
+      "field": "confidence",
+      "severity": "warning",
+      "status": "open",
+      "value": "inferred"
+    },
+    {
+      "action": "Validar com o arquiteto antes de uso como preset.",
+      "code": "CAP-W-INFERRED",
+      "entity": "EQP-031",
+      "explanation": "Dimensão derivada, sem confirmação direta na fonte.",
+      "field": "confidence",
+      "severity": "warning",
+      "status": "open",
+      "value": "inferred"
+    },
+    {
+      "action": "Validar com o arquiteto antes de uso como preset.",
+      "code": "CAP-W-INFERRED",
+      "entity": "EQP-032",
+      "explanation": "Dimensão derivada, sem confirmação direta na fonte.",
+      "field": "confidence",
+      "severity": "warning",
+      "status": "open",
+      "value": "inferred"
+    },
+    {
+      "action": "Validar com o arquiteto antes de uso como preset.",
+      "code": "CAP-W-INFERRED",
+      "entity": "EQP-033",
+      "explanation": "Dimensão derivada, sem confirmação direta na fonte.",
+      "field": "confidence",
+      "severity": "warning",
+      "status": "open",
+      "value": "inferred"
+    },
+    {
+      "action": "Validar com o arquiteto antes de uso como preset.",
+      "code": "CAP-W-INFERRED",
+      "entity": "EQP-034",
+      "explanation": "Dimensão derivada, sem confirmação direta na fonte.",
+      "field": "confidence",
+      "severity": "warning",
+      "status": "open",
+      "value": "inferred"
+    },
+    {
+      "action": "Validar com o arquiteto antes de uso como preset.",
+      "code": "CAP-W-INFERRED",
+      "entity": "EQP-035",
+      "explanation": "Dimensão derivada, sem confirmação direta na fonte.",
+      "field": "confidence",
+      "severity": "warning",
+      "status": "open",
+      "value": "inferred"
+    },
+    {
+      "action": "Validar com o arquiteto antes de uso como preset.",
+      "code": "CAP-W-INFERRED",
+      "entity": "EQP-036",
+      "explanation": "Dimensão derivada, sem confirmação direta na fonte.",
+      "field": "confidence",
+      "severity": "warning",
+      "status": "open",
+      "value": "inferred"
+    },
+    {
+      "action": "Validar com o arquiteto antes de uso como preset.",
+      "code": "CAP-W-INFERRED",
+      "entity": "EQP-037",
+      "explanation": "Dimensão derivada, sem confirmação direta na fonte.",
+      "field": "confidence",
+      "severity": "warning",
+      "status": "open",
+      "value": "inferred"
+    },
+    {
+      "action": "Manter como referência preliminar até revisão técnica.",
+      "code": "CAP-W-SOURCE-PENDING",
+      "entity": "EQP-013",
+      "explanation": "Item inferido sem fonte documental validada.",
+      "field": "fonte_id",
+      "severity": "warning",
+      "status": "open",
+      "value": null
+    },
+    {
+      "action": "Manter como referência preliminar até revisão técnica.",
+      "code": "CAP-W-SOURCE-PENDING",
+      "entity": "EQP-015",
+      "explanation": "Item inferido sem fonte documental validada.",
+      "field": "fonte_id",
+      "severity": "warning",
+      "status": "open",
+      "value": null
+    },
+    {
+      "action": "Manter como referência preliminar até revisão técnica.",
+      "code": "CAP-W-SOURCE-PENDING",
+      "entity": "EQP-017",
+      "explanation": "Item inferido sem fonte documental validada.",
+      "field": "fonte_id",
+      "severity": "warning",
+      "status": "open",
+      "value": null
+    },
+    {
+      "action": "Manter como referência preliminar até revisão técnica.",
+      "code": "CAP-W-SOURCE-PENDING",
+      "entity": "EQP-018",
+      "explanation": "Item inferido sem fonte documental validada.",
+      "field": "fonte_id",
+      "severity": "warning",
+      "status": "open",
+      "value": null
+    },
+    {
+      "action": "Manter como referência preliminar até revisão técnica.",
+      "code": "CAP-W-SOURCE-PENDING",
+      "entity": "EQP-031",
+      "explanation": "Item inferido sem fonte documental validada.",
+      "field": "fonte_id",
+      "severity": "warning",
+      "status": "open",
+      "value": null
+    },
+    {
+      "action": "Manter como referência preliminar até revisão técnica.",
+      "code": "CAP-W-SOURCE-PENDING",
+      "entity": "EQP-032",
+      "explanation": "Item inferido sem fonte documental validada.",
+      "field": "fonte_id",
+      "severity": "warning",
+      "status": "open",
+      "value": null
+    },
+    {
+      "action": "Manter como referência preliminar até revisão técnica.",
+      "code": "CAP-W-SOURCE-PENDING",
+      "entity": "EQP-033",
+      "explanation": "Item inferido sem fonte documental validada.",
+      "field": "fonte_id",
+      "severity": "warning",
+      "status": "open",
+      "value": null
+    },
+    {
+      "action": "Manter como referência preliminar até revisão técnica.",
+      "code": "CAP-W-SOURCE-PENDING",
+      "entity": "EQP-035",
+      "explanation": "Item inferido sem fonte documental validada.",
+      "field": "fonte_id",
+      "severity": "warning",
+      "status": "open",
+      "value": null
+    },
+    {
+      "action": "Manter como referência preliminar até revisão técnica.",
+      "code": "CAP-W-SOURCE-PENDING",
+      "entity": "EQP-036",
+      "explanation": "Item inferido sem fonte documental validada.",
+      "field": "fonte_id",
+      "severity": "warning",
+      "status": "open",
+      "value": null
+    },
+    {
+      "action": "Manter como referência preliminar até revisão técnica.",
+      "code": "CAP-W-SOURCE-PENDING",
+      "entity": "EQP-037",
+      "explanation": "Item inferido sem fonte documental validada.",
+      "field": "fonte_id",
+      "severity": "warning",
+      "status": "open",
+      "value": null
+    },
+    {
+      "action": "Manter como referência preliminar até revisão técnica.",
+      "code": "CAP-W-SOURCE-PENDING",
+      "entity": "REG-004",
+      "explanation": "Item inferido sem fonte documental validada.",
+      "field": "fonte_id",
+      "severity": "warning",
+      "status": "open",
+      "value": null
+    },
+    {
+      "action": "Manter como referência preliminar até revisão técnica.",
+      "code": "CAP-W-SOURCE-PENDING",
+      "entity": "REG-005",
+      "explanation": "Item inferido sem fonte documental validada.",
+      "field": "fonte_id",
+      "severity": "warning",
+      "status": "open",
+      "value": null
+    },
+    {
+      "action": "Manter capacidade experimental e não calcular rampas.",
+      "code": "CAP-W-STAIRS",
+      "entity": "AMB-014",
+      "explanation": "Escadas e rampas estão agrupadas, mas a regra de Blondel só se aplica a escadas.",
+      "field": "nome",
+      "severity": "warning",
+      "status": "resolved",
+      "value": "Escadas e Rampas Residencias"
+    },
+    {
+      "action": "Revisar e mapear explicitamente antes de utilizar.",
+      "code": "CAP-W-UNKNOWN-FIELD",
+      "entity": "CIR-004",
+      "explanation": "Campo não reconhecido pelo contrato da biblioteca.",
+      "field": "diametro_giro",
+      "severity": "warning",
+      "status": "open",
+      "value": 1.5
+    }
+  ],
+  "libraryVersion": "1.2.0",
+  "sourceHash": "0c1b377a74713da4a879f8d049ed75a07258b8d19266c415cfeba4260a5e2f33"
+}
