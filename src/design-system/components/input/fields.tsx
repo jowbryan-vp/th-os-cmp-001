@@ -1,9 +1,28 @@
 "use client";
-import { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import { cloneElement, InputHTMLAttributes, isValidElement, ReactElement, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes, useId } from "react";
 import { cn } from "../../utils/cn";
 
+interface FieldControlProps {
+  id?: string;
+  "aria-invalid"?: boolean | "true" | "false";
+  "aria-describedby"?: string;
+  "aria-required"?: boolean | "true" | "false";
+}
+
 export function Field({ label, htmlFor, helpText, errorText, required, children, className }: { label: string; htmlFor?: string; helpText?: string; errorText?: string; required?: boolean; children: ReactNode; className?: string }) {
-  return <div className={cn("ds-field", errorText && "ds-field--invalid", className)}><label htmlFor={htmlFor}>{label}{required ? <span aria-hidden="true"> *</span> : null}</label>{children}{errorText ? <p className="ds-field__error" role="alert">{errorText}</p> : helpText ? <p className="ds-field__help">{helpText}</p> : null}</div>;
+  const autoId = useId();
+  const control = isValidElement<FieldControlProps>(children) ? (children as ReactElement<FieldControlProps>) : null;
+  const id = htmlFor ?? control?.props.id ?? autoId;
+  const describedBy = errorText ? `${id}-error` : helpText ? `${id}-help` : undefined;
+  const associatedControl = control
+    ? cloneElement(control, {
+        id: control.props.id ?? id,
+        "aria-invalid": control.props["aria-invalid"] ?? (errorText ? true : undefined),
+        "aria-describedby": control.props["aria-describedby"] ?? describedBy,
+        "aria-required": control.props["aria-required"] ?? (required ? true : undefined),
+      })
+    : children;
+  return <div className={cn("ds-field", errorText && "ds-field--invalid", className)}><label htmlFor={id}>{label}{required ? <span aria-hidden="true"> *</span> : null}</label>{associatedControl}{errorText ? <p id={`${id}-error`} className="ds-field__error" role="alert">{errorText}</p> : helpText ? <p id={`${id}-help`} className="ds-field__help">{helpText}</p> : null}</div>;
 }
 export function Input({ className, invalid, ...props }: InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }) { return <input className={cn("ds-input", className)} aria-invalid={invalid || undefined} {...props} />; }
 export function NumberInput(props: InputHTMLAttributes<HTMLInputElement>) { return <Input type="number" inputMode="decimal" {...props} />; }
