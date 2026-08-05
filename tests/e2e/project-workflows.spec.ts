@@ -84,20 +84,24 @@ test("creates, autosaves, and restores a project after reload", async ({ page })
 test("archives, restores, and permanently deletes a project", async ({ page }) => {
   const pilot = page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" });
 
-  await pilot.getByRole("button", { name: "Arquivar" }).click();
+  await pilot.getByRole("button", { name: "Ações" }).click();
+  await pilot.getByRole("menuitem", { name: "Arquivar" }).click();
   await expect(page.getByText("Projeto arquivado.")).toBeVisible();
   await expect(pilot).toBeHidden();
 
   await page.getByLabel("Status").selectOption("all");
   await expect(pilot.getByText("Arquivado", { exact: true }).first()).toBeVisible();
 
-  await pilot.getByRole("button", { name: "Restaurar" }).click();
+  await pilot.getByRole("button", { name: "Ações" }).click();
+  await pilot.getByRole("menuitem", { name: "Restaurar" }).click();
   await expect(page.getByText("Projeto restaurado.")).toBeVisible();
   await expect(pilot.getByText("Ativo", { exact: true })).toBeVisible();
 
-  await pilot.getByRole("button", { name: "Arquivar" }).click();
-  page.once("dialog", (dialog) => dialog.accept());
-  await pilot.getByRole("button", { name: "Excluir" }).click();
+  await pilot.getByRole("button", { name: "Ações" }).click();
+  await pilot.getByRole("menuitem", { name: "Arquivar" }).click();
+  await pilot.getByRole("button", { name: "Ações" }).click();
+  await pilot.getByRole("menuitem", { name: "Excluir definitivamente" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Excluir definitivamente" }).click();
   await expect(page.getByText("Cadastro excluído.")).toBeVisible();
   await expect(pilot).toHaveCount(0);
 });
@@ -201,7 +205,7 @@ test("keeps functional content available on tablet and mobile", async ({ page })
 test("calculates, compares, accumulates three CAP-001 areas and restores scenarios", async ({ page }) => {
   const pilot = page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" });
   await pilot.locator("button.project-card__open").click();
-  await page.getByRole("button", { name: "+ Ambiente" }).click();
+  await page.getByRole("button", { name: "Ambiente", exact: true }).click();
   await page.getByRole("combobox", { name: "Ambiente", exact: true }).last().fill("Suíte");
   await expect(page.getByText("Salvo neste dispositivo")).toBeVisible();
   await page.getByRole("button", { name: "Pré-dimensionar com CAP-001" }).click();
@@ -267,7 +271,7 @@ test("calculates, compares, accumulates three CAP-001 areas and restores scenari
 test("shows comfort and accessibility choices and advances to the next environment", async ({ page }) => {
   const pilot = page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" });
   await pilot.locator("button.project-card__open").click();
-  await page.getByRole("button", { name: "+ Ambiente" }).click();
+  await page.getByRole("button", { name: "Ambiente", exact: true }).click();
   await page.getByRole("combobox", { name: "Ambiente", exact: true }).last().fill("Varanda Gourmet");
   await expect(page.getByText("Salvo neste dispositivo")).toBeVisible();
   await page.getByRole("button", { name: "Pré-dimensionar com CAP-001" }).click();
@@ -306,8 +310,8 @@ test("shows comfort and accessibility choices and advances to the next environme
   await report.locator("article").first().getByRole("button", { name: "Editar" }).click();
   await expect(report.locator("article").first()).toHaveClass(/is-current/);
   await expect(page.getByLabel("Ambiente que será calculado").locator("option:checked")).toHaveText("Editar: Varanda Gourmet");
-  page.once("dialog", (dialog) => dialog.accept());
   await report.locator("article").first().getByRole("button", { name: "Excluir" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Excluir ambiente" }).click();
   await expect(report.locator("article")).toHaveCount(0);
   await expect(page.getByText(/Varanda Gourmet excluído/)).toBeVisible();
 
@@ -450,7 +454,7 @@ test("keeps the CAP-001 library usable on tablet and mobile", async ({ page }) =
     await page.getByRole("button", { name: "CAP-001" }).click();
     await expect(page.getByRole("heading", { name: "Biblioteca e Calculadora Paramétrica" })).toBeVisible();
     await expect(page.getByRole("button", { name: /Dormitório Casal/ })).toBeVisible();
-    await page.getByRole("button", { name: "← Voltar ao CMP" }).click();
+    await page.getByRole("button", { name: "Voltar ao CMP" }).click();
   }
 });
 
@@ -475,8 +479,8 @@ test("calcula HON-001, compara cenários, gera pagamentos, aprova snapshot e per
   await expect(page.getByText("E. Valor final negociado")).toBeVisible();
   await expect(page.getByText("Gestão", { exact: false })).toBeAttached();
   await page.getByRole("button", { name: "Cenários" }).click();
-  await page.getByRole("button", { name: "+ Salvar cenário atual" }).click();
-  await page.getByRole("button", { name: "+ Salvar cenário atual" }).click();
+  await page.getByRole("button", { name: "Salvar cenário atual" }).click();
+  await page.getByRole("button", { name: "Salvar cenário atual" }).click();
   await expect(page.locator(".hon-scenario-grid article")).toHaveCount(2);
   await page.getByRole("button", { name: "Pagamentos" }).click();
   await page.getByRole("button", { name: "30% + etapas" }).click();

@@ -1,6 +1,8 @@
 :root {
   --brand-military: #677048;
+  --brand-military-hover: #59613f;
   --brand-military-dark: #4d5535;
+  --brand-military-pressed: #434a2e;
   --brand-military-soft: #eef0e8;
   --brand-ink: #11120f;
   --brand-black: #000000;
@@ -9,13 +11,24 @@
   --color-bg: #f5f5f1;
   --color-surface: #ffffff;
   --color-surface-muted: #f8f8f5;
+  --color-surface-raised: #fbfbf8;
   --color-text: #171813;
   --color-text-muted: #6b6d63;
   --color-border: #dedfd7;
   --color-border-strong: #c8cabf;
+  --color-border-interactive: #aeb2a3;
   --color-focus: #677048;
   --color-success-bg: #eef3e7;
   --color-success-text: #45502f;
+  --color-success: #3f6b3d;
+  --color-warning: #99651f;
+  --color-error: #9b3d35;
+  --color-info: #426378;
+  --color-focus-ring: color-mix(in srgb, #677048 36%, transparent);
+
+  --module-cmp: #677048;
+  --module-cap: #526b62;
+  --module-hon: #6b6248;
 
   --font-ui: "Aptos", "Helvetica Neue", Arial, sans-serif;
   --font-mono: "SFMono-Regular", Consolas, monospace;
@@ -35,11 +48,20 @@
   --space-12: 3rem;
   --space-16: 4rem;
 
-  --radius-sm: 0.35rem;
-  --radius-md: 0.65rem;
-  --radius-lg: 0.9rem;
-  --shadow-card: 0 1px 2px rgba(17, 18, 15, 0.04);
-  --shadow-float: 0 16px 38px rgba(17, 18, 15, 0.12);
+  --radius-sm: 0.3125rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --shadow-card: 0 1px 2px rgba(17, 18, 15, 0.08);
+  --shadow-elevated: 0 8px 24px rgba(17, 18, 15, 0.12);
+  --shadow-float: 0 20px 48px rgba(17, 18, 15, 0.18);
   --content-max: 90rem;
-  --transition-fast: 160ms ease;
+  --transition-fast: 120ms cubic-bezier(.2,.8,.2,1);
+  --transition-normal: 160ms cubic-bezier(.2,.8,.2,1);
+  --transition-slow: 220ms cubic-bezier(.2,.8,.2,1);
+
+  --z-sticky: 20;
+  --z-menu: 40;
+  --z-toast: 60;
+  --z-overlay: 80;
+  --z-modal: 90;
 }

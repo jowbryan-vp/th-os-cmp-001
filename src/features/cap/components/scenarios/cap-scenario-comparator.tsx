@@ -1,5 +1,6 @@
 import { ParametricEnvironmentStudy, ParametricScenario } from "../../domain/cap-library-types";
 import { accessibilityLabels, comfortLabels } from "../../utils/cap-labels";
+import { Button } from "../../../../design-system";
 
 const format = (value: number) => value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -23,5 +24,5 @@ export function CapScenarioComparator({ study, onPrefer }: {
     ["Confiança", (scenario) => scenario.result?.confidence ?? "—"], ["Alertas", (scenario) => String(scenario.result?.warnings.length ?? 0)],
   ];
   return <section className="cap-panel"><h2>Comparador de cenários</h2><p>Compare até quatro cenários. A ferramenta não escolhe automaticamente o melhor.</p><div className="cap-compare-wrap"><table className="cap-compare"><thead><tr><th>Métrica</th>{study.scenarios.map((scenario) => <th key={scenario.id}>{scenario.name}{study.selectedScenarioId === scenario.id ? <small>Preferido</small> : null}</th>)}</tr></thead><tbody>{rows.map(([label, getter]) => <tr key={label}><th>{label}</th>{study.scenarios.map((scenario) => <td key={scenario.id}>{getter(scenario)}</td>)}</tr>)}</tbody></table>
-    <div className="cap-actions">{study.scenarios.map((scenario) => <button key={scenario.id} onClick={() => onPrefer(scenario.id)}>Destacar {scenario.name}</button>)}</div></div></section>;
+    <div className="cap-actions">{study.scenarios.map((scenario) => <Button variant="secondary" key={scenario.id} onClick={() => onPrefer(scenario.id)}>Destacar {scenario.name}</Button>)}</div></div></section>;
 }
