@@ -112,7 +112,7 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
 
   if (loading) return <main className="hon-loading"><Spinner label="Carregando Calculadora de Honorários" /><span>Carregando Calculadora de Honorários…</span></main>;
   return <main className="hon-shell">
-    <header className="hon-header"><Button variant="ghost" icon={ArrowLeft} onClick={onBack}>Voltar ao CMP-001</Button><span className="eyebrow">TH OS · HON-001 · v1.0.0</span><h1>Calculadora de Honorários</h1><p>Formação de preço baseada no custo do serviço. Área é referência de esforço, nunca preço automático por m².</p></header>
+    <header className="hon-header"><Button variant="ghost" className="text-action" icon={ArrowLeft} onClick={onBack}>Voltar ao CMP-001</Button><span className="eyebrow">TH OS · HON-001 · v1.0.0</span><h1>Calculadora de Honorários</h1><p>Formação de preço baseada no custo do serviço. Área é referência de esforço, nunca preço automático por m².</p></header>
     <Tabs ariaLabel="Etapas da calculadora" items={tabs.map(([id, label]) => ({ id, label }))} value={tab} onChange={(value) => setTab(value as Tab)} />
     {notice && <Toast variant={notice.toLowerCase().includes("falha") || notice.toLowerCase().includes("não foi possível") ? "error" : "success"} title={notice} onClose={() => setNotice("")} />}
     <section className="hon-panel">
