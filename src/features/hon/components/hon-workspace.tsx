@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Calculator, CheckCircle2, Copy, Download, Plus, Save } from "lucide-react";
+import { ArrowLeft, Calculator, CheckCircle2, Copy, Download, Plus, Save } from "../../../design-system/icons";
 import { Button, EmptyState, Field as DsField, Spinner, Tabs, Toast } from "../../../design-system";
 import { ProjectMasterRecord, createId } from "../../../domain/project-master-record";
 import { getParametricStudyRepository } from "../../cap/repositories/parametric-study-repository";

@@ -1,7 +1,7 @@
 import { ParametricScenario } from "../../domain/cap-library-types";
 import { AppliedAreaType } from "../../services/cap-program-service";
 import { Button } from "../../../../design-system";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2 } from "../../../../design-system/icons";
 
 const format = (value: number) => value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 

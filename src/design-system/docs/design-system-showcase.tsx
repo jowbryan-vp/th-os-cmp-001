@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   ActionMenu, Badge, Button, Card, CardBody, CardFooter, CardHeader, Checkbox, ClickableCard,
   Combobox, ConfirmDialog, CurrencyInput, DataTable, DateInput, EmptyState, Field, Input, Link,
@@ -9,11 +9,14 @@ import {
 import { Archive, Calculator, Copy, Plus, Save, Trash2 } from "../icons";
 
 const buttonVariants = ["primary", "secondary", "tertiary", "destructive", "success", "ghost", "link"] as const;
+const subscribeNever = () => () => {};
+function useIsHydrated() {
+  return useSyncExternalStore(subscribeNever, () => true, () => false);
+}
 export function DesignSystemShowcase() {
-  const [ready, setReady] = useState(false);
+  const ready = useIsHydrated();
   const [tab, setTab] = useState("components"); const [modal, setModal] = useState(false); const [toast, setToast] = useState(false);
   const [switchValue, setSwitchValue] = useState(true); const [combo, setCombo] = useState("cmp");
-  useEffect(() => setReady(true), []);
   return <main className="ds-showcase" data-ready={ready ? "true" : "false"}>
     <PageActionBar eyebrow="TH OS · DS-001" title="Design System" breadcrumb={<Link href="/" variant="subtle">TH OS / Desenvolvimento</Link>} status={<Badge tone="experimental">Somente desenvolvimento</Badge>} primaryAction={<Button variant="primary" icon={Save} onClick={() => setToast(true)}>Salvar exemplo</Button>} secondaryActions={<Button variant="secondary" icon={Calculator}>Calcular</Button>} />
     <Tabs ariaLabel="Seções do showcase" value={tab} onChange={setTab} items={[{ id: "components", label: "Componentes" }, { id: "tokens", label: "Tokens" }, { id: "guidance", label: "Uso correto" }]} />

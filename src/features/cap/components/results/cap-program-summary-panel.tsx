@@ -3,7 +3,7 @@ import { ParametricEnvironmentStudy } from "../../domain/cap-library-types";
 import { capLibrary } from "../../services/cap-library-service";
 import { isConfiguredNeedsItem, summarizeCapAreaOptions } from "../../services/cap-program-service";
 import { Button } from "../../../../design-system";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "../../../../design-system/icons";
 
 const formatArea = (value: number) => value.toLocaleString("pt-BR", {
   minimumFractionDigits: 2, maximumFractionDigits: 2,
