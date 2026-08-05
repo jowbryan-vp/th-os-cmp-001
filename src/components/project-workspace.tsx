@@ -25,6 +25,11 @@ import { CatalogCombobox } from "../features/catalogs/components/catalog-combobo
 import { getReferenceCatalogRepository } from "../features/catalogs/repositories/reference-catalog-repository";
 import { HonWorkspace } from "../features/hon/components/hon-workspace";
 import { readHonBackupData } from "../features/hon/repositories/hon-repositories";
+import {
+  ActionMenu, Button, Card as DsCard, ConfirmDialog, Field as DsField, Input as DsInput,
+  Select as DsSelect, Spinner, Textarea as DsTextarea, Toast as DsToast,
+} from "../design-system";
+import { Archive, ArrowLeft, Calculator, Copy, Download, Plus, RotateCcw, Trash2, Upload } from "../design-system/icons";
 
 type View = "list" | "record" | "cap" | "hon";
 const sections = [
@@ -82,7 +87,6 @@ export function ProjectWorkspace() {
     setCurrent(saved); setView("record"); setNotice(`${saved.code} criado a partir de ${project.code}.`);
   }
   async function remove(project: ProjectMasterRecord) {
-    if (!window.confirm(`Excluir definitivamente ${project.code}?`)) return;
     await repository.remove(project.id); setProjects((items) => items.filter((item) => item.id !== project.id));
     setView("list"); setCurrent(null); setNotice("Cadastro excluído.");
   }
@@ -197,7 +201,7 @@ export function ProjectWorkspace() {
     setCurrent(savedProject);
     return { deletedStudyIds: linkedStudies.map((study) => study.id) };
   }
-  if (loading) return <main className="loading-state">Carregando Cadastro Mestre…</main>;
+  if (loading) return <main className="loading-state"><Spinner label="Carregando Cadastro Mestre" /><span>Carregando Cadastro Mestre…</span></main>;
   if (error) return <main className="loading-state" role="alert">{error.message}</main>;
   return (
     <div className="app-shell">
@@ -227,7 +231,7 @@ export function ProjectWorkspace() {
       ) : null}
       <input ref={importInput} className="sr-only" type="file" accept=".json,application/json" onChange={importJson} />
       <input ref={backupInput} className="sr-only" type="file" accept=".json,application/json" onChange={restoreBackup} />
-      {notice && <div className="toast" role="status" aria-live="polite"><strong>{notice}</strong><button type="button" aria-label="Fechar aviso" onClick={() => setNotice("")}>Fechar</button></div>}
+      {notice && <DsToast variant={notice.toLowerCase().includes("falha") || notice.toLowerCase().includes("erro") ? "error" : "success"} title={notice} onClose={() => setNotice("")} />}
     </div>
   );
 }
@@ -246,13 +250,13 @@ function Header({ record, autosave, onHome, onNew, onImport, onExport, onCap, on
     </button>
     <div className="product-signature"><strong>TH OS</strong><span>Cadastro Mestre do Projeto · CMP-001</span></div>
     <div className="topbar-actions">
-      <button className="button button--ghost cap-entry" onClick={onCap}>CAP-001</button>
-      <button className="button button--ghost hon-entry" onClick={onHon}>HON-001</button>
+      <Button variant="tertiary" size="small" icon={Calculator} className="cap-entry" onClick={onCap}>CAP-001</Button>
+      <Button variant="tertiary" size="small" icon={Calculator} className="hon-entry" onClick={onHon}>HON-001</Button>
       {record && saveLabel && <span className={`save-status save-status--${autosave.state}`}>{saveLabel}</span>}
-      {autosave.state === "error" && <button className="button button--ghost" onClick={() => void autosave.retry()}>Tentar novamente</button>}
-      {record ? <button className="button button--ghost record-export" onClick={onExport}>Exportar JSON</button>
-        : <><button className="button button--ghost" onClick={onImport}>Importar JSON</button>
-          <button className="button button--primary" onClick={onNew}>Novo projeto</button></>}
+      {autosave.state === "error" && <Button variant="secondary" size="small" onClick={() => void autosave.retry()}>Tentar novamente</Button>}
+      {record ? <Button variant="secondary" icon={Download} className="record-export" onClick={onExport}>Exportar JSON</Button>
+        : <><Button variant="secondary" icon={Upload} onClick={onImport}>Importar JSON</Button>
+          <Button variant="primary" icon={Plus} onClick={onNew}>Novo projeto</Button></>}
     </div>
   </header>;
 }
@@ -266,6 +270,7 @@ function ProjectList({ projects, onOpen, onArchive, onDuplicate, onDelete, onBac
   const [phase, setPhase] = useState(""); const [priority, setPriority] = useState("");
   const [responsible, setResponsible] = useState(""); const [city, setCity] = useState("");
   const [sort, setSort] = useState("updated");
+  const [pendingDelete, setPendingDelete] = useState<ProjectMasterRecord | null>(null);
   const cities = [...new Set(projects.map((item) => item.property.city).filter(Boolean))].sort();
   const filtered = projects.filter((project) => {
     const haystack = [project.code, project.internalName, project.commercialName,
@@ -286,8 +291,8 @@ function ProjectList({ projects, onOpen, onArchive, onDuplicate, onDelete, onBac
     </div>
     <section className="backup-card" aria-label="Backup completo">
       <div><strong>Backup completo</strong><p>Exporte ou restaure todos os cadastros deste navegador em um único arquivo.</p></div>
-      <div className="backup-actions"><button className="button button--ghost" onClick={onRestore}>Restaurar backup</button>
-        <button className="button button--primary" onClick={onBackup}>Exportar backup completo</button></div>
+      <div className="backup-actions"><Button variant="secondary" icon={Upload} onClick={onRestore}>Restaurar backup</Button>
+        <Button variant="primary" icon={Download} onClick={onBackup}>Exportar backup completo</Button></div>
     </section>
     <div className="filters-card" aria-label="Filtros de projetos">
       <Field label="Buscar"><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Código, nome, cliente ou cidade" /></Field>
@@ -311,11 +316,13 @@ function ProjectList({ projects, onOpen, onArchive, onDuplicate, onDelete, onBac
           {(overdue.length > 0 || blockers.length > 0) && <strong className="semantic-alert">⚠ {overdue.length} vencida(s) · {blockers.length} bloqueadora(s)</strong>}
           <small>Atualizado em {formatDate(project.updatedAt)}</small>
         </button>
-        <div className="project-card__actions"><button onClick={() => onDuplicate(project)}>Duplicar</button>
-          <button onClick={() => onArchive(project, project.recordStatus !== "archived")}>{project.recordStatus === "archived" ? "Restaurar" : "Arquivar"}</button>
-          {project.recordStatus === "archived" && <button className="danger-action" onClick={() => onDelete(project)}>Excluir</button>}</div>
+        <div className="project-card__actions"><ActionMenu label="Ações" items={[
+          { label: "Duplicar", icon: Copy, onSelect: () => onDuplicate(project) },
+          { label: project.recordStatus === "archived" ? "Restaurar" : "Arquivar", icon: project.recordStatus === "archived" ? RotateCcw : Archive, onSelect: () => onArchive(project, project.recordStatus !== "archived") },
+          ...(project.recordStatus === "archived" ? [{ label: "Excluir definitivamente", icon: Trash2, destructive: true, onSelect: () => setPendingDelete(project) }] : []),
+        ]} /></div>
       </article>;
-    })}</div>
+    })}</div><ConfirmDialog open={Boolean(pendingDelete)} title={`Excluir ${pendingDelete?.code ?? "projeto"}?`} description="Esta ação remove definitivamente o projeto e seus estudos locais. Confirme somente se houver backup." confirmLabel="Excluir definitivamente" confirmVariant="destructive" onClose={() => setPendingDelete(null)} onConfirm={() => { if (pendingDelete) void onDelete(pendingDelete); }} />
   </main>;
 }
 
@@ -341,7 +348,7 @@ function ProjectRecord({ project, update, validation, setValidation, onBack, onO
     });
   };
   return <main className="workspace expanded-workspace">
-    <aside className="section-nav" aria-label="Seções do cadastro"><button className="back-action" onClick={onBack}>← Projetos</button>
+    <aside className="section-nav" aria-label="Seções do cadastro"><Button variant="ghost" icon={ArrowLeft} onClick={onBack}>Projetos</Button>
       {sections.map(([id, label]) => <a key={id} href={`#${id}`}>{label}</a>)}</aside>
     <div className="content-column">
       <div className="page-heading"><div><span className="record-code">{project.code}</span><h1>{project.internalName}</h1>
@@ -356,7 +363,7 @@ function ProjectRecord({ project, update, validation, setValidation, onBack, onO
           <CatalogCombobox label="Origem do contato" catalogType="contactOrigin" value={project.contactOrigin} onChange={(contactOrigin) => update({ contactOrigin })} />
           <Textarea label="Notas internas" value={project.internalNotes} onChange={(internalNotes) => update({ internalNotes })} /></Grid>
       </Section>
-      <Section id="clients" title="2. Clientes" action={<button onClick={() => mutate("clients", [...project.clients, { ...createEmptyClient(), primary: project.clients.length === 0 }])}>+ Cliente</button>}>
+      <Section id="clients" title="2. Clientes" action={<Button variant="secondary" size="small" icon={Plus} onClick={() => mutate("clients", [...project.clients, { ...createEmptyClient(), primary: project.clients.length === 0 }])}>Cliente</Button>}>
         {project.clients.map((client) => <Collection key={client.id} onRemove={() => mutate("clients", project.clients.filter((c) => c.id !== client.id))}>
           <Grid><Input label="Nome" value={client.name} onChange={(name) => updateClient(client.id, { name })} />
             <Input label="Nome preferido" value={client.preferredName} onChange={(preferredName) => updateClient(client.id, { preferredName })} />
@@ -389,7 +396,7 @@ function ProjectRecord({ project, update, validation, setValidation, onBack, onO
       <Section id="scope" title="5. Escopo preliminar" action={<select aria-label="Adicionar serviço" defaultValue="" onChange={(e) => { if (e.target.value) mutate("preliminaryScope", [...project.preliminaryScope, createScopeItem(e.target.value, "not_defined", project.preliminaryScope.length)]); e.target.value = ""; }}><option value="">+ Catálogo</option>{scopeCatalog.map((s) => <option key={s.serviceCode} value={s.serviceCode}>{s.name}</option>)}</select>}>
         {project.preliminaryScope.sort((a, b) => a.order - b.order).map((item) => <ScopeRow key={item.id} item={item} onChange={(patch) => mutate("preliminaryScope", project.preliminaryScope.map((s) => s.id === item.id ? { ...s, ...patch } : s))} onRemove={() => mutate("preliminaryScope", project.preliminaryScope.filter((s) => s.id !== item.id))} />)}
       </Section>
-      <Section id="program" title="6. Programa inicial" action={<button onClick={() => mutate("needsProgram", [...project.needsProgram, emptyNeed(project.needsProgram.length)])}>+ Ambiente</button>}>
+      <Section id="program" title="6. Programa inicial" action={<Button variant="secondary" size="small" icon={Plus} onClick={() => mutate("needsProgram", [...project.needsProgram, emptyNeed(project.needsProgram.length)])}>Ambiente</Button>}>
         <div className="summary-strip"><span>Existente: {areas.existing} m²</span><span>Desejada: {areas.desired} m²</span><span>Ampliação: {areas.expansion} m²</span><span>Ambientes: {areas.environments}</span><span>Essenciais: {areas.essential}</span><span>Sob análise: {areas.underReview}</span></div>
         <div className="cap-total-options" aria-label="Totais das opções calculadas pelo CAP-001">
           <div><span>Total mínimo</span><strong>{capAreas.minimumAreaM2.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} m²</strong></div>
@@ -406,10 +413,10 @@ function ProjectRecord({ project, update, validation, setValidation, onBack, onO
           <Input type="number" label="Quantidade" value={String(item.quantity)} onChange={(v) => updateNeed(project, item.id, { quantity: Math.max(1, Number(v) || 1) }, mutate)} />
           <Select label="Prioridade" value={item.priority} onChange={(priority) => updateNeed(project, item.id, { priority: priority as NeedsItem["priority"] }, mutate)} options={[["essential", "Essencial"], ["important", "Importante"], ["desirable", "Desejável"], ["under_review", "Sob análise"]]} />
         </Grid>{item.capMinimumAreaM2 !== null && item.capRecommendedAreaM2 !== null && item.capPreliminaryGrossAreaM2 !== null && <div className="cap-program-options"><strong>Escolha a área deste ambiente</strong><div>
-          <button aria-pressed={item.appliedAreaType === "minimum"} onClick={() => selectCapArea(item, "minimum")}>Mínima · {item.capMinimumAreaM2.toLocaleString("pt-BR")} m²</button>
-          <button aria-pressed={item.appliedAreaType === "recommended"} onClick={() => selectCapArea(item, "recommended")}>Recomendada · {item.capRecommendedAreaM2.toLocaleString("pt-BR")} m²</button>
-          <button aria-pressed={item.appliedAreaType === "preliminary_gross"} onClick={() => selectCapArea(item, "preliminary_gross")}>Bruta preliminar · {item.capPreliminaryGrossAreaM2.toLocaleString("pt-BR")} m²</button>
-        </div></div>}<div className="cap-program-link"><button className="button button--ghost" onClick={() => onOpenCap(item.id)}>{item.parametricStudyId ? "Recalcular com CAP-001" : "Pré-dimensionar com CAP-001"}</button>
+          <Button size="small" variant="tertiary" aria-pressed={item.appliedAreaType === "minimum"} onClick={() => selectCapArea(item, "minimum")}>Mínima · {item.capMinimumAreaM2.toLocaleString("pt-BR")} m²</Button>
+          <Button size="small" variant="tertiary" aria-pressed={item.appliedAreaType === "recommended"} onClick={() => selectCapArea(item, "recommended")}>Recomendada · {item.capRecommendedAreaM2.toLocaleString("pt-BR")} m²</Button>
+          <Button size="small" variant="tertiary" aria-pressed={item.appliedAreaType === "preliminary_gross"} onClick={() => selectCapArea(item, "preliminary_gross")}>Bruta preliminar · {item.capPreliminaryGrossAreaM2.toLocaleString("pt-BR")} m²</Button>
+        </div></div>}<div className="cap-program-link"><Button variant="tertiary" icon={Calculator} onClick={() => onOpenCap(item.id)}>{item.parametricStudyId ? "Recalcular com CAP-001" : "Pré-dimensionar com CAP-001"}</Button>
           {item.parametricStudyId && <small>{item.appliedAreaM2 !== null ? `Escolhida: ${item.appliedAreaM2.toLocaleString("pt-BR")} m²` : "3 opções registradas; escolha pendente"} · biblioteca {item.capLibraryVersion} · motor {item.calculationEngineVersion}</small>}</div></Collection>)}
       </Section>
       <Section id="planning" title="7. Prazos"><Grid>
@@ -445,7 +452,7 @@ function ProjectRecord({ project, update, validation, setValidation, onBack, onO
         render={(item: PendingRecord) => <Grid><Input label="Descrição" value={item.description} onChange={(description) => mutate("pending", project.pending.map((v) => v.id === item.id ? { ...v, description } : v))} /><Input type="date" label="Prazo" value={item.dueDate} onChange={(dueDate) => mutate("pending", project.pending.map((v) => v.id === item.id ? { ...v, dueDate } : v))} /><Select label="Status" value={item.status} onChange={(status) => mutate("pending", project.pending.map((v) => v.id === item.id ? { ...v, status: status as PendingRecord["status"] } : v))} options={[["open", "Aberta"], ["in_progress", "Em andamento"], ["blocked", "Bloqueada"], ["completed", "Concluída"], ["cancelled", "Cancelada"]]} />{overduePending(project).some((p) => p.id === item.id) && <strong className="semantic-alert">⚠ Pendência vencida</strong>}</Grid>} />
       <Section id="history" title="14. Histórico"><div className="history-list">{[...project.history].reverse().map((event) => <div className="history-row" key={event.id}><strong>{event.action}</strong><p>{event.detail}</p><time>{formatDate(event.at)}</time></div>)}</div></Section>
       <section className="validation-panel"><div><h2>Prontidão</h2><p>A validação informa prontidão e não altera o status.</p></div>
-        <div className="validation-actions">{(["draft", "meeting", "survey", "proposal"] as const).map((level) => <button key={level} className="button button--ghost" onClick={() => setValidation(calculateReadiness(project, level))}>{level === "draft" ? "Rascunho" : level === "meeting" ? "Reunião" : level === "survey" ? "Levantamento" : "Proposta"}</button>)}</div></section>
+        <div className="validation-actions">{(["draft", "meeting", "survey", "proposal"] as const).map((level) => <Button size="small" variant="tertiary" key={level} onClick={() => setValidation(calculateReadiness(project, level))}>{level === "draft" ? "Rascunho" : level === "meeting" ? "Reunião" : level === "survey" ? "Levantamento" : "Proposta"}</Button>)}</div></section>
       {validation && <div className={`validation-result ${validation.valid ? "validation-result--valid" : ""}`} role="status"><strong>{validation.valid ? `Pronto para ${validation.level}.` : `Faltam ${validation.missing.length} itens.`}</strong><ul>{validation.missing.map((m) => <li key={m}>{m}</li>)}{validation.warnings.map((m) => <li key={m}>⚠ {m}</li>)}</ul></div>}
     </div>
   </main>;
@@ -455,21 +462,21 @@ function Section({ id, title, action, children }: { id: string; title: string; a
   return <section id={id} className="form-section"><div className="section-heading"><h2>{title}</h2>{action}</div><div className="card form-card">{children}</div></section>;
 }
 function Grid({ children }: { children: ReactNode }) { return <div className="field-grid">{children}</div>; }
-function Field({ label, children }: { label: string; children: ReactNode }) { return <label className="field"><span>{label}</span>{children}</label>; }
+function Field({ label, children }: { label: string; children: ReactNode }) { return <DsField label={label} className="field">{children}</DsField>; }
 function Input({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (v: string) => void; type?: string }) {
-  return <Field label={label}><input type={type} value={value} onChange={(e) => onChange(e.target.value)} /></Field>;
+  return <Field label={label}><DsInput type={type} value={value} onChange={(e) => onChange(e.target.value)} /></Field>;
 }
 function Textarea({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  return <Field label={label}><textarea value={value} onChange={(e) => onChange(e.target.value)} /></Field>;
+  return <Field label={label}><DsTextarea value={value} onChange={(e) => onChange(e.target.value)} /></Field>;
 }
 function Select({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: readonly (readonly [string, string])[] }) {
-  return <Field label={label}><select value={value} onChange={(e) => onChange(e.target.value)}>{options.map(([v, text]) => <option value={v} key={v}>{text}</option>)}</select></Field>;
+  return <Field label={label}><DsSelect value={value} onChange={(e) => onChange(e.target.value)}>{options.map(([v, text]) => <option value={v} key={v}>{text}</option>)}</DsSelect></Field>;
 }
 function Collection({ children, onRemove }: { children: ReactNode; onRemove: () => void }) {
-  return <div className="table-card collection-card">{children}<button className="row-remove" aria-label="Remover registro" onClick={onRemove}>×</button></div>;
+  return <DsCard className="table-card collection-card">{children}<Button variant="tertiary" size="small" icon={Trash2} className="row-remove" aria-label="Remover registro" onClick={onRemove}>Remover</Button></DsCard>;
 }
 function GenericCollection<T extends { id: string }>({ id, title, items, addLabel, onAdd, onRemove, render }: { id: string; title: string; items: T[]; addLabel: string; onAdd: () => void; onRemove: (id: string) => void; render: (item: T) => ReactNode }) {
-  return <Section id={id} title={title} action={<button onClick={onAdd}>+ {addLabel}</button>}>{items.length ? items.map((item) => <Collection key={item.id} onRemove={() => onRemove(item.id)}>{render(item)}</Collection>) : <p className="empty-state">Nenhum registro.</p>}</Section>;
+  return <Section id={id} title={title} action={<Button variant="secondary" size="small" icon={Plus} onClick={onAdd}>{addLabel}</Button>}>{items.length ? items.map((item) => <Collection key={item.id} onRemove={() => onRemove(item.id)}>{render(item)}</Collection>) : <p className="empty-state">Nenhum registro.</p>}</Section>;
 }
 function ScopeRow({ item, onChange, onRemove }: { item: PreliminaryScopeItem; onChange: (patch: Partial<PreliminaryScopeItem>) => void; onRemove: () => void }) {
   return <Collection onRemove={onRemove}><Grid><Input label="Serviço" value={item.name} onChange={(name) => onChange({ name })} />

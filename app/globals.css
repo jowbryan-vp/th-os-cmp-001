@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "../src/styles/tokens.css";
+@import "../src/design-system/styles.css";
 
 @theme inline {
   --color-background: var(--color-bg);
@@ -48,6 +49,11 @@ textarea:focus-visible {
 
 button {
   cursor: pointer;
+}
+
+button:disabled,
+button[aria-disabled="true"] {
+  cursor: not-allowed;
 }
 
 .app-shell {
@@ -222,12 +228,13 @@ button {
 }
 
 .button {
-  min-height: 2.6rem;
+  min-height: 2.5rem;
   padding: 0 var(--space-5);
-  border: 1px solid transparent;
+  border: 1px solid var(--color-border-interactive);
   border-radius: var(--radius-sm);
   font-size: 0.8rem;
   font-weight: var(--weight-semibold);
+  box-shadow: var(--shadow-card);
   transition:
     background var(--transition-fast),
     border-color var(--transition-fast),
@@ -236,10 +243,11 @@ button {
 
 .button:active {
   transform: translateY(1px);
+  box-shadow: inset 0 1px 2px rgba(17,18,15,.18);
 }
 
 .button--ghost {
-  border-color: var(--color-border);
+  border-color: var(--color-border-interactive);
   background: var(--color-surface);
   color: var(--color-text);
 }
@@ -251,12 +259,17 @@ button {
 
 .button--primary {
   background: var(--brand-military);
+  border-color: var(--brand-military-dark);
   color: var(--brand-white);
+  box-shadow: 0 2px 5px rgba(17,18,15,.16), inset 0 1px rgba(255,255,255,.12);
 }
 
 .button--primary:hover {
-  background: var(--brand-military-dark);
+  background: var(--brand-military-hover);
+  box-shadow: 0 4px 10px rgba(17,18,15,.16);
 }
+
+.button:disabled { opacity: .5; box-shadow: none; transform: none; }
 
 .button--dark {
   background: var(--brand-ink);
@@ -1412,14 +1425,11 @@ button {
 /* HON-001: calculadora de honorários */
 .hon-shell { width: min(1800px, calc(100% - 32px)); margin: 24px auto 72px; color: #30352b; }
 .hon-shell *, .hon-shell *::before, .hon-shell *::after { box-sizing: border-box; }
-.hon-header { padding: 26px; color: #f8f8f2; background: linear-gradient(135deg, #263c35, #4f5a37); border-radius: 16px 16px 0 0; }
+.hon-header { padding: 26px; color: #f8f8f2; background: var(--color-brand-900, #263c35); border-radius: var(--radius-xl, 16px) var(--radius-xl, 16px) 0 0; }
 .hon-header h1 { margin: 6px 0; }
 .hon-header p { max-width: 950px; margin: 0; color: #e2e7da; }
 .hon-header .eyebrow { color: #ccd7bd; font-size: .74rem; letter-spacing: .11em; text-transform: uppercase; }
 .hon-header .text-action { display: block; padding: 0; margin-bottom: 17px; color: #fff; background: transparent; border: 0; }
-.hon-tabs { display: flex; gap: 3px; padding: 10px; overflow-x: auto; background: #ecefe6; border: 1px solid #d5d9cd; }
-.hon-tabs button { flex: 0 0 auto; border-color: transparent; background: transparent; }
-.hon-tabs button[aria-current="page"] { color: #fff; background: #52613d; }
 .hon-panel { min-height: 520px; padding: 24px; background: #fff; border: 1px solid #d8dbd1; }
 .hon-panel-title { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
 .hon-panel-title h2 { margin: 0 0 5px; }
@@ -1465,7 +1475,7 @@ button {
   .hon-notice { align-items: flex-start; }
 }
 @media print {
-  .hon-tabs, .hon-header button, .hon-actions, .hon-panel button, .topbar { display: none !important; }
+  .hon-header button, .hon-actions, .hon-panel button, .topbar { display: none !important; }
   .hon-shell { width: 100%; margin: 0; }
   .hon-panel { border: 0; }
 }
@@ -1478,9 +1488,12 @@ button {
 .cap-header p { max-width: 1000px; margin-bottom: 0; color: #dde1d4; }
 .cap-header .text-action { padding: 0; margin-bottom: 18px; color: #fff; background: transparent; }
 .cap-header .eyebrow { display: block; color: #cbd2b8; font-size: .76rem; letter-spacing: .09em; text-transform: uppercase; }
-.cap-tabs { display: flex; gap: 4px; padding: 10px; overflow-x: auto; background: #eceee6; border: 1px solid #d7dacd; }
-.cap-tabs button { flex: 0 0 auto; border-color: transparent; background: transparent; }
-.cap-tabs button[aria-current="page"] { color: #fff; background: #58613f; }
+
+@media (max-width: 600px) {
+  .topbar { min-height: 0; max-height: 96px; flex-wrap: nowrap; align-items: center; overflow: hidden; }
+  .topbar-actions { min-width: 0; flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin; }
+  .topbar-actions .ds-button { flex: 0 0 auto; min-height: 2.25rem; padding-inline: .65rem; }
+}
 .cap-panel, .cap-config-panel, .cap-result-panel, .cap-program-report { min-width: 0; max-width: 100%; padding: 22px; background: #fff; border: 1px solid #d9dbd2; }
 .cap-toolbar { display: grid; grid-template-columns: minmax(220px, 2fr) minmax(180px, 1fr); gap: 12px; margin-bottom: 18px; }
 .cap-toolbar label, .cap-config-panel > label, .cap-parameter-grid label { display: grid; gap: 6px; font-size: .84rem; font-weight: 650; }

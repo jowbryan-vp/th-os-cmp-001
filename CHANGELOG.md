@@ -1,5 +1,13 @@
 # Changelog
 
+## Não lançado — DS-001
+
+- consolida tokens de marca, tipografia, espaço, bordas, sombras, movimento, camadas e breakpoints;
+- introduz biblioteca acessível de ações, formulários, navegação, feedback, dados e estados;
+- migra incrementalmente CMP-001, CAP-001 e HON-001 sem alterar regras de negócio;
+- adiciona vitrine exclusiva de desenvolvimento, documentação, testes de interação e referências visuais responsivas;
+- padroniza Lucide como única biblioteca de ícones.
+
 ## Não lançado — HON-001 v1.0.0
 
 - motor de preço baseado no custo do serviço;

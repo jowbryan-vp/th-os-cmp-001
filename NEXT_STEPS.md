@@ -1,5 +1,12 @@
 # Próximos passos — CMP-001
 
+## Pós DS-001
+
+- realizar auditoria assistiva com leitor de tela e contraste em dispositivos reais;
+- migrar controles nativos remanescentes por fluxo, preservando seus adaptadores de domínio;
+- versionar componentes quando houver primeiro consumidor externo ao TH OS;
+- incluir regressão visual no CI depois de estabilizar a infraestrutura de fontes e navegador.
+
 ## Pós HON-001 v1
 
 - calibrar horas com registros reais aprovados;

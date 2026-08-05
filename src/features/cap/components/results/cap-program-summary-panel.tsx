@@ -2,6 +2,8 @@ import { ProjectMasterRecord } from "../../../../domain/project-master-record";
 import { ParametricEnvironmentStudy } from "../../domain/cap-library-types";
 import { capLibrary } from "../../services/cap-library-service";
 import { isConfiguredNeedsItem, summarizeCapAreaOptions } from "../../services/cap-program-service";
+import { Button } from "../../../../design-system";
+import { Pencil, Trash2 } from "../../../../design-system/icons";
 
 const formatArea = (value: number) => value.toLocaleString("pt-BR", {
   minimumFractionDigits: 2, maximumFractionDigits: 2,
@@ -45,8 +47,8 @@ export function CapProgramSummaryPanel({ project, currentNeedsItemId, currentEnv
           <div><dt>Recomendada</dt><dd>{formatArea(item.capRecommendedAreaM2! * quantity)} m²</dd></div>
           <div><dt>Bruta</dt><dd>{formatArea(item.capPreliminaryGrossAreaM2! * quantity)} m²</dd></div>
         </dl> : <p>Aguardando cálculo</p>}
-        <div className="cap-report-actions"><button type="button" onClick={() => onEdit?.(item.id)}>Editar</button>
-          <button type="button" className="danger-action" onClick={() => onDelete?.(item.id)}>Excluir</button></div>
+        <div className="cap-report-actions"><Button size="small" variant="tertiary" icon={Pencil} onClick={() => onEdit?.(item.id)}>Editar</Button>
+          <Button size="small" variant="destructive" icon={Trash2} onClick={() => onDelete?.(item.id)}>Excluir</Button></div>
       </article>;
     }) : <p>Nenhum ambiente adicionado.</p>}</div>
   </aside>;

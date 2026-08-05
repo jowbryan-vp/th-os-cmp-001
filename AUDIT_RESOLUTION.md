@@ -1,5 +1,9 @@
 # Resolução da auditoria — CMP-001
 
+## DS-001
+
+O inventário visual foi consolidado em `docs/ds/DS_UI_AUDIT.md`. Tokens, foco, ações, formulários, tabs, menus, diálogos, feedback e responsividade possuem contratos compartilhados em `src/design-system`. CMP, CAP e HON adotam essas primitivas por composição, mantendo cálculos, validações, persistência, formatos e integrações inalterados. A rota de demonstração é bloqueada em builds de produção.
+
 ## HON-001
 
 O módulo separa custo, mínimo, recomendado, comercial e final; usa centavos; faz gross-up do imposto; separa desconto/doação; preserva snapshots; usa repositórios e não envia dados financeiros a serviços externos.

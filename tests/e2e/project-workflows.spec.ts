@@ -84,20 +84,24 @@ test("creates, autosaves, and restores a project after reload", async ({ page })
 test("archives, restores, and permanently deletes a project", async ({ page }) => {
   const pilot = page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" });
 
-  await pilot.getByRole("button", { name: "Arquivar" }).click();
+  await pilot.getByRole("button", { name: "Ações" }).click();
+  await pilot.getByRole("menuitem", { name: "Arquivar" }).click();
   await expect(page.getByText("Projeto arquivado.")).toBeVisible();
   await expect(pilot).toBeHidden();
 
   await page.getByLabel("Status").selectOption("all");
   await expect(pilot.getByText("Arquivado", { exact: true }).first()).toBeVisible();
 
-  await pilot.getByRole("button", { name: "Restaurar" }).click();
+  await pilot.getByRole("button", { name: "Ações" }).click();
+  await pilot.getByRole("menuitem", { name: "Restaurar" }).click();
   await expect(page.getByText("Projeto restaurado.")).toBeVisible();
   await expect(pilot.getByText("Ativo", { exact: true })).toBeVisible();
 
-  await pilot.getByRole("button", { name: "Arquivar" }).click();
-  page.once("dialog", (dialog) => dialog.accept());
-  await pilot.getByRole("button", { name: "Excluir" }).click();
+  await pilot.getByRole("button", { name: "Ações" }).click();
+  await pilot.getByRole("menuitem", { name: "Arquivar" }).click();
+  await pilot.getByRole("button", { name: "Ações" }).click();
+  await pilot.getByRole("menuitem", { name: "Excluir definitivamente" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Excluir definitivamente" }).click();
   await expect(page.getByText("Cadastro excluído.")).toBeVisible();
   await expect(pilot).toHaveCount(0);
 });
@@ -201,7 +205,7 @@ test("keeps functional content available on tablet and mobile", async ({ page })
 test("calculates, compares, accumulates three CAP-001 areas and restores scenarios", async ({ page }) => {
   const pilot = page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" });
   await pilot.locator("button.project-card__open").click();
-  await page.getByRole("button", { name: "+ Ambiente" }).click();
+  await page.getByRole("button", { name: "Ambiente", exact: true }).click();
   await page.getByRole("combobox", { name: "Ambiente", exact: true }).last().fill("Suíte");
   await expect(page.getByText("Salvo neste dispositivo")).toBeVisible();
   await page.getByRole("button", { name: "Pré-dimensionar com CAP-001" }).click();
@@ -218,11 +222,13 @@ test("calculates, compares, accumulates three CAP-001 areas and restores scenari
   await page.getByRole("checkbox", { name: "Módulo de Closet Aberto" }).check();
   await page.getByRole("button", { name: "Calcular e revisar" }).click();
 
-  await page.getByRole("button", { name: "Comparador" }).click();
+  await page.getByRole("tab", { name: "Comparador" }).click();
+  await expect(page.getByRole("tab", { name: "Comparador" })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("columnheader", { name: "King + armário" })).toBeVisible();
   await expect(page.getByRole("columnheader", { name: /Queen \+ closet/ })).toBeVisible();
   await expect(page.getByRole("rowheader", { name: "Diferença vs. cenário A" })).toBeVisible();
-  await page.getByRole("button", { name: "Calculadora", exact: true }).click();
+  await page.getByRole("tab", { name: "Calculadora", exact: true }).click();
+  await expect(page.getByRole("tab", { name: "Calculadora", exact: true })).toHaveAttribute("aria-selected", "true");
   await page.getByRole("button", { name: "Registrar as 3 áreas" }).click();
   await expect(page.getByText("As três áreas CAP-001 foram registradas. Escolha uma opção no ambiente quando estiver pronto.")).toBeVisible();
   await expect(page.getByText("Total mínimo")).toBeVisible();
@@ -267,7 +273,7 @@ test("calculates, compares, accumulates three CAP-001 areas and restores scenari
 test("shows comfort and accessibility choices and advances to the next environment", async ({ page }) => {
   const pilot = page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" });
   await pilot.locator("button.project-card__open").click();
-  await page.getByRole("button", { name: "+ Ambiente" }).click();
+  await page.getByRole("button", { name: "Ambiente", exact: true }).click();
   await page.getByRole("combobox", { name: "Ambiente", exact: true }).last().fill("Varanda Gourmet");
   await expect(page.getByText("Salvo neste dispositivo")).toBeVisible();
   await page.getByRole("button", { name: "Pré-dimensionar com CAP-001" }).click();
@@ -293,7 +299,7 @@ test("shows comfort and accessibility choices and advances to the next environme
   await expect(page.getByRole("checkbox", { name: /Forno de Pizza a Lenha/ })).toBeChecked();
   await page.getByRole("radio", { name: /Mínimo \/ compacto/ }).check();
   await page.getByRole("radio", { name: /Acessível — referência NBR 9050/ }).check();
-  await page.getByRole("button", { name: "Calcular, registrar e próximo ambiente →" }).click();
+  await page.getByRole("button", { name: "Calcular, registrar e próximo ambiente" }).click();
 
   await expect(page.getByText("Ambiente registrado. Configure agora o próximo ambiente.")).toBeVisible();
   await expect(report.getByText("1 de 1 ambiente(s) calculado(s)")).toBeVisible();
@@ -306,8 +312,8 @@ test("shows comfort and accessibility choices and advances to the next environme
   await report.locator("article").first().getByRole("button", { name: "Editar" }).click();
   await expect(report.locator("article").first()).toHaveClass(/is-current/);
   await expect(page.getByLabel("Ambiente que será calculado").locator("option:checked")).toHaveText("Editar: Varanda Gourmet");
-  page.once("dialog", (dialog) => dialog.accept());
   await report.locator("article").first().getByRole("button", { name: "Excluir" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Excluir ambiente" }).click();
   await expect(report.locator("article")).toHaveCount(0);
   await expect(page.getByText(/Varanda Gourmet excluído/)).toBeVisible();
 
@@ -324,10 +330,10 @@ test("shows comfort and accessibility choices and advances to the next environme
 
 test("registers and advances when CAP-001 starts without a linked program item", async ({ page }) => {
   await page.getByRole("button", { name: "CAP-001" }).click();
-  await page.getByRole("button", { name: "Calculadora", exact: true }).click();
+  await page.getByRole("tab", { name: "Calculadora", exact: true }).click();
 
   await expect(page.getByLabel("Ambiente que será calculado").locator("option:checked")).toHaveText("+ Criar novo ambiente");
-  const advance = page.getByRole("button", { name: "Calcular, registrar e próximo ambiente →" });
+  const advance = page.getByRole("button", { name: "Calcular, registrar e próximo ambiente" });
   await expect(advance).toBeEnabled();
   await advance.click();
 
@@ -345,7 +351,7 @@ test("registers and advances when CAP-001 starts without a linked program item",
 
 test("creates five intervention environments without a persisted empty placeholder", async ({ page }) => {
   await page.getByRole("button", { name: "CAP-001" }).click();
-  await page.getByRole("button", { name: "Calculadora", exact: true }).click();
+  await page.getByRole("tab", { name: "Calculadora", exact: true }).click();
   const environment = page.getByRole("combobox", { name: "Ambiente", exact: true });
   const report = page.getByLabel("Relatório acumulado do Programa de Necessidades");
 
@@ -358,8 +364,8 @@ test("creates five intervention environments without a persisted empty placehold
 
   for (const [index, environmentId] of ["AMB-011", "AMB-015", "AMB-007", "AMB-018", "AMB-009"].entries()) {
     if (index > 0) await environment.selectOption(environmentId);
-    await page.getByRole("button", { name: "Calcular, registrar e próximo ambiente →" }).click();
-    await expect(page.locator(".toast")).toHaveCount(1);
+    await page.getByRole("button", { name: "Calcular, registrar e próximo ambiente" }).click();
+    await expect(page.getByRole("status")).toHaveCount(1);
     await page.getByRole("button", { name: "Fechar aviso" }).click();
   }
 
@@ -373,7 +379,7 @@ test("creates five intervention environments without a persisted empty placehold
 
   await page.reload();
   await page.getByRole("button", { name: "CAP-001" }).click();
-  await page.getByRole("button", { name: "Calculadora", exact: true }).click();
+  await page.getByRole("tab", { name: "Calculadora", exact: true }).click();
   await expect(report.getByText("5 de 5 ambiente(s) calculado(s)")).toBeVisible();
   await expect(report.locator("article")).toHaveCount(5);
   await report.locator("article").filter({ hasText: "Despensa" }).getByRole("button", { name: "Editar" }).click();
@@ -383,7 +389,7 @@ test("creates five intervention environments without a persisted empty placehold
 
 test("CAP accepts 0,60 x 1,60 and stays usable across desktop, zoom equivalents, tablet and mobile", async ({ page }) => {
   await page.getByRole("button", { name: "CAP-001" }).click();
-  await page.getByRole("button", { name: "Calculadora", exact: true }).click();
+  await page.getByRole("tab", { name: "Calculadora", exact: true }).click();
   const environment = page.getByRole("combobox", { name: "Ambiente", exact: true });
   await environment.selectOption({ label: "Sala de Estar / Home Theater" });
   await page.getByRole("checkbox", { name: /Sofá 3 Lugares/ }).check();
@@ -417,7 +423,8 @@ test("CAP accepts 0,60 x 1,60 and stays usable across desktop, zoom equivalents,
   await expect(page.locator(".cap-custom-item__row").filter({ hasText: "Mesa especial" })).toContainText("0,6 × 1,6 m");
   await page.getByRole("button", { name: "Salvar estudo" }).click();
   await page.reload(); await page.getByRole("button", { name: "CAP-001" }).click();
-  await page.getByRole("button", { name: "Estudos do projeto" }).click();
+  await page.getByRole("tab", { name: "Estudos do projeto" }).click();
+  await expect(page.getByRole("tab", { name: "Estudos do projeto" })).toHaveAttribute("aria-selected", "true");
   await page.getByRole("button", { name: "Abrir" }).click();
   await expect(page.locator(".cap-custom-item__row").filter({ hasText: "Mesa especial" })).toContainText("0,6 × 1,6 m");
 });
@@ -450,7 +457,7 @@ test("keeps the CAP-001 library usable on tablet and mobile", async ({ page }) =
     await page.getByRole("button", { name: "CAP-001" }).click();
     await expect(page.getByRole("heading", { name: "Biblioteca e Calculadora Paramétrica" })).toBeVisible();
     await expect(page.getByRole("button", { name: /Dormitório Casal/ })).toBeVisible();
-    await page.getByRole("button", { name: "← Voltar ao CMP" }).click();
+    await page.getByRole("button", { name: "Voltar ao CMP" }).click();
   }
 });
 
@@ -460,38 +467,40 @@ test("calcula HON-001, compara cenários, gera pagamentos, aprova snapshot e per
   await page.getByRole("button", { name: "Criar estudo e importar escopo" }).click();
   await expect(page.getByRole("heading", { name: "Serviços e estimativa manual de horas" })).toBeVisible();
   await page.getByLabel(/Horas de Levantamento cadastral/).fill("40");
-  await page.getByRole("button", { name: "Parceiros" }).click();
+  await page.getByRole("tab", { name: "Parceiros" }).click();
+  await expect(page.getByRole("tab", { name: "Parceiros" })).toHaveAttribute("aria-selected", "true");
   await page.getByRole("button", { name: "+ Parceiro" }).click();
   await page.getByLabel("Parceiro", { exact: true }).fill("Engenharia estrutural");
   await page.getByLabel("Serviço", { exact: true }).fill("Projeto estrutural");
   await page.getByLabel("Custo", { exact: true }).fill("2.000,00");
-  await page.getByRole("button", { name: "Deslocamentos e visitas" }).click();
+  await page.getByRole("tab", { name: "Deslocamentos e visitas" }).click();
   await page.getByRole("button", { name: "+ Deslocamento/visita" }).click();
   await page.getByLabel("Cidade", { exact: true }).fill("Vilhena");
   await page.getByLabel("Km ida e volta").fill("450");
   await page.getByLabel("Horas de viagem").fill("8");
-  await page.getByRole("button", { name: "Resultado" }).click();
+  await page.getByRole("tab", { name: "Resultado" }).click();
   await page.getByRole("button", { name: "Calcular honorários" }).click();
   await expect(page.getByText("E. Valor final negociado")).toBeVisible();
   await expect(page.getByText("Gestão", { exact: false })).toBeAttached();
-  await page.getByRole("button", { name: "Cenários" }).click();
-  await page.getByRole("button", { name: "+ Salvar cenário atual" }).click();
-  await page.getByRole("button", { name: "+ Salvar cenário atual" }).click();
+  await page.getByRole("tab", { name: "Cenários" }).click();
+  await page.getByRole("button", { name: "Salvar cenário atual" }).click();
+  await page.getByRole("button", { name: "Salvar cenário atual" }).click();
   await expect(page.locator(".hon-scenario-grid article")).toHaveCount(2);
-  await page.getByRole("button", { name: "Pagamentos" }).click();
+  await page.getByRole("tab", { name: "Pagamentos" }).click();
   await page.getByRole("button", { name: "30% + etapas" }).click();
   await expect(page.getByRole("cell", { name: "30%" }).first()).toBeVisible();
-  await page.getByRole("button", { name: "Histórico e snapshots" }).click();
+  await page.getByRole("tab", { name: "Histórico e snapshots" }).click();
   await page.getByRole("button", { name: "Aprovar snapshot imutável" }).click();
   await expect(page.getByText("Snapshot imutável aprovado.")).toBeVisible();
   await expect(page.getByText("approved", { exact: true })).toBeVisible();
   await page.reload();
   await page.getByRole("button", { name: "HON-001" }).click();
   await expect(page.getByRole("heading", { name: "Calculadora de Honorários" })).toBeVisible();
-  await page.getByRole("button", { name: "Histórico e snapshots" }).click();
+  await page.getByRole("tab", { name: "Histórico e snapshots" }).click();
+  await expect(page.getByRole("tab", { name: "Histórico e snapshots" })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByText("approved", { exact: true })).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("button", { name: "Resultado" }).click();
+  await page.getByRole("tab", { name: "Resultado" }).click();
   await expect(page.getByText("E. Valor final negociado")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
 });

@@ -2,6 +2,8 @@
 
 **Produto:** CMP-001 + CAP-001 + HON-001 · **Fase:** piloto
 
+DS-001 consolida tokens, componentes e padrões acessíveis usados pelos três módulos. Consulte [o guia do Design System](docs/ds/DS_USAGE_GUIDE.md); a vitrine `/design-system` existe somente em desenvolvimento.
+
 HON-001 v1.0.0 acrescenta custo-hora sustentável, perfis, serviços, fatores, parceiros, viagens, obra, cenários, pagamentos e snapshots. Consulte [o guia do usuário](docs/hon/HON_USER_GUIDE.md).
 
 Aplicação local da TH Arquitetura para manter uma fonte única de identificação,
@@ -18,6 +20,7 @@ financeiro, login ou upload real.
 - `src/services`: importação/exportação e ciclo de vida;
 - `src/hooks`: carregamento e autosave serializado;
 - `src/components`: lista, filtros e workspace das 14 seções;
+- `src/design-system`: tokens, ícones, componentes, estilos e contratos transversais;
 - `tests`: unitários, integração, smoke e Playwright.
 - `src/features/cap`: biblioteca versionada, motor de estratégias, estudos e interface paramétrica;
 - `data/cap-001`: fonte bruta auditável; `docs/cap`: método, auditoria e revisão técnica.
