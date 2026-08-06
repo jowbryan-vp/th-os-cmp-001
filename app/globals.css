@@ -905,9 +905,10 @@ button[aria-disabled="true"] {
 
 .history-row {
   display: grid;
-  grid-template-columns: 0.75rem minmax(0, 1fr) auto;
-  gap: var(--space-4);
-  align-items: start;
+  grid-template-columns: minmax(8rem, auto) minmax(0, 1fr) auto;
+  column-gap: var(--space-4);
+  row-gap: var(--space-1);
+  align-items: center;
   padding: var(--space-5) var(--space-6);
   border-bottom: 1px solid var(--color-border);
 }
@@ -933,8 +934,14 @@ button[aria-disabled="true"] {
   font-size: 0.7rem;
 }
 
+.history-row p {
+  min-width: 0;
+}
+
 .history-row time {
   color: var(--color-text-muted);
+  text-align: right;
+  white-space: nowrap;
 }
 
 .validation-panel {
@@ -1682,8 +1689,8 @@ button[aria-disabled="true"] {
 .cap-program-options { display: grid; gap: 8px; padding: 12px; margin-top: 12px; background: #f7f8f3; border: 1px solid #dde2d3; border-radius: 8px; }
 .cap-program-options > div { display: flex; flex-wrap: wrap; gap: 8px; }
 .cap-program-options button[aria-pressed="true"] { color: #fff; background: #596441; border-color: #596441; }
-.collection-card { position: relative; padding: 18px 48px 18px 18px; margin-bottom: 12px; }
-.collection-card .row-remove { position: absolute; right: 12px; top: 12px; }
+.collection-card { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-6); margin-bottom: var(--space-3); }
+.collection-card .row-remove { display: inline-flex; align-self: flex-end; width: auto; height: auto; max-width: 100%; font-size: .75rem; }
 .helper-text { margin-top: 12px; color: #676a61; font-size: .85rem; }
 .loading-state { min-height: 60vh; display: grid; place-items: center; font-size: 1.1rem; }
 button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
@@ -1704,6 +1711,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .cap-total-options p { grid-column: auto; }
   .topbar { align-items: flex-start; }
   .topbar-actions { flex-wrap: wrap; }
+  .history-row { grid-template-columns: 1fr; row-gap: 0.2rem; }
+  .history-row time { text-align: left; }
 }
 @media print {
   .section-nav, .topbar-actions, .project-card__actions, .row-remove, .validation-actions { display: none !important; }
