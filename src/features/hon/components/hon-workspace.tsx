@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Calculator, CheckCircle2, Copy, Download, Plus, Save } from "../../../design-system/icons";
-import { Button, EmptyState, Field as DsField, Spinner, Tabs, Toast } from "../../../design-system";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, Calculator, CheckCircle2, Copy, Plus, Save } from "../../../design-system/icons";
+import { Badge, Button, EmptyState, Field as DsField, PageActionBar, Spinner, Tabs, Toast } from "../../../design-system";
 import { ProjectMasterRecord, createId } from "../../../domain/project-master-record";
 import { getParametricStudyRepository } from "../../cap/repositories/parametric-study-repository";
 import {
@@ -16,6 +16,7 @@ import { calculateHourlyCost, createPaymentPlan } from "../services/hon-engine";
 import {
   approveStudy, assessCapacity, calculateAndVersionStudy, createFeeStudy, createProposalPricingSnapshot, createScenario,
 } from "../services/hon-study-service";
+import { HonResultPanel } from "./results/hon-result-panel";
 
 const tabs = [
   ["overview", "Visão geral"], ["structure", "Estrutura do escritório"], ["services", "Serviços e horas"],
@@ -25,8 +26,10 @@ const tabs = [
   ["history", "Histórico e snapshots"], ["settings", "Configurações"],
 ] as const;
 type Tab = (typeof tabs)[number][0];
+type NoticeVariant = "success" | "error" | "info";
+type ResultState = "not_calculated" | "updated" | "stale";
 
-const money = (cents: number) => (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+export const money = (cents: number) => (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const parseMoney = (value: string) => {
   const normalized = value.trim().replace(/\s/g, "").replace(/^R\$/i, "");
   if (!normalized) return 0;
@@ -34,6 +37,37 @@ const parseMoney = (value: string) => {
   const parsed = Number(decimal); return Number.isFinite(parsed) ? Math.round(parsed * 100) : 0;
 };
 const inputMoney = (cents: number) => (cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+
+// Assinatura determinística, independente da ordem de inserção de chaves — usada apenas
+// para comparar localmente o estudo atual com a última versão persistida/calculada.
+function stableSignature(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableSignature).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, item]) => `${JSON.stringify(key)}:${stableSignature(item)}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+function computeSaveSignature(study: FeeCalculationStudy) {
+  return stableSignature({ ...study, updatedAt: undefined });
+}
+function computeCalcSignature(study: FeeCalculationStudy, profile: StructureProfile) {
+  return stableSignature({
+    inputs: study.inputs, services: study.services, partners: study.partners, travel: study.travel,
+    revisions: study.revisions, risks: study.risks, bim: study.bim, construction: study.construction,
+    structureProfileId: study.structureProfileId, profile,
+  });
+}
+function focusAndReveal(node: HTMLElement | null | undefined) {
+  if (!node) return;
+  node.focus();
+  const rect = node.getBoundingClientRect();
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+  const inView = rect.top >= 0 && rect.bottom <= viewportHeight;
+  if (!inView) node.scrollIntoView({ block: "start", behavior: "smooth" });
+}
 
 export function HonWorkspace({ projects, initialProjectId, onBack }: { projects: ProjectMasterRecord[]; initialProjectId?: string; onBack: () => void }) {
   const [tab, setTab] = useState<Tab>("overview");
@@ -43,14 +77,25 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
   const [study, setStudy] = useState<FeeCalculationStudy | null>(null);
   const [scenarios, setScenarios] = useState<FeeScenario[]>([]);
   const [snapshotCount, setSnapshotCount] = useState(0);
-  const [notice, setNotice] = useState("");
+  const [notice, setNoticeState] = useState<{ text: string; variant: NoticeVariant } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "error">("idle");
+  const [calcStatus, setCalcStatus] = useState<"idle" | "calculating">("idle");
   const studyRepo = useMemo(() => new FeeStudyRepository(), []);
   const profileRepo = useMemo(() => new StructureProfileRepository(), []);
   const catalogRepo = useMemo(() => new ServiceCatalogRepository(), []);
   const scenarioRepo = useMemo(() => new FeeScenarioRepository(), []);
   const snapshotRepo = useMemo(() => new FeeSnapshotRepository(), []);
   const paymentRepo = useMemo(() => new PaymentPlanRepository(), []);
+  const resultHeadingRef = useRef<HTMLHeadingElement>(null);
+  const pricingFormRef = useRef<HTMLDivElement>(null);
+  const justCalculatedRef = useRef(false);
+  // Assinaturas da última versão salva/calculada: estado (não ref), pois precisam ser lidas
+  // durante a renderização para derivar os badges de status — refs não podem ser lidas no render.
+  const [lastSavedSignature, setLastSavedSignature] = useState<string | null>(null);
+  const [lastCalculatedSignature, setLastCalculatedSignature] = useState<string | null>(null);
+
+  const showNotice = (text: string, variant: NoticeVariant = "info") => setNoticeState({ text, variant });
 
   useEffect(() => { void (async () => {
     try {
@@ -58,7 +103,7 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
       const loadedStudies = await studyRepo.list(); setProfiles(loadedProfiles); setStudies(loadedStudies);
       const selected = loadedStudies.find((item) => item.projectId === projectId) ?? null;
       setStudy(selected); if (selected) { setScenarios(await scenarioRepo.listByStudy(selected.id)); setSnapshotCount((await snapshotRepo.listByStudy(selected.id)).length); }
-    } catch (reason) { setNotice(reason instanceof Error ? reason.message : "Falha ao abrir HON-001."); }
+    } catch (reason) { showNotice(reason instanceof Error ? reason.message : "Falha ao abrir HON-001.", "error"); }
     finally { setLoading(false); }
   })(); }, [catalogRepo, profileRepo, projectId, scenarioRepo, snapshotRepo, studyRepo]);
 
@@ -69,23 +114,104 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
   const mutate = (patch: Partial<FeeCalculationStudy>) => setStudy((current) => current ? { ...current, ...patch, updatedAt: new Date().toISOString() } : current);
   const inputs = (patch: Partial<FeeCalculationStudy["inputs"]>) => study && mutate({ inputs: { ...study.inputs, ...patch } });
 
+  // Reseta a assinatura de "última versão salva/calculada" sempre que um estudo diferente é
+  // aberto (troca de seleção, criação, reload). Ajuste de estado durante a renderização
+  // (comparando com o id do estudo da renderização anterior) em vez de useEffect: evita tanto
+  // o flash de "alterações não salvas" quanto o disparo de setState assíncrono dentro de efeito.
+  const [baselineStudyId, setBaselineStudyId] = useState<string | null>(null);
+  if ((study?.id ?? null) !== baselineStudyId) {
+    setBaselineStudyId(study?.id ?? null);
+    if (!study) { setLastSavedSignature(null); setLastCalculatedSignature(null); }
+    else {
+      const activeProfile = profiles.find((item) => item.id === study.structureProfileId) ?? profiles[0];
+      setLastSavedSignature(computeSaveSignature(study));
+      setLastCalculatedSignature(study.results && activeProfile ? computeCalcSignature(study, activeProfile) : null);
+    }
+  }
+
+  // Move o foco para o resumo executivo somente quando a troca para "result" foi
+  // consequência direta de um cálculo bem-sucedido (não em navegação manual de aba).
+  useEffect(() => {
+    if (tab !== "result" || !justCalculatedRef.current) return;
+    justCalculatedRef.current = false;
+    focusAndReveal(resultHeadingRef.current);
+  }, [tab]);
+
+  const saveSignatureNow = study ? computeSaveSignature(study) : null;
+  const calcSignatureNow = study && profile ? computeCalcSignature(study, profile) : null;
+  const dirty = study ? saveSignatureNow !== lastSavedSignature : false;
+  const saveLabel = !study ? null : saveStatus === "saving" ? "Salvando…" : saveStatus === "error" ? "Erro ao salvar" : dirty ? "Alterações não salvas" : "Salvo";
+  const saveTone = saveStatus === "error" ? "error" : saveStatus === "saving" ? "info" : dirty ? "warning" : "success";
+  const resultState: ResultState = !study?.results ? "not_calculated"
+    : calcSignatureNow !== null && calcSignatureNow === lastCalculatedSignature ? "updated" : "stale";
+  const resultLabel = resultState === "not_calculated" ? "Resultado não calculado" : resultState === "updated" ? "Resultado atualizado" : "Resultado desatualizado";
+  const resultTone = resultState === "not_calculated" ? "neutral" : resultState === "updated" ? "success" : "warning";
+
   async function newStudy() {
     if (!selectedProject || !profiles.length) return;
     const capStudies = await getParametricStudyRepository().listByProject(selectedProject.id);
     const catalog = await catalogRepo.list();
     const created = createFeeStudy(selectedProject, capStudies, profiles[0], catalog, studies.filter((item) => item.projectId === selectedProject.id).length + 1);
-    await studyRepo.save(created); setStudies((items) => [created, ...items]); setStudy(created); setScenarios([]); setSnapshotCount(0); setNotice("Estudo criado com cópia de trabalho CMP/CAP rastreável."); setTab("services");
+    await studyRepo.save(created); setStudies((items) => [created, ...items]); setStudy(created); setScenarios([]); setSnapshotCount(0); showNotice("Estudo criado com cópia de trabalho CMP/CAP rastreável.", "success"); setTab("services");
   }
-  async function saveStudy(next = study) { if (!next) return; const saved = await studyRepo.save(next); setStudy(saved); setStudies((items) => [saved, ...items.filter((item) => item.id !== saved.id)]); setNotice("Estudo salvo neste dispositivo."); }
-  async function calculate() { if (!study || !profile) return; const calculated = calculateAndVersionStudy(study, profile); await saveStudy(calculated); setTab("result"); }
+  async function saveStudy(next = study) {
+    if (!next) return undefined;
+    setSaveStatus("saving");
+    try {
+      const saved = await studyRepo.save(next);
+      setStudy(saved); setStudies((items) => [saved, ...items.filter((item) => item.id !== saved.id)]);
+      setLastSavedSignature(computeSaveSignature(saved));
+      setSaveStatus("idle"); showNotice("Estudo salvo neste dispositivo.", "success");
+      return saved;
+    } catch (reason) {
+      setSaveStatus("error");
+      showNotice(reason instanceof Error ? reason.message : "Não foi possível salvar o estudo.", "error");
+      throw reason;
+    }
+  }
+  async function calculate() {
+    if (!study || !profile) { showNotice("Selecione um projeto e crie um estudo antes de calcular.", "error"); return; }
+    setCalcStatus("calculating");
+    let calculated: FeeCalculationStudy;
+    try {
+      calculated = calculateAndVersionStudy(study, profile);
+    } catch (reason) {
+      setCalcStatus("idle");
+      const message = reason instanceof Error ? reason.message : "Não foi possível calcular os honorários com os dados atuais.";
+      showNotice(message, "error");
+      setTab(/horas faturáveis/i.test(message) ? "structure" : "result");
+      return;
+    }
+    if (!calculated.results) {
+      setCalcStatus("idle");
+      showNotice("Não foi possível calcular os honorários com os dados atuais.", "error");
+      return;
+    }
+    try {
+      await saveStudy(calculated);
+    } catch {
+      setCalcStatus("idle");
+      return; // saveStudy já exibiu o motivo do erro; o estudo em edição permanece intacto.
+    }
+    setLastCalculatedSignature(computeCalcSignature(calculated, profile));
+    justCalculatedRef.current = true;
+    setCalcStatus("idle");
+    setTab("result");
+    showNotice(`Honorários calculados. Valor final negociado: ${money(calculated.results.finalPrice)}.`, "success");
+  }
+  function adjustParameters() {
+    const container = pricingFormRef.current;
+    const firstField = container?.querySelector<HTMLElement>("input, select, textarea");
+    focusAndReveal(firstField ?? container);
+  }
   async function approve() {
     if (!study) return;
-    try { const approved = approveStudy(study); await snapshotRepo.save(approved.snapshot); await saveStudy(approved.study); setSnapshotCount((count) => count + 1); setNotice("Snapshot imutável aprovado."); }
-    catch (reason) { setNotice(reason instanceof Error ? reason.message : "Não foi possível aprovar."); }
+    try { const approved = approveStudy(study); await snapshotRepo.save(approved.snapshot); await saveStudy(approved.study); setSnapshotCount((count) => count + 1); showNotice("Snapshot imutável aprovado.", "success"); }
+    catch (reason) { showNotice(reason instanceof Error ? reason.message : "Não foi possível aprovar.", "error"); }
   }
   async function addScenario() {
     if (!study?.results) return;
-    if (scenarios.length >= 4) { setNotice("O comparador exibe quatro cenários por estudo; remova ou use outro estudo."); return; }
+    if (scenarios.length >= 4) { showNotice("O comparador exibe quatro cenários por estudo; remova ou use outro estudo.", "info"); return; }
     const scenario = createScenario(study, `Cenário ${scenarios.length + 1}`, study.paymentPlan?.name ?? "A definir");
     await scenarioRepo.save(scenario); setScenarios((items) => [...items, scenario]);
   }
@@ -100,7 +226,7 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
   }
   async function duplicateProfile() {
     if (!profile) return; const duplicated = await profileRepo.duplicate(profile.id, `${profile.name} — personalizado`);
-    setProfiles((items) => [...items, duplicated]); if (study) mutate({ structureProfileId: duplicated.id }); setNotice("Perfil duplicado para edição personalizada.");
+    setProfiles((items) => [...items, duplicated]); if (study) mutate({ structureProfileId: duplicated.id }); showNotice("Perfil duplicado para edição personalizada.", "success");
   }
   function download(name: string, content: string, type = "application/json") {
     const url = URL.createObjectURL(new Blob([content], { type })); const anchor = document.createElement("a");
@@ -112,10 +238,20 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
 
   if (loading) return <main className="hon-loading"><Spinner label="Carregando Calculadora de Honorários" /><span>Carregando Calculadora de Honorários…</span></main>;
   return <main className="hon-shell">
-    <header className="hon-header"><Button variant="ghost" className="text-action" icon={ArrowLeft} onClick={onBack}>Voltar ao CMP-001</Button><span className="eyebrow">TH OS · HON-001 · v1.0.0</span><h1>Calculadora de Honorários</h1><p>Formação de preço baseada no custo do serviço. Área é referência de esforço, nunca preço automático por m².</p></header>
+    <div className="hon-action-bar-sticky">
+      <PageActionBar
+        eyebrow="TH OS · HON-001 · v1.0.0"
+        title="Calculadora de Honorários"
+        breadcrumb={<Button variant="ghost" icon={ArrowLeft} onClick={onBack}>Voltar ao CMP-001</Button>}
+        status={study ? <div className="hon-status-group"><Badge tone={saveTone}>{saveLabel}</Badge><Badge tone={resultTone}>{resultLabel}</Badge></div> : null}
+        primaryAction={<Button icon={Calculator} loading={calcStatus === "calculating"} disabled={!study || !profile} onClick={() => void calculate()}>Calcular honorários</Button>}
+        secondaryActions={<Button variant="secondary" icon={Save} loading={saveStatus === "saving"} disabled={!study} onClick={() => void saveStudy()}>Salvar</Button>}
+      />
+    </div>
+    <p className="hon-lede">Formação de preço baseada no custo do serviço. Área é referência de esforço, nunca preço automático por m².</p>
     <Tabs ariaLabel="Etapas da calculadora" items={tabs.map(([id, label]) => ({ id, label }))} value={tab} onChange={(value) => setTab(value as Tab)} />
-    {notice && <Toast variant={notice.toLowerCase().includes("falha") || notice.toLowerCase().includes("não foi possível") ? "error" : "success"} title={notice} onClose={() => setNotice("")} />}
-    <section className="hon-panel">
+    {notice && <Toast variant={notice.variant} title={notice.text} onClose={() => setNoticeState(null)} />}
+    <section className="hon-panel" role="tabpanel" aria-label={tabs.find(([id]) => id === tab)?.[1]} tabIndex={-1}>
       {tab === "overview" && <><PanelTitle title="Selecionar projeto e estudo" help="Os dados CMP/CAP são lidos para uma cópia de trabalho; o cadastro mestre não é alterado." />
         <div className="hon-form-grid"><Field label="Projeto CMP-001"><select value={projectId} onChange={(event) => { setProjectId(event.target.value); setStudy(null); }}><option value="">Selecione</option>{projects.map((item) => <option key={item.id} value={item.id}>{item.code} · {item.internalName}</option>)}</select></Field>
           <Field label="Estudo HON-001"><select value={study?.id ?? ""} onChange={async (event) => { const selected = studies.find((item) => item.id === event.target.value) ?? null; setStudy(selected); setScenarios(selected ? await scenarioRepo.listByStudy(selected.id) : []); }}><option value="">Novo estudo</option>{studies.filter((item) => item.projectId === projectId).map((item) => <option key={item.id} value={item.id}>{item.code} · v{item.version} · {item.status}</option>)}</select></Field></div>
@@ -146,18 +282,11 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
 
       {tab === "construction" && study && <><PanelTitle title="Acompanhamento e gerenciamento" help="Acompanhamento segue o cronograma; gerenciamento segue a carga semanal contratada." /><div className="hon-form-grid"><Field label="Semanas de acompanhamento"><input type="number" min="0" value={study.construction.monitoringWeeks} onChange={(e) => mutate({ construction: { ...study.construction, monitoringWeeks: Number(e.target.value) } })} /></Field><Field label="Visitas por semana"><input type="number" min="0" value={study.construction.visitsPerWeek} onChange={(e) => mutate({ construction: { ...study.construction, visitsPerWeek: Number(e.target.value) } })} /></Field><Field label="Horas por visita"><input type="number" min="0" value={study.construction.hoursPerVisit} onChange={(e) => mutate({ construction: { ...study.construction, hoursPerVisit: Number(e.target.value) } })} /></Field><Field label="Semanas de gerenciamento"><input type="number" min="0" value={study.construction.managementWeeks} onChange={(e) => mutate({ construction: { ...study.construction, managementWeeks: Number(e.target.value) } })} /></Field><Field label="Carga semanal de gerenciamento"><input type="number" min="0" value={study.construction.managementWeeklyHours} onChange={(e) => mutate({ construction: { ...study.construction, managementWeeklyHours: Number(e.target.value) } })} /></Field></div>{capacity && <div className="hon-summary"><Metric label="Capacidade mensal" value={`${capacity.monthlyCapacity.toFixed(1)} h`} /><Metric label="Comprometido" value={`${capacity.committedHours.toFixed(1)} h`} /><Metric label="Sobrecarga" value={`${capacity.overloadHours.toFixed(1)} h`} /><Metric label="Risco de prazo" value={capacity.deadlineRisk} /></div>}</>}
 
-      {tab === "result" && study && <><PanelTitle title="Resultado financeiro" help="Os cinco valores abaixo são conceitos distintos e permanecem rastreáveis." /><div className="hon-form-grid"><Field label="Lucro sobre custo (%)"><input type="number" min="0" value={study.inputs.profitMarkup} onChange={(e) => inputs({ profitMarkup: Number(e.target.value) })} /></Field><Field label="Imposto (%)"><input type="number" min="0" max="99" value={study.inputs.taxPercentage} onChange={(e) => inputs({ taxPercentage: Number(e.target.value) })} /></Field><Field label="Valor comercial manual"><input placeholder="vazio = recomendado" value={study.inputs.commercialPriceCents === null ? "" : inputMoney(study.inputs.commercialPriceCents)} onChange={(e) => inputs({ commercialPriceCents: e.target.value ? parseMoney(e.target.value) : null })} /></Field><Field label="Desconto"><input value={inputMoney(study.inputs.discountCents)} onChange={(e) => inputs({ discountCents: parseMoney(e.target.value) })} /></Field><Field label="Doação"><input value={inputMoney(study.inputs.donationCents)} onChange={(e) => inputs({ donationCents: parseMoney(e.target.value) })} /></Field></div><Button icon={Calculator} onClick={() => void calculate()}>Calcular honorários</Button>
-        {study.results && <><div className="hon-price-ladder"><Metric label="A. Custo do escritório" value={money(study.results.subtotalBeforeProfit)} /><Metric label="B. Mínimo sustentável" value={money(study.results.sustainableMinimum)} /><Metric label="C. Honorário recomendado" value={money(study.results.recommendedFee)} /><Metric label="D. Valor comercial" value={money(study.results.commercialPrice)} /><Metric label="E. Valor final negociado" value={money(study.results.finalPrice)} /></div><div className="hon-summary"><Metric label="Imposto estimado" value={money(study.results.taxes)} /><Metric label="Receita líquida" value={money(study.results.estimatedNetRevenue)} /><Metric label="Lucro estimado" value={money(study.results.estimatedProfit)} /><Metric label="Margem real" value={`${study.results.effectiveMarginPercentage.toFixed(2)}%`} /><Metric label="Acréscimo sobre custo" value={`${study.inputs.profitMarkup}%`} /><Metric label="Hora efetiva" value={money(study.results.effectiveHourlyRate)} /></div>
-          <details><summary>Memória de cálculo detalhada</summary><div className="hon-table-wrap"><table><tbody>{[
-            ["Mão de obra interna", study.results.internalLaborCost], ["Complexidade", study.results.complexityAdjustment],
-            ["Urgência", study.results.urgencyAdjustment], ["Risco", study.results.riskAdjustment], ["BIM", study.results.bimAdjustment],
-            ["Revisões", study.results.revisionAdjustment], ["Parceiros", study.results.partnerCost],
-            ["Gestão de parceiros", study.results.partnerManagementFee], ["Deslocamentos e visitas", study.results.travelCost],
-            ["Acompanhamento e gerenciamento", study.results.constructionServicesCost], ["Despesas diretas", study.results.directExpenses],
-            ["Lucro sobre custo", study.results.profitMarkup], ["Impostos", study.results.taxes], ["Desconto", -study.results.discount],
-            ["Doação", -study.results.donation], ["Ajuste de mínimo", study.results.minimumAdjustment],
-          ].map(([label, value]) => <tr key={String(label)}><th>{label}</th><td>{money(Number(value))}</td></tr>)}</tbody></table></div></details>
-          <Warnings items={study.results.warnings} /><div className="hon-actions"><Button variant="secondary" icon={Download} onClick={exportInternal}>Memória interna JSON</Button><Button variant="secondary" icon={Download} onClick={exportCommercial}>Resumo comercial JSON</Button><Button variant="secondary" icon={Download} onClick={exportCsv}>Serviços CSV</Button></div></>}
+      {tab === "result" && study && <><PanelTitle title="Configuração comercial" help="Ajuste lucro, imposto e condições; o resumo, a composição e o escopo aparecem logo abaixo." />
+        <div className="hon-form-grid" ref={pricingFormRef}><Field label="Lucro sobre custo (%)"><input type="number" min="0" value={study.inputs.profitMarkup} onChange={(e) => inputs({ profitMarkup: Number(e.target.value) })} /></Field><Field label="Imposto (%)"><input type="number" min="0" max="99" value={study.inputs.taxPercentage} onChange={(e) => inputs({ taxPercentage: Number(e.target.value) })} /></Field><Field label="Valor comercial manual"><input placeholder="vazio = recomendado" value={study.inputs.commercialPriceCents === null ? "" : inputMoney(study.inputs.commercialPriceCents)} onChange={(e) => inputs({ commercialPriceCents: e.target.value ? parseMoney(e.target.value) : null })} /></Field><Field label="Desconto"><input value={inputMoney(study.inputs.discountCents)} onChange={(e) => inputs({ discountCents: parseMoney(e.target.value) })} /></Field><Field label="Doação"><input value={inputMoney(study.inputs.donationCents)} onChange={(e) => inputs({ donationCents: parseMoney(e.target.value) })} /></Field></div>
+        <HonResultPanel study={study} resultHeadingRef={resultHeadingRef}
+          onAdjustParameters={adjustParameters} onGoToServices={() => setTab("services")} onGoToScenarios={() => setTab("scenarios")}
+          onGoToPayments={() => setTab("payments")} onExportInternal={exportInternal} onExportCommercial={exportCommercial} onExportCsv={exportCsv} />
       </>}
 
       {tab === "scenarios" && study && <><PanelTitle title="Comparador de cenários" help="Compare até quatro combinações sem substituir o cálculo técnico por média simples." /><Button variant="secondary" icon={Plus} disabled={!study.results || scenarios.length >= 4} onClick={() => void addScenario()}>Salvar cenário atual</Button>{scenarios.length > 0 && <div className="hon-scenario-grid">{scenarios.map((scenario) => <article key={scenario.id}><h3>{scenario.name}</h3><strong>{money(scenario.result.finalPrice)}</strong><p>{scenario.complexity} · {scenario.urgency}</p><small>{scenario.paymentCondition}</small></article>)}</div>}</>}
@@ -175,5 +304,5 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
 
 function PanelTitle({ title, help }: { title: string; help: string }) { return <div className="hon-panel-title"><div><h2>{title}</h2><p>{help}</p></div></div>; }
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <DsField label={label} className="hon-field">{children}</DsField>; }
-function Metric({ label, value }: { label: string; value: string }) { return <div><span>{label}</span><strong>{value}</strong></div>; }
-function Warnings({ items }: { items: string[] }) { return items.length ? <div className="hon-warnings" role="alert"><strong>Alertas financeiros ({items.length})</strong><ul>{items.map((item) => <li key={item}>⚠ {item}</li>)}</ul></div> : <div className="hon-ok" role="status">✓ Nenhum alerta financeiro ativo.</div>; }
+export function Metric({ label, value }: { label: string; value: string }) { return <div><span>{label}</span><strong>{value}</strong></div>; }
+export function Warnings({ items }: { items: string[] }) { return items.length ? <div className="hon-warnings" role="alert"><strong>Alertas financeiros ({items.length})</strong><ul>{items.map((item) => <li key={item}>⚠ {item}</li>)}</ul></div> : <div className="hon-ok" role="status">✓ Nenhum alerta financeiro ativo.</div>; }
