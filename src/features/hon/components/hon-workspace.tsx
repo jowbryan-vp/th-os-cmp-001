@@ -16,6 +16,9 @@ import { calculateHourlyCost, createPaymentPlan } from "../services/hon-engine";
 import {
   approveStudy, assessCapacity, calculateAndVersionStudy, createFeeStudy, createProposalPricingSnapshot, createScenario,
 } from "../services/hon-study-service";
+import { domainErrorMessage, inputMoney, money, parseMoney } from "./hon-formatters";
+import { Metric } from "./hon-metric";
+import { Warnings } from "./hon-warnings";
 import { HonResultPanel } from "./results/hon-result-panel";
 
 const tabs = [
@@ -29,14 +32,12 @@ type Tab = (typeof tabs)[number][0];
 type NoticeVariant = "success" | "error" | "info";
 type ResultState = "not_calculated" | "updated" | "stale";
 
-export const money = (cents: number) => (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-const parseMoney = (value: string) => {
-  const normalized = value.trim().replace(/\s/g, "").replace(/^R\$/i, "");
-  if (!normalized) return 0;
-  const decimal = normalized.includes(",") ? normalized.replace(/\./g, "").replace(",", ".") : normalized.replace(/\.(?=\d{3}(?:\D|$))/g, "");
-  const parsed = Number(decimal); return Number.isFinite(parsed) ? Math.round(parsed * 100) : 0;
-};
-const inputMoney = (cents: number) => (cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+// Mensagens de erro que o motor/domínio HON já produz em português, curadas e seguras para
+// exibição direta ao usuário (guiam uma correção específica). Qualquer erro fora dessa lista
+// — bug, falha de IndexedDB, schema inválido — é tratado como desconhecido por
+// domainErrorMessage() e recebe uma mensagem genérica segura em vez do texto técnico bruto.
+const CALCULATE_KNOWN_ERRORS = ["As horas faturáveis devem ser maiores que zero.", "O imposto deve estar entre 0% e 100%."] as const;
+const APPROVE_KNOWN_ERRORS = ["Calcule o estudo antes de aprová-lo.", "Não é possível aprovar sem estimativa de horas.", "Snapshots aprovados são imutáveis; crie uma nova versão."] as const;
 
 // Assinatura determinística, independente da ordem de inserção de chaves — usada apenas
 // para comparar localmente o estudo atual com a última versão persistida/calculada.
@@ -53,10 +54,43 @@ function stableSignature(value: unknown): string {
 function computeSaveSignature(study: FeeCalculationStudy) {
   return stableSignature({ ...study, updatedAt: undefined });
 }
+const pick = <T extends object, K extends keyof T>(source: T, keys: readonly K[]): Pick<T, K> =>
+  Object.fromEntries(keys.map((key) => [key, source[key]])) as Pick<T, K>;
+
+// Somente os campos efetivamente lidos por calculateHourlyCost/calculateFeeStudy
+// (hon-engine.ts) entram na assinatura de "cálculo relevante" — confirmado campo a campo
+// contra o motor. Ficam de fora: identificadores (id/code/catalogItemId), texto puramente
+// descritivo (notes/name/service/city/responsibility/stage) e study.risks (o array inteiro
+// não é lido pelo motor; só study.inputs.riskPercentage é). complexitySuggestedLevel e
+// complexityJustification também ficam de fora: só decidem se um alerta aparece no resultado,
+// não alteram nenhum valor numérico — "desatualizado" aqui é sobre o preço, não sobre o texto
+// dos alertas. Se hon-engine.ts passar a ler um novo campo, esta lista precisa acompanhar.
+const RELEVANT_INPUT_FIELDS = [
+  "calculationDate", "complexityLevel", "urgencyLevel", "riskPercentage", "profitMarkup",
+  "taxPercentage", "taxMode", "discountCents", "donationCents", "commercialPriceCents",
+  "minimumContractCents", "directExpensesCents",
+] as const;
+const RELEVANT_SERVICE_FIELDS = ["included", "estimatedHours", "hourlyCostCents", "fixedCostCents"] as const;
+const RELEVANT_PARTNER_FIELDS = ["includedInContract", "costCents", "urgencyCents", "managementPercentage"] as const;
+const RELEVANT_TRAVEL_FIELDS = [
+  "roundTripKm", "costPerKmCents", "travelHours", "technicalHours", "reportHours",
+  "perDiemDays", "perDiemCents", "directExpensesCents", "calendarSurchargePercentage",
+] as const;
+const RELEVANT_REVISION_FIELDS = ["method", "stageValueCents", "percentage", "additionalHours", "fixedValueCents"] as const;
+const RELEVANT_BIM_FIELDS = ["mode", "percentage", "affectedBaseCents", "additionalHours"] as const;
+const RELEVANT_CONSTRUCTION_FIELDS = [
+  "monitoringWeeks", "visitsPerWeek", "hoursPerVisit", "managementWeeklyHours", "managementWeeks", "dedicatedTeamCostCents",
+] as const;
+
 function computeCalcSignature(study: FeeCalculationStudy, profile: StructureProfile) {
   return stableSignature({
-    inputs: study.inputs, services: study.services, partners: study.partners, travel: study.travel,
-    revisions: study.revisions, risks: study.risks, bim: study.bim, construction: study.construction,
+    inputs: pick(study.inputs, RELEVANT_INPUT_FIELDS),
+    services: study.services.map((item) => pick(item, RELEVANT_SERVICE_FIELDS)),
+    partners: study.partners.map((item) => pick(item, RELEVANT_PARTNER_FIELDS)),
+    travel: study.travel.map((item) => pick(item, RELEVANT_TRAVEL_FIELDS)),
+    revisions: study.revisions.map((item) => pick(item, RELEVANT_REVISION_FIELDS)),
+    bim: pick(study.bim, RELEVANT_BIM_FIELDS),
+    construction: pick(study.construction, RELEVANT_CONSTRUCTION_FIELDS),
     structureProfileId: study.structureProfileId, profile,
   });
 }
@@ -115,9 +149,32 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
   const inputs = (patch: Partial<FeeCalculationStudy["inputs"]>) => study && mutate({ inputs: { ...study.inputs, ...patch } });
 
   // Reseta a assinatura de "última versão salva/calculada" sempre que um estudo diferente é
-  // aberto (troca de seleção, criação, reload). Ajuste de estado durante a renderização
-  // (comparando com o id do estudo da renderização anterior) em vez de useEffect: evita tanto
-  // o flash de "alterações não salvas" quanto o disparo de setState assíncrono dentro de efeito.
+  // aberto (troca de seleção, criação, reload) — sem herdar o status do estudo anterior.
+  //
+  // Ajuste de estado durante a renderização (padrão documentado pelo React para "resetar
+  // estado quando uma prop/id muda": https://react.dev/learn/you-might-not-need-an-effect
+  // #adjusting-some-state-when-a-prop-changes), em vez de useEffect ou useMemo:
+  //
+  // - useEffect rodaria DEPOIS do primeiro paint com o estudo novo, causando um flash visível
+  //   de "alterações não salvas"/"resultado desatualizado" antes de corrigir, e o linter do
+  //   React Compiler bloqueia setState incondicional dentro de efeito (react-hooks/set-state-in-effect).
+  // - useMemo não serve aqui: o valor não é uma derivação pura do `study` atual — é "o que foi
+  //   lembrado no último evento discreto" (salvar/calcular/trocar de estudo). Se fosse
+  //   `useMemo(() => computeSaveSignature(study), [study])`, a assinatura "salva" recalcularia
+  //   a cada tecla digitada (mutate() gera um novo objeto a cada edição) e seria sempre igual
+  //   à atual — "dirty" nunca ficaria true.
+  // - Não dá para resolver só nos handlers de mutate/saveStudy/calculate: esses já atualizam as
+  //   assinaturas quando fazem sentido (saveStudy e calculate o fazem). O que falta é o reset ao
+  //   TROCAR de estudo carregado, que acontece em 3 pontos fora desses handlers (seletor de
+  //   estudo, criação de estudo, carga inicial); centralizar aqui evita duplicar a mesma lógica
+  //   de reset em cada um deles.
+  //
+  // Segurança contra loop infinito: a condição do `if` compara `study?.id` com o id "lembrado"
+  // na renderização anterior (`baselineStudyId`). A primeira ação dentro do `if` é justamente
+  // igualar `baselineStudyId` a `study?.id` — ou seja, a MESMA mudança que tornou a condição
+  // verdadeira já a torna falsa na re-renderização seguinte. Como nada dentro deste bloco altera
+  // `study?.id`, a condição não pode voltar a ficar verdadeira sem um evento externo real (troca
+  // de estudo) — converge em exatamente uma renderização extra a cada troca, nunca em loop.
   const [baselineStudyId, setBaselineStudyId] = useState<string | null>(null);
   if ((study?.id ?? null) !== baselineStudyId) {
     setBaselineStudyId(study?.id ?? null);
@@ -165,7 +222,9 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
       return saved;
     } catch (reason) {
       setSaveStatus("error");
-      showNotice(reason instanceof Error ? reason.message : "Não foi possível salvar o estudo.", "error");
+      // Sem lista de mensagens conhecidas: uma falha aqui (Zod, IndexedDB) é sempre inesperada
+      // do ponto de vista do usuário, então a mensagem é sempre genérica e segura.
+      showNotice(domainErrorMessage(reason, [], "Não foi possível salvar o estudo neste dispositivo. Tente novamente."), "error");
       throw reason;
     }
   }
@@ -177,14 +236,14 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
       calculated = calculateAndVersionStudy(study, profile);
     } catch (reason) {
       setCalcStatus("idle");
-      const message = reason instanceof Error ? reason.message : "Não foi possível calcular os honorários com os dados atuais.";
+      const message = domainErrorMessage(reason, CALCULATE_KNOWN_ERRORS, "Não foi possível calcular os honorários com os dados atuais. Revise os parâmetros e tente novamente.");
       showNotice(message, "error");
-      setTab(/horas faturáveis/i.test(message) ? "structure" : "result");
+      setTab(message === CALCULATE_KNOWN_ERRORS[0] ? "structure" : "result");
       return;
     }
     if (!calculated.results) {
       setCalcStatus("idle");
-      showNotice("Não foi possível calcular os honorários com os dados atuais.", "error");
+      showNotice("Não foi possível calcular os honorários com os dados atuais. Revise os parâmetros e tente novamente.", "error");
       return;
     }
     try {
@@ -207,7 +266,7 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
   async function approve() {
     if (!study) return;
     try { const approved = approveStudy(study); await snapshotRepo.save(approved.snapshot); await saveStudy(approved.study); setSnapshotCount((count) => count + 1); showNotice("Snapshot imutável aprovado.", "success"); }
-    catch (reason) { showNotice(reason instanceof Error ? reason.message : "Não foi possível aprovar.", "error"); }
+    catch (reason) { showNotice(domainErrorMessage(reason, APPROVE_KNOWN_ERRORS, "Não foi possível aprovar o estudo."), "error"); }
   }
   async function addScenario() {
     if (!study?.results) return;
@@ -304,5 +363,3 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
 
 function PanelTitle({ title, help }: { title: string; help: string }) { return <div className="hon-panel-title"><div><h2>{title}</h2><p>{help}</p></div></div>; }
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <DsField label={label} className="hon-field">{children}</DsField>; }
-export function Metric({ label, value }: { label: string; value: string }) { return <div><span>{label}</span><strong>{value}</strong></div>; }
-export function Warnings({ items }: { items: string[] }) { return items.length ? <div className="hon-warnings" role="alert"><strong>Alertas financeiros ({items.length})</strong><ul>{items.map((item) => <li key={item}>⚠ {item}</li>)}</ul></div> : <div className="hon-ok" role="status">✓ Nenhum alerta financeiro ativo.</div>; }

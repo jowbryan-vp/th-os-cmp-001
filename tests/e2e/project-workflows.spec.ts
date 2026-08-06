@@ -658,6 +658,72 @@ test("HON-002A: erro de cálculo mantém a aba pertinente, preserva a edição e
   await expect(page.getByText("Resultado não calculado")).toBeVisible();
 });
 
+test("HON-002A: salvar sem alterar entradas mantém o resultado atualizado", async ({ page }) => {
+  await page.getByRole("button", { name: "HON-001" }).click();
+  await page.getByRole("button", { name: "Criar estudo e importar escopo" }).click();
+  await page.getByLabel(/Horas de Levantamento cadastral/).fill("40");
+  await page.getByRole("button", { name: "Calcular honorários" }).click();
+  await expect(page.getByText("Resultado atualizado")).toBeVisible();
+
+  // Editar um campo de observação (visual/textual, não usado pelo motor) não deve desatualizar.
+  // O status fica na barra persistente, visível em qualquer aba — não precisa voltar a Resultado.
+  await page.getByRole("button", { name: "Ver serviços e horas" }).click();
+  await page.getByLabel(/Observações de Levantamento cadastral/).fill("revisar com o cliente");
+  await expect(page.getByText("Alterações não salvas")).toBeVisible();
+  await expect(page.getByText("Resultado atualizado")).toBeVisible();
+
+  await page.getByRole("button", { name: "Salvar", exact: true }).click();
+  await expect(page.getByText("Salvo", { exact: true })).toBeVisible();
+  await expect(page.getByText("Resultado atualizado")).toBeVisible();
+});
+
+test("HON-002A: trocar de estudo reinicializa salvamento e resultado sem herdar do estudo anterior", async ({ page }) => {
+  await page.getByRole("button", { name: "HON-001" }).click();
+  const studySelect = page.getByLabel("Estudo HON-001");
+
+  // Estudo A: calculado.
+  await page.getByRole("button", { name: "Criar estudo e importar escopo" }).click();
+  await page.getByLabel(/Horas de Levantamento cadastral/).fill("40");
+  await page.getByRole("button", { name: "Calcular honorários" }).click();
+  await expect(page.getByText("Resultado atualizado")).toBeVisible();
+  await page.getByRole("tab", { name: "Visão geral" }).click();
+  const studyAId = await studySelect.inputValue();
+
+  // Estudo B: novo estudo do mesmo projeto, ainda sem cálculo.
+  await studySelect.selectOption({ label: "Novo estudo" });
+  await page.getByRole("button", { name: "Criar estudo e importar escopo" }).click();
+  await expect(page.getByText("Resultado não calculado")).toBeVisible();
+  await expect(page.getByText("Salvo", { exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "Visão geral" }).click();
+  const studyBId = await studySelect.inputValue();
+  expect(studyBId).not.toBe(studyAId);
+
+  // Volta ao estudo A pelo seletor: deve mostrar o status do estudo A, não o do B.
+  await studySelect.selectOption({ value: studyAId });
+  await expect(page.getByText("Resultado atualizado")).toBeVisible();
+  await expect(page.getByText("Salvo", { exact: true })).toBeVisible();
+
+  // E voltando para o estudo B, o status volta a ser o dele — nenhum dos dois vaza no outro.
+  await studySelect.selectOption({ value: studyBId });
+  await expect(page.getByText("Resultado não calculado")).toBeVisible();
+});
+
+test("HON-002A: edições repetidas não causam loop de renderização nem erros no console", async ({ page }) => {
+  const consoleErrors: string[] = [];
+  page.on("pageerror", (error) => consoleErrors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
+
+  await page.getByRole("button", { name: "HON-001" }).click();
+  await page.getByRole("button", { name: "Criar estudo e importar escopo" }).click();
+  const hoursField = page.getByLabel(/Horas de Levantamento cadastral/);
+  for (let i = 1; i <= 15; i += 1) {
+    await hoursField.fill(String(i));
+  }
+  await expect(hoursField).toHaveValue("15");
+  await expect(page.getByText("Alterações não salvas")).toBeVisible();
+  expect(consoleErrors, `esperava nenhum erro de console; obteve: ${consoleErrors.join(" | ")}`).toHaveLength(0);
+});
+
 test("keeps projects isolated between browser contexts", async ({ browser }) => {
   const firstContext = await browser.newContext();
   const secondContext = await browser.newContext();

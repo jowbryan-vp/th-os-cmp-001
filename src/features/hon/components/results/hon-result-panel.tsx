@@ -4,7 +4,9 @@ import { RefObject } from "react";
 import { Button, EmptyState } from "../../../../design-system";
 import { ClipboardCheck, Download, Eye, Pencil } from "../../../../design-system/icons";
 import { FeeCalculationStudy } from "../../domain/hon-types";
-import { Metric, Warnings, money } from "../hon-workspace";
+import { money } from "../hon-formatters";
+import { Metric } from "../hon-metric";
+import { Warnings } from "../hon-warnings";
 
 export interface HonResultPanelProps {
   study: FeeCalculationStudy;
