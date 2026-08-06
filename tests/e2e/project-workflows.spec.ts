@@ -519,11 +519,17 @@ test("keeps the CAP-001 library usable on tablet and mobile", async ({ page }) =
   }
 });
 
-test("calcula HON-001, compara cenários, gera pagamentos, aprova snapshot e persiste", async ({ page }) => {
+test("HON-002A: calcula a partir da barra persistente, resultado explícito com foco automático, atalhos, cenários, pagamentos, histórico e persistência", async ({ page }) => {
   await page.getByRole("button", { name: "HON-001" }).click();
   await expect(page.getByRole("heading", { name: "Calculadora de Honorários" })).toBeVisible();
   await page.getByRole("button", { name: "Criar estudo e importar escopo" }).click();
   await expect(page.getByRole("heading", { name: "Serviços e estimativa manual de horas" })).toBeVisible();
+
+  // 1) "Calcular honorários" já está visível na barra persistente sem precisar abrir Resultado.
+  await expect(page.getByRole("tab", { name: "Resultado" })).toHaveAttribute("aria-selected", "false");
+  await expect(page.getByRole("button", { name: "Calcular honorários" })).toBeVisible();
+  await expect(page.getByText("Resultado não calculado")).toBeVisible();
+
   await page.getByLabel(/Horas de Levantamento cadastral/).fill("40");
   await page.getByRole("tab", { name: "Parceiros" }).click();
   await expect(page.getByRole("tab", { name: "Parceiros" })).toHaveAttribute("aria-selected", "true");
@@ -536,31 +542,186 @@ test("calcula HON-001, compara cenários, gera pagamentos, aprova snapshot e per
   await page.getByLabel("Cidade", { exact: true }).fill("Vilhena");
   await page.getByLabel("Km ida e volta").fill("450");
   await page.getByLabel("Horas de viagem").fill("8");
-  await page.getByRole("tab", { name: "Resultado" }).click();
+
+  // 2) cálculo disparado a partir de outra aba (ainda em "Deslocamentos e visitas").
+  await expect(page.getByRole("tab", { name: "Deslocamentos e visitas" })).toHaveAttribute("aria-selected", "true");
   await page.getByRole("button", { name: "Calcular honorários" }).click();
+
+  // 3) mudança automática para a aba Resultado.
+  await expect(page.getByRole("tab", { name: "Resultado" })).toHaveAttribute("aria-selected", "true");
+  // 4) foco programático no heading do resumo executivo.
+  await expect(page.getByRole("heading", { name: "Resumo executivo" })).toBeFocused();
+  // 5) valor final negociado visível.
   await expect(page.getByText("E. Valor final negociado")).toBeVisible();
-  await expect(page.getByText("Gestão", { exact: false })).toBeAttached();
-  await page.getByRole("tab", { name: "Cenários" }).click();
+  await expect(page.getByText(/Honorários calculados\. Valor final negociado/)).toBeVisible();
+  await expect(page.getByText("Resultado atualizado")).toBeVisible();
+  await expect(page.getByText("Salvo", { exact: true })).toBeVisible();
+
+  // 6) composição do valor organizada e visível (sem precisar expandir nada).
+  await expect(page.getByRole("heading", { name: "Composição do valor" })).toBeVisible();
+  await expect(page.getByText("Mão de obra interna")).toBeVisible();
+  // 7) "Gestão de parceiros" preservado.
+  await expect(page.getByText("Gestão de parceiros")).toBeVisible();
+  // 8) serviços incluídos aparecem no escopo considerado.
+  await expect(page.getByRole("heading", { name: "Escopo considerado" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Levantamento cadastral" })).toBeVisible();
+
+  // 9) atalho "Ver serviços e horas".
+  await page.getByRole("button", { name: "Ver serviços e horas" }).click();
+  await expect(page.getByRole("tab", { name: "Serviços e horas" })).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("tab", { name: "Resultado" }).click();
+
+  // 10) atalho "Comparar cenários".
+  await page.getByRole("button", { name: "Comparar cenários" }).click();
+  await expect(page.getByRole("tab", { name: "Cenários" })).toHaveAttribute("aria-selected", "true");
   await page.getByRole("button", { name: "Salvar cenário atual" }).click();
   await page.getByRole("button", { name: "Salvar cenário atual" }).click();
   await expect(page.locator(".hon-scenario-grid article")).toHaveCount(2);
-  await page.getByRole("tab", { name: "Pagamentos" }).click();
+  await page.getByRole("tab", { name: "Resultado" }).click();
+
+  // 11) atalho "Configurar pagamentos" (na barra de ações do resultado — a mesma ação também
+  // aparece no EmptyState de "Condições comerciais" enquanto não há plano cadastrado).
+  await page.locator(".hon-actions").getByRole("button", { name: "Configurar pagamentos" }).click();
+  await expect(page.getByRole("tab", { name: "Pagamentos" })).toHaveAttribute("aria-selected", "true");
   await page.getByRole("button", { name: "30% + etapas" }).click();
   await expect(page.getByRole("cell", { name: "30%" }).first()).toBeVisible();
+
   await page.getByRole("tab", { name: "Histórico e snapshots" }).click();
   await page.getByRole("button", { name: "Aprovar snapshot imutável" }).click();
   await expect(page.getByText("Snapshot imutável aprovado.")).toBeVisible();
   await expect(page.getByText("approved", { exact: true })).toBeVisible();
+
+  // 15) reload mantém o resultado salvo.
   await page.reload();
   await page.getByRole("button", { name: "HON-001" }).click();
   await expect(page.getByRole("heading", { name: "Calculadora de Honorários" })).toBeVisible();
   await page.getByRole("tab", { name: "Histórico e snapshots" }).click();
   await expect(page.getByRole("tab", { name: "Histórico e snapshots" })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByText("approved", { exact: true })).toBeVisible();
-  await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("tab", { name: "Resultado" }).click();
   await expect(page.getByText("E. Valor final negociado")).toBeVisible();
+  await expect(page.getByText("Resultado atualizado")).toBeVisible();
+
+  // 16) exportação comercial (JSON) continua funcionando.
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Exportar comercial" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/resumo-cliente\.json$/);
+
+  // 17) mobile sem overflow horizontal.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByText("E. Valor final negociado")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
+
+  // 18) aproximação de zoom 200% (viewport reduzido para metade de 1280x720), sem overflow.
+  await page.setViewportSize({ width: 640, height: 360 });
+  await expect(page.getByText("E. Valor final negociado")).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
+});
+
+test("HON-002A: resultado fica desatualizado após alterar entrada relevante, e salvar não recalcula", async ({ page }) => {
+  await page.getByRole("button", { name: "HON-001" }).click();
+  await page.getByRole("button", { name: "Criar estudo e importar escopo" }).click();
+  await page.getByLabel(/Horas de Levantamento cadastral/).fill("40");
+  await page.getByRole("button", { name: "Calcular honorários" }).click();
+  await expect(page.getByRole("tab", { name: "Resultado" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByText("Resultado atualizado")).toBeVisible();
+  const finalValueRow = page.locator(".hon-price-ladder div", { hasText: "E. Valor final negociado" });
+  const finalValueBefore = await finalValueRow.locator("strong").textContent();
+
+  // 12) altera uma entrada relevante para o cálculo (horas) sem recalcular.
+  await page.getByRole("button", { name: "Ver serviços e horas" }).click();
+  await page.getByLabel(/Horas de Levantamento cadastral/).fill("80");
+  await page.getByRole("tab", { name: "Resultado" }).click();
+  await expect(page.getByText("Resultado desatualizado")).toBeVisible();
+
+  // 13) salvar não recalcula: o valor final exibido permanece o mesmo do último cálculo.
+  await page.getByRole("button", { name: "Salvar", exact: true }).click();
+  await expect(page.getByText("Salvo", { exact: true })).toBeVisible();
+  await expect(page.getByText("Resultado desatualizado")).toBeVisible();
+  const finalValueAfterSave = await finalValueRow.locator("strong").textContent();
+  expect(finalValueAfterSave).toBe(finalValueBefore);
+});
+
+test("HON-002A: erro de cálculo mantém a aba pertinente, preserva a edição e informa o problema de forma acessível", async ({ page }) => {
+  await page.getByRole("button", { name: "HON-001" }).click();
+  await page.getByRole("button", { name: "Criar estudo e importar escopo" }).click();
+  await page.getByLabel(/Horas de Levantamento cadastral/).fill("40");
+  await page.getByRole("tab", { name: "Resultado" }).click();
+  await page.getByLabel("Imposto (%)").fill("150");
+
+  // 14) erro de cálculo (imposto fora da faixa aceita pelo motor) produz mensagem acessível.
+  await page.getByRole("button", { name: "Calcular honorários" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: /imposto/i })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Resultado" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByLabel("Imposto (%)")).toHaveValue("150");
+  await expect(page.getByText("Resultado não calculado")).toBeVisible();
+});
+
+test("HON-002A: salvar sem alterar entradas mantém o resultado atualizado", async ({ page }) => {
+  await page.getByRole("button", { name: "HON-001" }).click();
+  await page.getByRole("button", { name: "Criar estudo e importar escopo" }).click();
+  await page.getByLabel(/Horas de Levantamento cadastral/).fill("40");
+  await page.getByRole("button", { name: "Calcular honorários" }).click();
+  await expect(page.getByText("Resultado atualizado")).toBeVisible();
+
+  // Editar um campo de observação (visual/textual, não usado pelo motor) não deve desatualizar.
+  // O status fica na barra persistente, visível em qualquer aba — não precisa voltar a Resultado.
+  await page.getByRole("button", { name: "Ver serviços e horas" }).click();
+  await page.getByLabel(/Observações de Levantamento cadastral/).fill("revisar com o cliente");
+  await expect(page.getByText("Alterações não salvas")).toBeVisible();
+  await expect(page.getByText("Resultado atualizado")).toBeVisible();
+
+  await page.getByRole("button", { name: "Salvar", exact: true }).click();
+  await expect(page.getByText("Salvo", { exact: true })).toBeVisible();
+  await expect(page.getByText("Resultado atualizado")).toBeVisible();
+});
+
+test("HON-002A: trocar de estudo reinicializa salvamento e resultado sem herdar do estudo anterior", async ({ page }) => {
+  await page.getByRole("button", { name: "HON-001" }).click();
+  const studySelect = page.getByLabel("Estudo HON-001");
+
+  // Estudo A: calculado.
+  await page.getByRole("button", { name: "Criar estudo e importar escopo" }).click();
+  await page.getByLabel(/Horas de Levantamento cadastral/).fill("40");
+  await page.getByRole("button", { name: "Calcular honorários" }).click();
+  await expect(page.getByText("Resultado atualizado")).toBeVisible();
+  await page.getByRole("tab", { name: "Visão geral" }).click();
+  const studyAId = await studySelect.inputValue();
+
+  // Estudo B: novo estudo do mesmo projeto, ainda sem cálculo.
+  await studySelect.selectOption({ label: "Novo estudo" });
+  await page.getByRole("button", { name: "Criar estudo e importar escopo" }).click();
+  await expect(page.getByText("Resultado não calculado")).toBeVisible();
+  await expect(page.getByText("Salvo", { exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "Visão geral" }).click();
+  const studyBId = await studySelect.inputValue();
+  expect(studyBId).not.toBe(studyAId);
+
+  // Volta ao estudo A pelo seletor: deve mostrar o status do estudo A, não o do B.
+  await studySelect.selectOption({ value: studyAId });
+  await expect(page.getByText("Resultado atualizado")).toBeVisible();
+  await expect(page.getByText("Salvo", { exact: true })).toBeVisible();
+
+  // E voltando para o estudo B, o status volta a ser o dele — nenhum dos dois vaza no outro.
+  await studySelect.selectOption({ value: studyBId });
+  await expect(page.getByText("Resultado não calculado")).toBeVisible();
+});
+
+test("HON-002A: edições repetidas não causam loop de renderização nem erros no console", async ({ page }) => {
+  const consoleErrors: string[] = [];
+  page.on("pageerror", (error) => consoleErrors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
+
+  await page.getByRole("button", { name: "HON-001" }).click();
+  await page.getByRole("button", { name: "Criar estudo e importar escopo" }).click();
+  const hoursField = page.getByLabel(/Horas de Levantamento cadastral/);
+  for (let i = 1; i <= 15; i += 1) {
+    await hoursField.fill(String(i));
+  }
+  await expect(hoursField).toHaveValue("15");
+  await expect(page.getByText("Alterações não salvas")).toBeVisible();
+  expect(consoleErrors, `esperava nenhum erro de console; obteve: ${consoleErrors.join(" | ")}`).toHaveLength(0);
 });
 
 test("keeps projects isolated between browser contexts", async ({ browser }) => {

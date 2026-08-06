@@ -1432,11 +1432,14 @@ button[aria-disabled="true"] {
 /* HON-001: calculadora de honorários */
 .hon-shell { width: min(1800px, calc(100% - 32px)); margin: 24px auto 72px; color: #30352b; }
 .hon-shell *, .hon-shell *::before, .hon-shell *::after { box-sizing: border-box; }
-.hon-header { padding: 26px; color: #f8f8f2; background: var(--color-brand-900, #263c35); border-radius: var(--radius-xl, 16px) var(--radius-xl, 16px) 0 0; }
-.hon-header h1 { margin: 6px 0; }
-.hon-header p { max-width: 950px; margin: 0; color: #e2e7da; }
-.hon-header .eyebrow { color: #ccd7bd; font-size: .74rem; letter-spacing: .11em; text-transform: uppercase; }
-.hon-header .text-action { display: block; padding: 0; margin-bottom: 17px; color: #fff; background: transparent; border: 0; }
+/* HON-002A: barra de ação persistente (sticky, não fixed) e resultado explícito */
+.hon-action-bar-sticky { position: sticky; top: 5rem; z-index: var(--z-sticky, 20); min-width: 0; padding: 10px 0; background: var(--color-surface, #fff); border-bottom: 1px solid var(--color-border, #dedfd7); }
+.hon-action-bar-sticky .ds-page-action-bar { padding: 10px 0; border-bottom: 0; }
+.hon-lede { max-width: 950px; margin: 14px 0 20px; color: var(--color-text-muted, #62685d); }
+.hon-status-group { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; margin-top: 6px; }
+@media (max-width: 54rem) { .hon-action-bar-sticky { top: 4.5rem; } }
+.hon-result-heading { margin: 0 0 10px; outline-offset: 4px; }
+.hon-result-heading:focus-visible { outline: 2px solid var(--color-focus, #677048); }
 .hon-panel { min-height: 520px; padding: 24px; background: #fff; border: 1px solid #d8dbd1; }
 .hon-panel-title { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
 .hon-panel-title h2 { margin: 0 0 5px; }
@@ -1477,12 +1480,16 @@ button[aria-disabled="true"] {
 }
 @media (max-width: 680px) {
   .hon-shell { width: calc(100% - 20px); margin-top: 10px; }
-  .hon-panel, .hon-header { padding: 16px; }
+  .hon-panel { padding: 16px; }
   .hon-form-grid, .hon-edit-card, .hon-summary, .hon-price-ladder, .hon-scenario-grid { grid-template-columns: 1fr; }
   .hon-notice { align-items: flex-start; }
 }
+@media (max-width: 600px) {
+  /* .topbar assume max-height: 96px nesta largura (ver regra em @media (max-width: 600px) acima). */
+  .hon-action-bar-sticky { top: 6rem; }
+}
 @media print {
-  .hon-header button, .hon-actions, .hon-panel button, .topbar { display: none !important; }
+  .hon-action-bar-sticky, .hon-actions, .hon-panel button, .topbar { display: none !important; }
   .hon-shell { width: 100%; margin: 0; }
   .hon-panel { border: 0; }
 }
