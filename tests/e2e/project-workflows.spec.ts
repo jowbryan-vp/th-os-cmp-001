@@ -202,6 +202,64 @@ test("keeps functional content available on tablet and mobile", async ({ page })
   expect(download.suggestedFilename()).toBe("th-2026-001-cmp.json");
 });
 
+async function expectNoHorizontalOverflow(page: import("@playwright/test").Page) {
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
+}
+
+test("keeps the client 'Remover' button fully inside its card across viewports", async ({ page }) => {
+  const pilot = page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" });
+  await pilot.locator("button.project-card__open").click();
+  await page.getByRole("link", { name: "Clientes" }).click();
+
+  for (const viewport of [{ width: 1280, height: 720 }, { width: 1024, height: 768 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport);
+    await expectNoHorizontalOverflow(page);
+
+    const card = page.locator("#clients .collection-card").first();
+    const removeButton = card.getByRole("button", { name: "Remover" });
+    await expect(removeButton).toBeVisible();
+    await expect(removeButton).toHaveText(/Remover/);
+
+    const cardBox = (await card.boundingBox())!;
+    const buttonBox = (await removeButton.boundingBox())!;
+    expect(buttonBox.x).toBeGreaterThanOrEqual(cardBox.x - 1);
+    expect(buttonBox.y).toBeGreaterThanOrEqual(cardBox.y - 1);
+    expect(buttonBox.x + buttonBox.width).toBeLessThanOrEqual(cardBox.x + cardBox.width + 1);
+    expect(buttonBox.y + buttonBox.height).toBeLessThanOrEqual(cardBox.y + cardBox.height + 1);
+  }
+});
+
+test("keeps history event, description and date separated without overlap", async ({ page }) => {
+  const pilot = page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" });
+  await pilot.locator("button.project-card__open").click();
+
+  await page.getByRole("link", { name: "Identificação" }).click();
+  await page.getByLabel("Fase").selectOption("survey");
+
+  await page.getByRole("link", { name: "Histórico" }).click();
+  const rows = page.locator("#history .history-row");
+  await expect(rows).toHaveCount(2);
+
+  for (const viewport of [{ width: 1280, height: 720 }, { width: 1024, height: 768 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport);
+    await expectNoHorizontalOverflow(page);
+
+    for (const row of await rows.all()) {
+      const eventBox = (await row.locator("strong").boundingBox())!;
+      const descriptionBox = (await row.locator("p").boundingBox())!;
+      const dateBox = (await row.locator("time").boundingBox())!;
+      const intersects = (a: { x: number; y: number; width: number; height: number }, b: { x: number; y: number; width: number; height: number }) =>
+        a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+      expect(intersects(eventBox, descriptionBox)).toBe(false);
+      expect(intersects(descriptionBox, dateBox)).toBe(false);
+      await expect(row.locator("time")).toBeVisible();
+    }
+  }
+
+  await expect(rows.first().locator("strong")).toHaveText("phase_changed");
+  await expect(rows.first().locator("p")).toHaveText("Fase alterada para Levantamento.");
+});
+
 test("calculates, compares, accumulates three CAP-001 areas and restores scenarios", async ({ page }) => {
   const pilot = page.locator("article").filter({ hasText: "Reforma e Ampliação Residencial" });
   await pilot.locator("button.project-card__open").click();
