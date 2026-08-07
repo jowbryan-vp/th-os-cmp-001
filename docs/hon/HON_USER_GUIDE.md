@@ -1,8 +1,11 @@
-# HON-001/HON-002A — Guia do usuário
+# HON-001/HON-002A/HON-002B — Guia do usuário
 
 1. Abra **HON-001**, selecione o projeto e crie o estudo.
 2. Confira a cópia de trabalho CMP/CAP e o perfil.
-3. Informe horas, complexidade, urgência e risco.
+3. Informe horas, complexidade, urgência e risco. Na aba "Serviços e horas", consulte o
+   **catálogo de serviços** abaixo da tabela de horas — busque por nome, descrição ou categoria,
+   filtre por categoria e use **Entenda este serviço** para ver a descrição para o cliente, a
+   descrição técnica, entregáveis, exclusões e premissas de cada item antes de decidir o escopo.
 4. Inclua BIM, revisões, parceiros, viagens e obra.
 5. Clique em **Calcular honorários**, sempre visível na barra superior, a partir de qualquer
    aba. O sistema salva o estudo, muda automaticamente para a aba Resultado e leva o foco ao
