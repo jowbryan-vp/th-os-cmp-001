@@ -1,5 +1,19 @@
 # Changelog
 
+## Não lançado — HON-003 (Proposal Builder)
+
+- adiciona `ProposalDraft`: proposta comercial montada a partir de um estudo HON calculado, com
+  snapshot imutável do escopo (nome, descrições, entregáveis, exclusões, premissas) e cópia dos
+  totais — nunca recalculados dentro da proposta;
+- nova aba "Proposta comercial" no `HonWorkspace` e botão "Incorporar à proposta" no Resultado;
+- idempotência (uma proposta por estudo, aplicada na camada de aplicação) e detecção de
+  "cálculo mais recente disponível" com confirmação explícita antes de sobrescrever;
+- campos manuais (título, introdução, condições comerciais, observações, exclusões/premissas
+  adicionais, validade) livres e nunca sobrescritos por uma atualização a partir do HON;
+- prévia interna consolidada dentro da própria aba;
+- IndexedDB v6 e backup v4 com `honSchemaVersion` 4, mantendo compatibilidade com backups
+  anteriores ao HON-003.
+
 ## Não lançado — DS-001
 
 - consolida tokens de marca, tipografia, espaço, bordas, sombras, movimento, camadas e breakpoints;

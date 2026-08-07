@@ -1,6 +1,6 @@
 # HON-001 — Modelo de dados
 
-IndexedDB `th-os` v5 adiciona:
+IndexedDB `th-os` v6 adiciona:
 
 | Store | Entidade | Índices |
 |---|---|---|
@@ -11,6 +11,7 @@ IndexedDB `th-os` v5 adiciona:
 | `fee-snapshots` | `FeeSnapshot` | studyId, projectId |
 | `payment-plans` | `PaymentPlan` | studyId |
 | `fee-calibration-records` | `FeeCalibrationRecord` | studyId, projectId |
+| `proposal-drafts` | `ProposalDraft` (HON-003) | projectId, studyId, status |
 
 Componentes usam repositórios. Snapshot contém payload, motor e checksum; regravação do ID é rejeitada. Backup v4 restaura CMP, CAP e HON em uma transação.
 
@@ -31,3 +32,9 @@ A store `service-catalog` não mudou de versão do IndexedDB — o formato do re
 `compositionHistory` é diferente: como um array vazio já é um conteúdo válido (nenhuma decisão registrada ainda), o campo usa `.optional().default([])` no próprio schema Zod — não precisa de migração manual.
 
 `backupV4EnvelopeSchema.honSchemaVersion` aceita 1, 2 ou 3 — um backup exportado antes do HON-002C continua sendo restaurado. Nenhuma store nova, nenhuma mudança de `DB_VERSION` (continua 5): tudo cabe no mesmo formato JSON das stores existentes.
+
+## HON_SCHEMA_VERSION 4 (HON-003)
+
+Nova entidade `ProposalDraft` — proposta comercial montada a partir de um `FeeCalculationStudy` calculado, com snapshot imutável do escopo e cópia dos totais (nunca recalculados dentro da proposta) — ver `docs/hon/HON_PROPOSAL_BUILDER.md`. Diferente das fases anteriores, esta traz uma **store nova** (`proposal-drafts`, `DB_VERSION` 5→6) em vez de só estender registros existentes.
+
+`backupV4EnvelopeSchema.honSchemaVersion` aceita 1, 2, 3 ou 4; o campo `proposalDrafts` usa `.optional().default([])` — um backup exportado antes do HON-003 continua sendo restaurado, sem propostas. `parseHonBackupData` valida que toda proposta referencia um estudo e um projeto existentes no mesmo backup, e que não há duas propostas para o mesmo `studyId` (idempotência também no backup).
