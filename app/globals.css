@@ -1489,9 +1489,25 @@ button[aria-disabled="true"] {
 .hon-catalog-detail-section h3 { margin: 0 0 6px; font-size: .92rem; }
 .hon-catalog-detail-section p, .hon-catalog-detail-section ul { margin: 0; overflow-wrap: anywhere; }
 .hon-catalog-detail-section ul { padding-left: 20px; }
+/* HON-002C: composição comercial de serviços */
+.hon-composition-totals { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.hon-composition-toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 20px; }
+.hon-composition-group { margin: 20px 0; }
+.hon-composition-group__header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
+.hon-composition-group__header h3 { margin: 0; }
+.hon-composition-card__controls { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.hon-catalog-card__actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.hon-custom-service-form { display: grid; gap: 14px; max-width: 100%; }
+.hon-composition-history { display: grid; gap: 8px; margin: 12px 0; padding: 0; list-style: none; }
+.hon-composition-history li { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px 12px; background: #f8f9f5; border: 1px solid #dce0d6; border-radius: 8px; }
+.hon-composition-history time { color: #646b5b; font-size: .78rem; white-space: nowrap; }
+
 @media (max-width: 1050px) {
   .hon-form-grid, .hon-edit-card { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hon-summary, .hon-price-ladder, .hon-scenario-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hon-composition-totals { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .hon-composition-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hon-composition-card__controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 680px) {
   .hon-shell { width: calc(100% - 20px); margin-top: 10px; }
@@ -1500,6 +1516,7 @@ button[aria-disabled="true"] {
   .hon-notice { align-items: flex-start; }
   .hon-catalog-toolbar { grid-template-columns: 1fr; }
   .hon-catalog-grid { grid-template-columns: 1fr; }
+  .hon-composition-totals, .hon-composition-toolbar, .hon-composition-card__controls { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
   /* .topbar assume max-height: 96px nesta largura (ver regra em @media (max-width: 600px) acima). */

@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { Badge, BadgeTone, Button, EmptyState, Field, Input, Select } from "../../../../design-system";
-import { Info } from "../../../../design-system/icons";
+import { Info, Plus } from "../../../../design-system/icons";
+import { serviceCommercialStateLabels } from "../../domain/hon-service-composition";
 import { FeeCalculationStudy, ServiceCatalogItem } from "../../domain/hon-types";
 import { serviceCategoryLabels, serviceCategoryOrder } from "../../services/hon-catalog-content";
 import { HonServiceDetailModal } from "./hon-service-detail-modal";
@@ -12,13 +13,16 @@ const normalize = (value: string) => value.trim().toLowerCase();
 function inclusionStatus(item: ServiceCatalogItem, study: FeeCalculationStudy): { label: string; tone: BadgeTone } {
   const match = study.services.find((service) => service.catalogItemId === item.id);
   if (!match) return { label: "Fora do estudo atual", tone: "neutral" };
-  return match.included ? { label: "Incluído no estudo", tone: "success" } : { label: "No estudo, não incluído", tone: "warning" };
+  const tone: BadgeTone = match.commercialState === "included" ? "success"
+    : match.commercialState === "complimentary" ? "info" : match.commercialState === "optional" ? "warning" : "neutral";
+  return { label: `Na composição · ${serviceCommercialStateLabels[match.commercialState]}`, tone };
 }
 
-// Consulta ao catálogo de serviços: navegação/leitura apenas. A composição personalizada
-// (selecionar, adicionar quantidade, opcionais) fica para uma fase seguinte (HON-002C) — aqui o
-// objetivo é só permitir ao arquiteto entender cada serviço antes de editar a tabela de horas.
-export function HonServiceCatalogPanel({ catalog, study }: { catalog: ServiceCatalogItem[]; study: FeeCalculationStudy }) {
+// Consulta e seleção do catálogo de serviços: navegação/leitura, com um botão para adicionar o
+// item à composição do estudo atual (HON-002C). A DECISÃO comercial (incluir/opcional/
+// cortesia), quantidade e desconto ficam a cargo do painel de composição — adicionar aqui só
+// cria a linha em estado neutro ("não contratado"), nunca compromete preço implicitamente.
+export function HonServiceCatalogPanel({ catalog, study, onAdd }: { catalog: ServiceCatalogItem[]; study: FeeCalculationStudy; onAdd?: (item: ServiceCatalogItem) => void }) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<"all" | ServiceCatalogItem["category"]>("all");
   const [detailItem, setDetailItem] = useState<ServiceCatalogItem | null>(null);
@@ -53,12 +57,16 @@ export function HonServiceCatalogPanel({ catalog, study }: { catalog: ServiceCat
       : <ul className="hon-catalog-grid">
         {filtered.map((item) => {
           const status = inclusionStatus(item, study);
+          const alreadyInStudy = study.services.some((service) => service.catalogItemId === item.id);
           return <li key={item.id} className="hon-catalog-card">
             <div className="hon-catalog-card__header"><h3>{item.name}</h3><Badge tone="neutral">{serviceCategoryLabels[item.category]}</Badge></div>
             <p>{item.clientDescription || "Descrição ainda não cadastrada para este serviço."}</p>
             <div className="hon-catalog-card__footer">
               <Badge tone={status.tone}>{status.label}</Badge>
-              <Button variant="tertiary" size="small" icon={Info} onClick={() => setDetailItem(item)}>Entenda este serviço</Button>
+              <div className="hon-catalog-card__actions">
+                <Button variant="tertiary" size="small" icon={Info} onClick={() => setDetailItem(item)}>Entenda este serviço</Button>
+                {onAdd && <Button variant="secondary" size="small" icon={Plus} disabled={alreadyInStudy} onClick={() => onAdd(item)}>{alreadyInStudy ? "Já na composição" : "Adicionar ao estudo"}</Button>}
+              </div>
             </div>
           </li>;
         })}

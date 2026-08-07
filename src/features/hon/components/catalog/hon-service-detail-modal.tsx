@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge, Modal } from "../../../../design-system";
-import { ServiceCatalogItem } from "../../domain/hon-types";
+import { ServiceCategory } from "../../domain/hon-types";
 import { serviceCategoryLabels } from "../../services/hon-catalog-content";
 
 function DetailList({ title, items }: { title: string; items: string[] }) {
@@ -9,9 +9,23 @@ function DetailList({ title, items }: { title: string; items: string[] }) {
   return <section className="hon-catalog-detail-section"><h3>{title}</h3><ul>{items.map((item) => <li key={item}>{item}</li>)}</ul></section>;
 }
 
+// Formato mínimo que o modal precisa — não amarrado a ServiceCatalogItem: um ServiceCatalogItem
+// satisfaz esta forma estruturalmente (usado para itens do catálogo), e o HON-002C também
+// monta um objeto deste formato a partir de FeeServiceInput.customDescription para reusar o
+// mesmo modal em itens personalizados da composição, sem duplicar o componente.
+export interface ServiceDetailContent {
+  name: string;
+  category: ServiceCategory;
+  clientDescription: string;
+  technicalDescription: string;
+  deliverables: string[];
+  exclusions: string[];
+  assumptions: string[];
+}
+
 // "Entenda este serviço": Modal do Design System já resolve trap de foco, Escape e
 // restauração de foco — este componente só monta o conteúdo.
-export function HonServiceDetailModal({ item, onClose }: { item: ServiceCatalogItem | null; onClose: () => void }) {
+export function HonServiceDetailModal({ item, onClose }: { item: ServiceDetailContent | null; onClose: () => void }) {
   return <Modal open={item !== null} title={item?.name ?? ""} onClose={onClose}>
     {item && <div className="hon-catalog-detail">
       <Badge tone="neutral">{serviceCategoryLabels[item.category]}</Badge>
