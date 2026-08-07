@@ -23,6 +23,10 @@ Agrupamento comercial (distinto de `stage`, que é a etapa de projeto): Diagnós
 
 A aba "Serviços e horas" do HON exibe o catálogo completo (busca por nome/descrição/categoria, filtro por categoria) com a ação "Entenda este serviço", que abre um modal com a descrição técnica, entregáveis, exclusões e premissas do item — sem seção vazia quando a lista correspondente não se aplica.
 
-### Fora de escopo nesta fase (planejado para HON-002C)
+### Composição personalizada (HON-002C)
 
-`dependencies`, `incompatibilities`, `unitPrice`/regra de preço explícita, `quantity`, `optional`, `complimentary`, desconto individual e pacotes sugeridos — esses campos ainda não existem no modelo; a composição personalizada de serviços é a próxima fase.
+`quantity`, `optional`, `complimentary` e desconto individual passaram a existir — não no `ServiceCatalogItem` (que continua descrevendo o serviço em abstrato), mas no `FeeServiceInput` de cada estudo, quando o serviço é adicionado à composição. Ver `docs/hon/HON_SERVICE_COMPOSITION.md`.
+
+### Ainda fora de escopo
+
+`dependencies`, `incompatibilities`, `unitPrice`/regra de preço explícita e pacotes sugeridos — esses campos ainda não existem no modelo.
