@@ -6,7 +6,7 @@ import { Badge, Button, EmptyState, Field as DsField, PageActionBar, Spinner, Ta
 import { ProjectMasterRecord, createId } from "../../../domain/project-master-record";
 import { getParametricStudyRepository } from "../../cap/repositories/parametric-study-repository";
 import {
-  FeeCalculationStudy, FeeScenario, PaymentPlan, StructureProfile,
+  FeeCalculationStudy, FeeScenario, PaymentPlan, ServiceCatalogItem, StructureProfile,
 } from "../domain/hon-types";
 import {
   FeeScenarioRepository, FeeSnapshotRepository, FeeStudyRepository, PaymentPlanRepository,
@@ -16,6 +16,7 @@ import { calculateHourlyCost, createPaymentPlan } from "../services/hon-engine";
 import {
   approveStudy, assessCapacity, calculateAndVersionStudy, createFeeStudy, createProposalPricingSnapshot, createScenario,
 } from "../services/hon-study-service";
+import { HonServiceCatalogPanel } from "./catalog/hon-service-catalog-panel";
 import { domainErrorMessage, inputMoney, money, parseMoney } from "./hon-formatters";
 import { Metric } from "./hon-metric";
 import { Warnings } from "./hon-warnings";
@@ -107,6 +108,7 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
   const [tab, setTab] = useState<Tab>("overview");
   const [projectId, setProjectId] = useState(initialProjectId ?? projects[0]?.id ?? "");
   const [profiles, setProfiles] = useState<StructureProfile[]>([]);
+  const [catalog, setCatalog] = useState<ServiceCatalogItem[]>([]);
   const [studies, setStudies] = useState<FeeCalculationStudy[]>([]);
   const [study, setStudy] = useState<FeeCalculationStudy | null>(null);
   const [scenarios, setScenarios] = useState<FeeScenario[]>([]);
@@ -133,8 +135,8 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
 
   useEffect(() => { void (async () => {
     try {
-      const loadedProfiles = await profileRepo.ensureDefaults(); await catalogRepo.ensureDefaults();
-      const loadedStudies = await studyRepo.list(); setProfiles(loadedProfiles); setStudies(loadedStudies);
+      const loadedProfiles = await profileRepo.ensureDefaults(); const loadedCatalog = await catalogRepo.ensureDefaults();
+      const loadedStudies = await studyRepo.list(); setProfiles(loadedProfiles); setCatalog(loadedCatalog); setStudies(loadedStudies);
       const selected = loadedStudies.find((item) => item.projectId === projectId) ?? null;
       setStudy(selected); if (selected) { setScenarios(await scenarioRepo.listByStudy(selected.id)); setSnapshotCount((await snapshotRepo.listByStudy(selected.id)).length); }
     } catch (reason) { showNotice(reason instanceof Error ? reason.message : "Falha ao abrir HON-001.", "error"); }
@@ -327,7 +329,10 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
         {hourly.warnings.length > 0 && <Warnings items={hourly.warnings} />}</>}
 
       {tab === "services" && study && <><PanelTitle title="Serviços e estimativa manual de horas" help="A estimativa assistida permanece identificada como sugestão; nenhuma hora foi inventada pelo sistema." />
-        <div className="hon-table-wrap"><table><thead><tr><th>Inclui</th><th>Serviço</th><th>Etapa</th><th>Horas estimadas</th><th>Observações</th></tr></thead><tbody>{study.services.map((service) => <tr key={service.id}><td><input aria-label={`Incluir ${service.name}`} type="checkbox" checked={service.included} onChange={(event) => mutate({ services: study.services.map((item) => item.id === service.id ? { ...item, included: event.target.checked } : item) })} /></td><td>{service.name}</td><td>{service.stage}</td><td><input aria-label={`Horas de ${service.name}`} type="number" min="0" step="0.5" value={service.estimatedHours} onChange={(event) => mutate({ services: study.services.map((item) => item.id === service.id ? { ...item, estimatedHours: Number(event.target.value) } : item) })} /></td><td><input aria-label={`Observações de ${service.name}`} value={service.notes} onChange={(event) => mutate({ services: study.services.map((item) => item.id === service.id ? { ...item, notes: event.target.value } : item) })} /></td></tr>)}</tbody></table></div><Button variant="secondary" icon={Save} onClick={() => void saveStudy()}>Salvar horas</Button></>}
+        <div className="hon-table-wrap"><table><thead><tr><th>Inclui</th><th>Serviço</th><th>Etapa</th><th>Horas estimadas</th><th>Observações</th></tr></thead><tbody>{study.services.map((service) => <tr key={service.id}><td><input aria-label={`Incluir ${service.name}`} type="checkbox" checked={service.included} onChange={(event) => mutate({ services: study.services.map((item) => item.id === service.id ? { ...item, included: event.target.checked } : item) })} /></td><td>{service.name}</td><td>{service.stage}</td><td><input aria-label={`Horas de ${service.name}`} type="number" min="0" step="0.5" value={service.estimatedHours} onChange={(event) => mutate({ services: study.services.map((item) => item.id === service.id ? { ...item, estimatedHours: Number(event.target.value) } : item) })} /></td><td><input aria-label={`Observações de ${service.name}`} value={service.notes} onChange={(event) => mutate({ services: study.services.map((item) => item.id === service.id ? { ...item, notes: event.target.value } : item) })} /></td></tr>)}</tbody></table></div><Button variant="secondary" icon={Save} onClick={() => void saveStudy()}>Salvar horas</Button>
+        <PanelTitle title="Catálogo de serviços" help="Consulte o catálogo completo do escritório para entender cada serviço antes de ajustar o escopo acima." />
+        <HonServiceCatalogPanel catalog={catalog} study={study} />
+      </>}
 
       {tab === "complexity" && study && <><PanelTitle title="Complexidade" help="O ajuste manual divergente da sugestão exige justificativa." /><div className="hon-form-grid"><Field label="Nível sugerido"><input readOnly value={study.inputs.complexitySuggestedLevel} /></Field><Field label="Pontuação"><input type="number" min="0" value={study.inputs.complexityScore} onChange={(e) => inputs({ complexityScore: Number(e.target.value) })} /></Field><Field label="Nível escolhido"><select value={study.inputs.complexityLevel} onChange={(e) => inputs({ complexityLevel: e.target.value as FeeCalculationStudy["inputs"]["complexityLevel"] })}>{[["very_simple", "Muito simples · 0,85"], ["simple", "Simples · 1,00"], ["medium", "Médio · 1,20"], ["complex", "Complexo · 1,45"], ["very_complex", "Muito complexo · 1,80"]].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field><Field label="Justificativa"><textarea value={study.inputs.complexityJustification} onChange={(e) => inputs({ complexityJustification: e.target.value })} /></Field></div><p className="hon-help">Avalie construção existente, levantamento, pavimentos, terreno, legislação, condomínio, ocupação, ambientes, disciplinas, detalhamento, decisores, prazo, BIM, risco e incerteza de escopo.</p></>}
 

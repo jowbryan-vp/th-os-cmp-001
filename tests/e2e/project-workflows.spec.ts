@@ -160,7 +160,8 @@ test("exports and restores a complete browser backup", async ({ page }) => {
   const envelope = JSON.parse(buffer.toString());
   expect(envelope.kind).toBe("consolidated-backup");
   expect(envelope.backupSchemaVersion).toBe(4);
-  expect(envelope.honSchemaVersion).toBe(1);
+  // honSchemaVersion 2 desde o HON-002B (catálogo com category/descrições/entregáveis).
+  expect(envelope.honSchemaVersion).toBe(2);
   expect(envelope.feeStudies).toEqual([]);
   expect(envelope.referenceCatalogOptions.length).toBeGreaterThan(0);
   expect(envelope.projectRecords).toHaveLength(2);
@@ -722,6 +723,69 @@ test("HON-002A: edições repetidas não causam loop de renderização nem erros
   await expect(hoursField).toHaveValue("15");
   await expect(page.getByText("Alterações não salvas")).toBeVisible();
   expect(consoleErrors, `esperava nenhum erro de console; obteve: ${consoleErrors.join(" | ")}`).toHaveLength(0);
+});
+
+test("HON-002B: catálogo de serviços — categoria, busca, detalhe do serviço, foco e persistência", async ({ page }) => {
+  await page.getByRole("button", { name: "HON-001" }).click();
+  await page.getByRole("button", { name: "Criar estudo e importar escopo" }).click();
+  await expect(page.getByRole("heading", { name: "Serviços e estimativa manual de horas" })).toBeVisible();
+
+  // 1-4) catálogo aberto por padrão na aba Serviços e horas, com categoria e descrição curta visíveis.
+  await expect(page.getByRole("heading", { name: "Catálogo de serviços" })).toBeVisible();
+  const cadastralCard = page.locator(".hon-catalog-card").filter({ hasText: "Levantamento cadastral" });
+  await expect(cadastralCard).toBeVisible();
+  await expect(cadastralCard.getByText("Diagnóstico e levantamento")).toBeVisible();
+  await expect(cadastralCard.getByText(/Medimos o imóvel como ele está hoje/)).toBeVisible();
+
+  // 5-9) "Entenda este serviço" mostra descrição comercial, técnica, entregáveis, exclusões e premissas.
+  const trigger = cadastralCard.getByRole("button", { name: "Entenda este serviço" });
+  await trigger.click();
+  const modal = page.getByRole("dialog", { name: "Levantamento cadastral" });
+  await expect(modal).toBeVisible();
+  await expect(modal.getByText(/Medimos o imóvel como ele está hoje/)).toBeVisible();
+  await expect(modal.getByRole("heading", { name: "Descrição técnica" })).toBeVisible();
+  await expect(modal.getByText(/Levantamento planialtimétrico e cadastral/)).toBeVisible();
+  await expect(modal.getByRole("heading", { name: "Entregáveis" })).toBeVisible();
+  await expect(modal.getByText("Planta de levantamento cadastral")).toBeVisible();
+  await expect(modal.getByRole("heading", { name: "Não inclui" })).toBeVisible();
+  await expect(modal.getByText("Sondagem de solo")).toBeVisible();
+  await expect(modal.getByRole("heading", { name: "Premissas" })).toBeVisible();
+  await expect(modal.getByText("Acesso completo ao imóvel para medição")).toBeVisible();
+
+  // 10) fechar por Escape restaura o foco no botão que abriu o modal.
+  await page.keyboard.press("Escape");
+  await expect(modal).toBeHidden();
+  await expect(trigger).toBeFocused();
+
+  // 11) busca por nome/descrição/categoria.
+  await page.getByLabel("Buscar serviço").fill("drone");
+  await expect(page.getByText("Nenhum serviço encontrado")).toBeVisible();
+  await page.getByLabel("Buscar serviço").fill("cadastral");
+  await expect(page.locator(".hon-catalog-card")).toHaveCount(1);
+  await page.getByLabel("Buscar serviço").fill("");
+
+  // 11) filtro por categoria.
+  await page.getByLabel("Categoria").selectOption({ label: "BIM e coordenação" });
+  const bimCards = page.locator(".hon-catalog-card");
+  await expect(bimCards).toHaveCount(4);
+  await expect(bimCards.first()).toContainText("BIM e coordenação");
+  await page.getByLabel("Categoria").selectOption({ label: "Todas" });
+
+  // 13-14) reload mantém o catálogo com descrições e o estudo existente continua abrindo.
+  await page.reload();
+  await page.getByRole("button", { name: "HON-001" }).click();
+  await page.getByRole("tab", { name: "Serviços e horas" }).click();
+  await expect(page.getByRole("heading", { name: "Catálogo de serviços" })).toBeVisible();
+  const cadastralCardAfterReload = page.locator(".hon-catalog-card").filter({ hasText: "Levantamento cadastral" });
+  await expect(cadastralCardAfterReload.getByText(/Medimos o imóvel como ele está hoje/)).toBeVisible();
+});
+
+test("HON-002B: catálogo de serviços sem overflow horizontal em mobile", async ({ page }) => {
+  await page.getByRole("button", { name: "HON-001" }).click();
+  await page.getByRole("button", { name: "Criar estudo e importar escopo" }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole("heading", { name: "Catálogo de serviços" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
 });
 
 test("keeps projects isolated between browser contexts", async ({ browser }) => {

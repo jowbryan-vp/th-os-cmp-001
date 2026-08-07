@@ -3,6 +3,7 @@ import {
   FEE_STUDY_STORE_NAME, PAYMENT_PLAN_STORE_NAME, SERVICE_CATALOG_STORE_NAME,
   STRUCTURE_PROFILE_STORE_NAME, openThOsDatabase, requestResult, transactionDone,
 } from "../../../data/th-os-database";
+import { migrateServiceCatalogItem } from "../domain/hon-migrations";
 import {
   feeCalibrationSchema, feeScenarioSchema, feeSnapshotSchema, feeStudySchema,
   paymentPlanSchema, serviceCatalogItemSchema, structureProfileSchema,
@@ -53,7 +54,7 @@ export class StructureProfileRepository extends IndexedDbEntityRepository<Struct
   }
 }
 export class ServiceCatalogRepository extends IndexedDbEntityRepository<ServiceCatalogItem> {
-  constructor() { super(SERVICE_CATALOG_STORE_NAME, (value) => serviceCatalogItemSchema.parse(value)); }
+  constructor() { super(SERVICE_CATALOG_STORE_NAME, (value) => serviceCatalogItemSchema.parse(migrateServiceCatalogItem(value))); }
   async ensureDefaults() { if ((await this.list()).length === 0) for (const item of defaultServiceCatalog) await this.save(item); return this.list(); }
 }
 export class FeeSnapshotRepository extends IndexedDbEntityRepository<FeeSnapshot> {
@@ -85,12 +86,15 @@ export async function readHonBackupData(): Promise<HonBackupData> {
   return { feeStudies, feeScenarios, structureProfiles, serviceCatalog, feeSnapshots, paymentPlans, feeCalibrationRecords };
 }
 
-export function parseHonBackupData(input: HonBackupData, projectIds: Set<string>): HonBackupData {
+// serviceCatalog chega solto (unknown), não pré-tipado: pode vir de um backup honSchemaVersion 1
+// (sem os campos do HON-002B), então precisa passar pela migração antes da validação estrita.
+export interface HonBackupInput extends Omit<HonBackupData, "serviceCatalog"> { serviceCatalog: unknown[]; }
+export function parseHonBackupData(input: HonBackupInput, projectIds: Set<string>): HonBackupData {
   const parsed: HonBackupData = {
     feeStudies: input.feeStudies.map((item) => feeStudySchema.parse(item)),
     feeScenarios: input.feeScenarios.map((item) => feeScenarioSchema.parse(item)),
     structureProfiles: input.structureProfiles.map((item) => structureProfileSchema.parse(item)),
-    serviceCatalog: input.serviceCatalog.map((item) => serviceCatalogItemSchema.parse(item)),
+    serviceCatalog: input.serviceCatalog.map((item) => serviceCatalogItemSchema.parse(migrateServiceCatalogItem(item))),
     feeSnapshots: input.feeSnapshots.map((item) => feeSnapshotSchema.parse(item)),
     paymentPlans: input.paymentPlans.map((item) => paymentPlanSchema.parse(item)),
     feeCalibrationRecords: input.feeCalibrationRecords.map((item) => feeCalibrationSchema.parse(item)),

@@ -1474,6 +1474,21 @@ button[aria-disabled="true"] {
 .hon-panel details { margin-top: 18px; padding: 14px; border: 1px solid #dce0d6; border-radius: 8px; }
 .hon-panel summary { cursor: pointer; font-weight: 750; }
 .hon-panel pre { max-width: 100%; overflow: auto; font-size: .75rem; }
+
+/* HON-002B: catálogo de serviços */
+.hon-catalog { margin-top: 16px; }
+.hon-catalog-toolbar { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 13px; align-items: end; margin-bottom: 16px; }
+.hon-catalog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.hon-catalog-card { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 16px; background: #f8f9f5; border: 1px solid #dce0d6; border-radius: 10px; }
+.hon-catalog-card__header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: start; gap: 8px; }
+.hon-catalog-card__header h3 { margin: 0; overflow-wrap: anywhere; }
+.hon-catalog-card p { flex: 1; margin: 0; color: #4c5145; overflow-wrap: anywhere; }
+.hon-catalog-card__footer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+.hon-catalog-detail { display: grid; gap: 14px; max-width: 100%; }
+.hon-catalog-detail__lede { margin: 0; font-size: 1rem; }
+.hon-catalog-detail-section h3 { margin: 0 0 6px; font-size: .92rem; }
+.hon-catalog-detail-section p, .hon-catalog-detail-section ul { margin: 0; overflow-wrap: anywhere; }
+.hon-catalog-detail-section ul { padding-left: 20px; }
 @media (max-width: 1050px) {
   .hon-form-grid, .hon-edit-card { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hon-summary, .hon-price-ladder, .hon-scenario-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1483,6 +1498,8 @@ button[aria-disabled="true"] {
   .hon-panel { padding: 16px; }
   .hon-form-grid, .hon-edit-card, .hon-summary, .hon-price-ladder, .hon-scenario-grid { grid-template-columns: 1fr; }
   .hon-notice { align-items: flex-start; }
+  .hon-catalog-toolbar { grid-template-columns: 1fr; }
+  .hon-catalog-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
   /* .topbar assume max-height: 96px nesta largura (ver regra em @media (max-width: 600px) acima). */
