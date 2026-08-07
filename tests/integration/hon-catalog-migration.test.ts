@@ -82,7 +82,7 @@ test("restauração de backup honSchemaVersion 1: catálogo antigo no envelope �
   await resetDb();
   const parsed = parseHonBackupData({
     feeStudies: [], feeScenarios: [], structureProfiles: [], feeSnapshots: [], paymentPlans: [], feeCalibrationRecords: [],
-    serviceCatalog: [legacyCadastralSurvey()],
+    proposalDrafts: [], serviceCatalog: [legacyCadastralSurvey()],
   }, new Set());
   assert.equal(parsed.serviceCatalog.length, 1);
   assert.equal(parsed.serviceCatalog[0].category, "diagnosis");
