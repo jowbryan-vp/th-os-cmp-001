@@ -160,8 +160,8 @@ test("exports and restores a complete browser backup", async ({ page }) => {
   const envelope = JSON.parse(buffer.toString());
   expect(envelope.kind).toBe("consolidated-backup");
   expect(envelope.backupSchemaVersion).toBe(4);
-  // honSchemaVersion 2 desde o HON-002B (catálogo com category/descrições/entregáveis).
-  expect(envelope.honSchemaVersion).toBe(2);
+  // honSchemaVersion 3 desde o HON-002C (composição comercial por serviço e histórico de decisões).
+  expect(envelope.honSchemaVersion).toBe(3);
   expect(envelope.feeStudies).toEqual([]);
   expect(envelope.referenceCatalogOptions.length).toBeGreaterThan(0);
   expect(envelope.projectRecords).toHaveLength(2);
@@ -731,8 +731,13 @@ test("HON-002B: catálogo de serviços — categoria, busca, detalhe do serviço
   await expect(page.getByRole("heading", { name: "Serviços e estimativa manual de horas" })).toBeVisible();
 
   // 1-4) catálogo aberto por padrão na aba Serviços e horas, com categoria e descrição curta visíveis.
+  // Escopado a ".hon-catalog" (o painel de navegação do catálogo): desde o HON-002C, a composição
+  // (".hon-composition") também renderiza cards com a classe ".hon-catalog-card" para reaproveitar
+  // o mesmo estilo — sem o escopo, "Levantamento cadastral" (já incluído por padrão) resolveria em
+  // dois elementos.
   await expect(page.getByRole("heading", { name: "Catálogo de serviços" })).toBeVisible();
-  const cadastralCard = page.locator(".hon-catalog-card").filter({ hasText: "Levantamento cadastral" });
+  const catalogPanel = page.locator(".hon-catalog");
+  const cadastralCard = catalogPanel.locator(".hon-catalog-card").filter({ hasText: "Levantamento cadastral" });
   await expect(cadastralCard).toBeVisible();
   await expect(cadastralCard.getByText("Diagnóstico e levantamento")).toBeVisible();
   await expect(cadastralCard.getByText(/Medimos o imóvel como ele está hoje/)).toBeVisible();
@@ -758,25 +763,25 @@ test("HON-002B: catálogo de serviços — categoria, busca, detalhe do serviço
   await expect(trigger).toBeFocused();
 
   // 11) busca por nome/descrição/categoria.
-  await page.getByLabel("Buscar serviço").fill("drone");
+  await catalogPanel.getByLabel("Buscar serviço").fill("drone");
   await expect(page.getByText("Nenhum serviço encontrado")).toBeVisible();
-  await page.getByLabel("Buscar serviço").fill("cadastral");
-  await expect(page.locator(".hon-catalog-card")).toHaveCount(1);
-  await page.getByLabel("Buscar serviço").fill("");
+  await catalogPanel.getByLabel("Buscar serviço").fill("cadastral");
+  await expect(catalogPanel.locator(".hon-catalog-card")).toHaveCount(1);
+  await catalogPanel.getByLabel("Buscar serviço").fill("");
 
   // 11) filtro por categoria.
-  await page.getByLabel("Categoria").selectOption({ label: "BIM e coordenação" });
-  const bimCards = page.locator(".hon-catalog-card");
+  await catalogPanel.getByLabel("Categoria").selectOption({ label: "BIM e coordenação" });
+  const bimCards = catalogPanel.locator(".hon-catalog-card");
   await expect(bimCards).toHaveCount(4);
   await expect(bimCards.first()).toContainText("BIM e coordenação");
-  await page.getByLabel("Categoria").selectOption({ label: "Todas" });
+  await catalogPanel.getByLabel("Categoria").selectOption({ label: "Todas" });
 
   // 13-14) reload mantém o catálogo com descrições e o estudo existente continua abrindo.
   await page.reload();
   await page.getByRole("button", { name: "HON-001" }).click();
   await page.getByRole("tab", { name: "Serviços e horas" }).click();
   await expect(page.getByRole("heading", { name: "Catálogo de serviços" })).toBeVisible();
-  const cadastralCardAfterReload = page.locator(".hon-catalog-card").filter({ hasText: "Levantamento cadastral" });
+  const cadastralCardAfterReload = page.locator(".hon-catalog").locator(".hon-catalog-card").filter({ hasText: "Levantamento cadastral" });
   await expect(cadastralCardAfterReload.getByText(/Medimos o imóvel como ele está hoje/)).toBeVisible();
 });
 
@@ -785,6 +790,148 @@ test("HON-002B: catálogo de serviços sem overflow horizontal em mobile", async
   await page.getByRole("button", { name: "Criar estudo e importar escopo" }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole("heading", { name: "Catálogo de serviços" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
+});
+
+function moneyToCents(text: string): number {
+  const normalized = text.replace(/[^0-9,.-]/g, "").replace(/\./g, "").replace(",", ".");
+  return Math.round(parseFloat(normalized) * 100);
+}
+
+test("HON-002C: composição de serviços — incluir, opcional, cortesia, quantidade, desconto, filtro, item personalizado, resultado e persistência", async ({ page }) => {
+  await page.getByRole("button", { name: "HON-001" }).click();
+  await page.getByRole("button", { name: "Criar estudo e importar escopo" }).click();
+  await expect(page.getByRole("heading", { name: "Serviços e estimativa manual de horas" })).toBeVisible();
+
+  const composition = page.locator(".hon-composition");
+  const catalog = page.locator(".hon-catalog");
+
+  // 1) Adicionar um serviço do catálogo à composição — entra em estado neutro "não contratado",
+  // nunca comprometendo preço implicitamente.
+  const landscapeCatalogCard = catalog.locator(".hon-catalog-card").filter({ hasText: "Paisagismo" });
+  await landscapeCatalogCard.getByRole("button", { name: "Adicionar ao estudo" }).click();
+  await expect(landscapeCatalogCard.getByText("Na composição · Não contratado")).toBeVisible();
+  const landscapeCard = composition.locator(".hon-composition-card").filter({ hasText: "Paisagismo" });
+  await expect(landscapeCard).toBeVisible();
+
+  // 2) incluir serviço.
+  await landscapeCard.getByLabel(/Estado de Paisagismo/).selectOption("included");
+  await expect(landscapeCard.locator(".hon-catalog-card__header").getByText("Incluído", { exact: true })).toBeVisible();
+  await landscapeCard.getByLabel(/Horas de Paisagismo/).fill("10");
+  const subtotalIncludedAfterHours = await page.locator(".hon-composition-totals").getByText("Subtotal incluído").locator("xpath=following-sibling::strong").innerText();
+  expect(moneyToCents(subtotalIncludedAfterHours)).toBeGreaterThan(0);
+
+  // 4) alterar quantidade — o subtotal do item dobra.
+  const landscapeSubtotalBefore = moneyToCents(await landscapeCard.getByText(/^Subtotal: /).innerText());
+  await landscapeCard.getByLabel(/Quantidade de Paisagismo/).fill("2");
+  const landscapeSubtotalAfterQuantity = moneyToCents(await landscapeCard.getByText(/^Subtotal: /).innerText());
+  expect(landscapeSubtotalAfterQuantity).toBe(landscapeSubtotalBefore * 2);
+
+  // 5) aplicar desconto — reduz exatamente o valor informado, sem depender da tarifa-hora.
+  await landscapeCard.getByLabel(/Desconto de Paisagismo/).fill("50,00");
+  const landscapeSubtotalAfterDiscount = moneyToCents(await landscapeCard.getByText(/^Subtotal: /).innerText());
+  expect(landscapeSubtotalAfterDiscount).toBe(landscapeSubtotalAfterQuantity - 5_000);
+
+  // 6-7) subtotal e total contratado atualizam juntos.
+  const contractedTotal = moneyToCents(await page.locator(".hon-composition-totals").getByText("Total contratado").locator("xpath=following-sibling::strong").innerText());
+  expect(contractedTotal).toBeGreaterThanOrEqual(landscapeSubtotalAfterDiscount);
+
+  // 2/3) marcar outro serviço (já incluído por padrão no escopo importado) como opcional e cortesia.
+  const cadastralCard = composition.locator(".hon-composition-card").filter({ hasText: "Levantamento cadastral" });
+  await cadastralCard.getByLabel(/Horas de Levantamento cadastral/).fill("20");
+  await cadastralCard.getByLabel(/Estado de Levantamento cadastral/).selectOption("optional");
+  await expect(cadastralCard.locator(".hon-catalog-card__header").getByText("Opcional", { exact: true })).toBeVisible();
+  const optionalTotal = moneyToCents(await page.locator(".hon-composition-totals").getByText("Total de opcionais").locator("xpath=following-sibling::strong").innerText());
+  expect(optionalTotal).toBeGreaterThan(0);
+  // 8) opcional nunca entra no total contratado.
+  const contractedAfterOptional = moneyToCents(await page.locator(".hon-composition-totals").getByText("Total contratado").locator("xpath=following-sibling::strong").innerText());
+  expect(contractedAfterOptional).toBe(contractedTotal);
+
+  const bimCard = composition.locator(".hon-composition-card").filter({ hasText: "Coordenação BIM" });
+  await bimCard.getByLabel(/Horas de Coordenação BIM/).fill("5");
+  await bimCard.getByLabel(/Estado de Coordenação BIM/).selectOption("complimentary");
+  await expect(bimCard.locator(".hon-catalog-card__header").getByText("Cortesia", { exact: true })).toBeVisible();
+  const complimentaryTotal = moneyToCents(await page.locator(".hon-composition-totals").getByText("Total de cortesias").locator("xpath=following-sibling::strong").innerText());
+  expect(complimentaryTotal).toBeGreaterThan(0);
+  const contractedAfterComplimentary = moneyToCents(await page.locator(".hon-composition-totals").getByText("Total contratado").locator("xpath=following-sibling::strong").innerText());
+  expect(contractedAfterComplimentary, "cortesia não deve somar valor ao total contratado").toBe(contractedTotal);
+
+  // 10) filtrar por estado comercial — só o serviço opcional aparece.
+  await composition.getByLabel("Estado comercial").selectOption("optional");
+  await expect(composition.locator(".hon-composition-card")).toHaveCount(1);
+  await expect(composition.locator(".hon-composition-card")).toContainText("Levantamento cadastral");
+  await composition.getByLabel("Estado comercial").selectOption("all");
+
+  // 9) abrir descrição de um item do catálogo a partir da composição.
+  await cadastralCard.getByRole("button", { name: "Entenda este serviço" }).click();
+  const detailDialog = page.getByRole("dialog", { name: "Levantamento cadastral" });
+  await expect(detailDialog).toBeVisible();
+  await expect(detailDialog.getByRole("heading", { name: "Descrição técnica" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(detailDialog).toBeHidden();
+
+  // 11) criar e editar um item personalizado — nunca altera um item padrão do catálogo.
+  await composition.getByRole("button", { name: "Serviço personalizado" }).click();
+  const customCard = composition.locator(".hon-composition-card").filter({ hasText: "Novo serviço personalizado" });
+  await expect(customCard).toBeVisible();
+  await customCard.getByRole("button", { name: "Editar item personalizado" }).click();
+  const editDialog = page.getByRole("dialog", { name: "Editar serviço personalizado" });
+  await editDialog.getByLabel("Nome").fill("Consultoria de iluminação externa");
+  await editDialog.getByLabel("Categoria").selectOption("interiors_specialties");
+  await editDialog.getByLabel("Descrição para o cliente").fill("Consultoria pontual de iluminação para as áreas externas.");
+  await editDialog.getByRole("button", { name: "Salvar item personalizado" }).click();
+  await expect(editDialog).toBeHidden();
+  const customServiceCard = composition.locator(".hon-composition-card").filter({ hasText: "Consultoria de iluminação externa" });
+  await expect(customServiceCard).toBeVisible();
+  await expect(customServiceCard.getByText("Consultoria pontual de iluminação")).toBeVisible();
+  // o item padrão do catálogo continua com a descrição curada, sem "Editar item personalizado".
+  await expect(cadastralCard.getByRole("button", { name: "Editar item personalizado" })).toHaveCount(0);
+
+  // 12) salvar.
+  await page.getByRole("button", { name: "Salvar", exact: true }).click();
+  await expect(page.getByText("Salvo", { exact: true })).toBeVisible();
+
+  // 13) reload preserva quantidade, desconto e estado comercial.
+  await page.reload();
+  await page.getByRole("button", { name: "HON-001" }).click();
+  await page.getByRole("tab", { name: "Serviços e horas" }).click();
+  const landscapeCardAfterReload = composition.locator(".hon-composition-card").filter({ hasText: "Paisagismo" });
+  await expect(landscapeCardAfterReload.getByLabel(/Quantidade de Paisagismo/)).toHaveValue("2");
+  await expect(landscapeCardAfterReload.getByLabel(/Desconto de Paisagismo/)).toHaveValue("50,00");
+  await expect(landscapeCardAfterReload.locator(".hon-catalog-card__header").getByText("Incluído", { exact: true })).toBeVisible();
+  await expect(composition.locator(".hon-composition-card").filter({ hasText: "Levantamento cadastral" }).locator(".hon-catalog-card__header").getByText("Opcional", { exact: true })).toBeVisible();
+  await expect(composition.locator(".hon-composition-card").filter({ hasText: "Consultoria de iluminação externa" })).toBeVisible();
+
+  // 14) resultado mostra o escopo separado por estado comercial.
+  await page.getByRole("button", { name: "Calcular honorários" }).click();
+  await expect(page.getByRole("tab", { name: "Resultado" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("heading", { name: "Contratados (dentro do valor final)" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Opcionais (fora do valor final)" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Cortesias (sem custo para o cliente)" })).toBeVisible();
+  const optionalSection = page.locator(".hon-table-wrap").filter({ has: page.getByRole("heading", { name: "Opcionais (fora do valor final)" }) });
+  await expect(optionalSection.getByRole("cell", { name: "Levantamento cadastral" })).toBeVisible();
+  const complimentarySection = page.locator(".hon-table-wrap").filter({ has: page.getByRole("heading", { name: "Cortesias (sem custo para o cliente)" }) });
+  await expect(complimentarySection.getByRole("cell", { name: "Coordenação BIM" })).toBeVisible();
+  const contractedSection = page.locator(".hon-table-wrap").filter({ has: page.getByRole("heading", { name: "Contratados (dentro do valor final)" }) });
+  await expect(contractedSection.getByRole("cell", { name: "Paisagismo" })).toBeVisible();
+
+  // histórico de decisões registra as ações relevantes.
+  await page.getByRole("tab", { name: "Histórico e snapshots" }).click();
+  await expect(page.getByText(/Levantamento cadastral marcado como opcional/)).toBeVisible();
+  await expect(page.getByText(/Coordenação BIM marcado como cortesia/)).toBeVisible();
+});
+
+// 15) mobile sem overflow horizontal com a composição populada (item do catálogo adicionado,
+// estado comercial alterado, filtros abertos).
+test("HON-002C: composição de serviços sem overflow horizontal em mobile", async ({ page }) => {
+  await page.getByRole("button", { name: "HON-001" }).click();
+  await page.getByRole("button", { name: "Criar estudo e importar escopo" }).click();
+  const catalog = page.locator(".hon-catalog");
+  const composition = page.locator(".hon-composition");
+  await catalog.locator(".hon-catalog-card").filter({ hasText: "Paisagismo" }).getByRole("button", { name: "Adicionar ao estudo" }).click();
+  await composition.locator(".hon-composition-card").filter({ hasText: "Paisagismo" }).getByLabel(/Estado de Paisagismo/).selectOption("optional");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole("heading", { name: "Serviços e estimativa manual de horas" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
 });
 
