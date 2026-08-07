@@ -162,6 +162,41 @@ test("gera entrada de 30% e de 50% com total exato de 100%", () => {
   assert.equal(fifty.installments.reduce((sum, item) => sum + item.percentage, 0), 100);
 });
 
+test("quantidade multiplica horas e custo fixo, nunca a tarifa-hora em si (HON-002C)", () => {
+  const withQuantity = study({ services: [{
+    id: "service-1", catalogItemId: null, code: "architecture", name: "Arquitetura", stage: "projeto",
+    category: "design", displayOrder: 100, estimatedHours: 10, hourlyCostCents: 1_000, fixedCostCents: 500,
+    minimumValueCents: 0, commercialState: "included", included: true, optional: false, complimentary: false,
+    quantity: 3, individualDiscountCents: 0, customDescription: null, notes: "",
+  }] });
+  const result = calculateFeeStudy(withQuantity, simpleProfile);
+  // (10h * 3) * 1000 + 500 * 3 = 30_000 + 1_500 = 31_500
+  assert.equal(result.internalLaborCost, 31_500);
+  assert.equal(result.totalEstimatedHours, 30);
+});
+
+test("desconto individual reduz o custo interno do serviço sem nunca ficar negativo (HON-002C)", () => {
+  const overDiscounted = study({ services: [{
+    id: "service-1", catalogItemId: null, code: "architecture", name: "Arquitetura", stage: "projeto",
+    category: "design", displayOrder: 100, estimatedHours: 10, hourlyCostCents: 1_000, fixedCostCents: 0,
+    minimumValueCents: 0, commercialState: "included", included: true, optional: false, complimentary: false,
+    quantity: 1, individualDiscountCents: 999_999, customDescription: null, notes: "",
+  }] });
+  const result = calculateFeeStudy(overDiscounted, simpleProfile);
+  assert.equal(result.internalLaborCost, 0, "desconto maior que o bruto zera a linha, nunca gera custo negativo");
+});
+
+test("cortesia e opcional não entram no custo interno nem no preço, mesmo com horas grandes (HON-002C)", () => {
+  const withNonContracted = study({ services: [
+    { id: "s1", catalogItemId: null, code: "a", name: "Incluído", stage: "projeto", category: "design", displayOrder: 1, estimatedHours: 10, hourlyCostCents: 1_000, fixedCostCents: 0, minimumValueCents: 0, commercialState: "included", included: true, optional: false, complimentary: false, quantity: 1, individualDiscountCents: 0, customDescription: null, notes: "" },
+    { id: "s2", catalogItemId: null, code: "b", name: "Cortesia", stage: "projeto", category: "design", displayOrder: 2, estimatedHours: 1_000, hourlyCostCents: 1_000, fixedCostCents: 0, minimumValueCents: 0, commercialState: "complimentary", included: false, optional: false, complimentary: true, quantity: 1, individualDiscountCents: 0, customDescription: null, notes: "" },
+    { id: "s3", catalogItemId: null, code: "c", name: "Opcional", stage: "projeto", category: "design", displayOrder: 3, estimatedHours: 1_000, hourlyCostCents: 1_000, fixedCostCents: 0, minimumValueCents: 0, commercialState: "optional", included: false, optional: true, complimentary: false, quantity: 1, individualDiscountCents: 0, customDescription: null, notes: "" },
+  ] });
+  const result = calculateFeeStudy(withNonContracted, simpleProfile);
+  assert.equal(result.internalLaborCost, 10_000, "só a linha incluída (10h * 1000) entra no custo interno");
+  assert.equal(result.totalEstimatedHours, 10);
+});
+
 test("rejeita plano com total diferente, parcela negativa e saldo sem vencimento", () => {
   const plan = createPaymentPlan("s", "custom", "thirty_installments", 100_000, "2026-08-04");
   plan.installments[0].percentage = 20;
