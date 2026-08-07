@@ -3,7 +3,8 @@
 import { RefObject } from "react";
 import { Button, EmptyState } from "../../../../design-system";
 import { ClipboardCheck, Download, Eye, Pencil } from "../../../../design-system/icons";
-import { FeeCalculationStudy } from "../../domain/hon-types";
+import { serviceLineNetCents } from "../../domain/hon-service-composition";
+import { FeeCalculationStudy, FeeServiceInput } from "../../domain/hon-types";
 import { money } from "../hon-formatters";
 import { Metric } from "../hon-metric";
 import { Warnings } from "../hon-warnings";
@@ -30,6 +31,15 @@ const compositionRows = (result: NonNullable<FeeCalculationStudy["results"]>) =>
   ["Doação", -result.donation], ["Ajuste de mínimo", result.minimumAdjustment],
 ] as const;
 
+function ServiceScopeTable({ title, services, hourlyCents }: { title: string; services: FeeServiceInput[]; hourlyCents: number }) {
+  return <div className="hon-table-wrap">
+    <h4>{title}</h4>
+    <table><thead><tr><th>Serviço</th><th>Etapa</th><th>Qtd.</th><th>Horas estimadas</th><th>Subtotal</th><th>Observações</th></tr></thead><tbody>
+      {services.map((service) => <tr key={service.id}><td>{service.name}</td><td>{service.stage}</td><td>{service.quantity}</td><td>{service.estimatedHours}</td><td>{money(serviceLineNetCents(service, hourlyCents))}</td><td>{service.notes || "—"}</td></tr>)}
+    </tbody></table>
+  </div>;
+}
+
 export function HonResultPanel({
   study, resultHeadingRef, onAdjustParameters, onGoToServices, onGoToScenarios,
   onGoToPayments, onExportInternal, onExportCommercial, onExportCsv,
@@ -39,7 +49,9 @@ export function HonResultPanel({
     return <EmptyState title="Nenhum resultado calculado ainda"
       description="Ajuste os parâmetros abaixo e use “Calcular honorários”, disponível na barra superior, para gerar o resumo, a composição e o escopo." />;
   }
-  const includedServices = study.services.filter((service) => service.included);
+  const includedServices = study.services.filter((service) => service.commercialState === "included");
+  const optionalServices = study.services.filter((service) => service.commercialState === "optional");
+  const complimentaryServices = study.services.filter((service) => service.commercialState === "complimentary");
 
   return <div className="hon-result">
     <h2 ref={resultHeadingRef} tabIndex={-1} className="hon-result-heading">Resumo executivo</h2>
@@ -66,12 +78,13 @@ export function HonResultPanel({
     </tbody></table></div>
 
     <h3>Escopo considerado</h3>
+    <p className="hon-help">O valor final acima cobre apenas os serviços contratados; opcionais e cortesias aparecem separados para ficar claro o que está dentro do preço.</p>
     {includedServices.length === 0
-      ? <EmptyState title="Nenhum serviço incluído" description="Volte para Serviços e horas para incluir os itens do escopo."
+      ? <EmptyState title="Nenhum serviço contratado" description="Volte para Serviços e horas para incluir os itens do escopo."
         action={{ children: "Ver serviços e horas", onClick: onGoToServices }} />
-      : <div className="hon-table-wrap"><table><thead><tr><th>Serviço</th><th>Etapa</th><th>Horas estimadas</th><th>Custo fixo</th><th>Observações</th></tr></thead><tbody>
-        {includedServices.map((service) => <tr key={service.id}><td>{service.name}</td><td>{service.stage}</td><td>{service.estimatedHours}</td><td>{service.fixedCostCents ? money(service.fixedCostCents) : "—"}</td><td>{service.notes || "—"}</td></tr>)}
-      </tbody></table></div>}
+      : <ServiceScopeTable title="Contratados (dentro do valor final)" services={includedServices} hourlyCents={result.minimumHourlyRate} />}
+    {optionalServices.length > 0 && <ServiceScopeTable title="Opcionais (fora do valor final)" services={optionalServices} hourlyCents={result.minimumHourlyRate} />}
+    {complimentaryServices.length > 0 && <ServiceScopeTable title="Cortesias (sem custo para o cliente)" services={complimentaryServices} hourlyCents={result.minimumHourlyRate} />}
 
     <h3>Condições comerciais</h3>
     {study.paymentPlan

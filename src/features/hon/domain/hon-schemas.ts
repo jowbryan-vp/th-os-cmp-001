@@ -1,7 +1,7 @@
 import { z } from "zod";
 import {
   FeeCalculationStudy, FeeCalibrationRecord, FeeScenario, FeeSnapshot, PaymentPlan,
-  ServiceCatalogItem, ServiceCategory, StructureProfile,
+  ServiceCatalogItem, ServiceCategory, ServiceCompositionHistoryEntry, StructureProfile,
 } from "./hon-types";
 
 export const serviceCategorySchema = z.enum([
@@ -49,6 +49,15 @@ export const serviceCatalogItemSchema = typed<ServiceCatalogItem>(z.object({
   active: z.boolean(), source: z.string(), confidence: z.enum(["unvalidated", "low", "medium", "high"]), notes: z.string(),
 }).strict());
 
+// Composta apenas de campos textuais/enum simples: mesmo tratamento permissivo dos demais
+// registros aninhados do HON (sem `.strict()`) para não travar em conteúdo futuro; o que
+// importa validar aqui é a forma mínima usada pela UI de histórico.
+export const compositionHistoryEntrySchema = typed<ServiceCompositionHistoryEntry>(z.object({
+  id: z.string().min(1), at: dateTime,
+  action: z.enum(["service_included", "service_removed", "marked_optional", "marked_complimentary", "discount_applied", "composition_saved"]),
+  serviceId: z.string().nullable(), serviceName: z.string().nullable(), detail: z.string(),
+}));
+
 const studyCore = z.object({
   id, schemaVersion: z.number().int().positive(), projectId: id, code: z.string().min(1), name: z.string().min(1),
   version: z.number().int().positive(), status: z.enum(["draft", "calculated", "under_review", "approved", "used_in_proposal", "superseded", "archived"]),
@@ -59,7 +68,12 @@ const studyCore = z.object({
   bim: z.record(z.string(), z.unknown()), construction: z.record(z.string(), z.unknown()),
   discounts: z.array(z.record(z.string(), z.unknown())), donations: z.array(z.record(z.string(), z.unknown())),
   paymentPlan: z.record(z.string(), z.unknown()).nullable(), results: z.record(z.string(), z.unknown()).nullable(),
-  snapshots: z.array(z.string()), createdAt: dateTime, updatedAt: dateTime, approvedAt: z.string().nullable(), notes: z.string(),
+  snapshots: z.array(z.string()),
+  // Opcional com default: estudos gravados antes do HON-002C (honSchemaVersion 1/2) não têm
+  // este campo — zod preenche [] na leitura, sem exigir migração manual (diferente de
+  // `services`, que carrega conteúdo real e por isso passa por hon-migrations.ts).
+  compositionHistory: z.array(compositionHistoryEntrySchema).optional().default([]),
+  createdAt: dateTime, updatedAt: dateTime, approvedAt: z.string().nullable(), notes: z.string(),
 }).strict();
 export const feeStudySchema = typed<FeeCalculationStudy>(studyCore);
 

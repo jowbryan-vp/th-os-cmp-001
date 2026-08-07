@@ -5,6 +5,7 @@ import { ArrowLeft, Calculator, CheckCircle2, Copy, Plus, Save } from "../../../
 import { Badge, Button, EmptyState, Field as DsField, PageActionBar, Spinner, Tabs, Toast } from "../../../design-system";
 import { ProjectMasterRecord, createId } from "../../../domain/project-master-record";
 import { getParametricStudyRepository } from "../../cap/repositories/parametric-study-repository";
+import { appendCompositionHistory, createServiceFromCatalogItem, serviceCommercialStateLabels } from "../domain/hon-service-composition";
 import {
   FeeCalculationStudy, FeeScenario, PaymentPlan, ServiceCatalogItem, StructureProfile,
 } from "../domain/hon-types";
@@ -13,10 +14,12 @@ import {
   ServiceCatalogRepository, StructureProfileRepository,
 } from "../repositories/hon-repositories";
 import { calculateHourlyCost, createPaymentPlan } from "../services/hon-engine";
+import { serviceCategoryLabels } from "../services/hon-catalog-content";
 import {
   approveStudy, assessCapacity, calculateAndVersionStudy, createFeeStudy, createProposalPricingSnapshot, createScenario,
 } from "../services/hon-study-service";
 import { HonServiceCatalogPanel } from "./catalog/hon-service-catalog-panel";
+import { HonServiceCompositionPanel } from "./composition/hon-service-composition-panel";
 import { domainErrorMessage, inputMoney, money, parseMoney } from "./hon-formatters";
 import { Metric } from "./hon-metric";
 import { Warnings } from "./hon-warnings";
@@ -71,7 +74,9 @@ const RELEVANT_INPUT_FIELDS = [
   "taxPercentage", "taxMode", "discountCents", "donationCents", "commercialPriceCents",
   "minimumContractCents", "directExpensesCents",
 ] as const;
-const RELEVANT_SERVICE_FIELDS = ["included", "estimatedHours", "hourlyCostCents", "fixedCostCents"] as const;
+const RELEVANT_SERVICE_FIELDS = [
+  "included", "estimatedHours", "hourlyCostCents", "fixedCostCents", "quantity", "individualDiscountCents",
+] as const;
 const RELEVANT_PARTNER_FIELDS = ["includedInContract", "costCents", "urgencyCents", "managementPercentage"] as const;
 const RELEVANT_TRAVEL_FIELDS = [
   "roundTripKm", "costPerKmCents", "travelHours", "technicalHours", "reportHours",
@@ -130,6 +135,10 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
   // durante a renderização para derivar os badges de status — refs não podem ser lidas no render.
   const [lastSavedSignature, setLastSavedSignature] = useState<string | null>(null);
   const [lastCalculatedSignature, setLastCalculatedSignature] = useState<string | null>(null);
+  // Última composição de serviços efetivamente salva — usada só para o diff que gera entradas
+  // de histórico (hon-service-composition.ts) no próximo salvamento. Ref, não estado: não
+  // precisa disparar re-render, só precisa estar correta no momento em que saveStudy() roda.
+  const lastSavedServicesRef = useRef<FeeCalculationStudy["services"]>([]);
 
   const showNotice = (text: string, variant: NoticeVariant = "info") => setNoticeState({ text, variant });
 
@@ -187,6 +196,16 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
       setLastCalculatedSignature(study.results && activeProfile ? computeCalcSignature(study, activeProfile) : null);
     }
   }
+  // Refs não podem ser escritos durante a renderização (regra react-hooks/refs) — diferente das
+  // assinaturas acima (estado, ajustado durante a renderização de propósito, ver comentário
+  // grande abaixo), o valor do ref só é lido dentro de saveStudy() (um event handler), então
+  // não há risco do "flash" que motivou o padrão acima: um efeito rodando depois do paint é
+  // suficiente e mais simples.
+  // Intencionalmente reage só a `study?.id` (troca de estudo) — incluir `study?.services` faria
+  // o ref acompanhar toda edição em memória, quando o objetivo é justamente guardar a
+  // composição da ÚLTIMA VERSÃO SALVA para o diff de histórico em saveStudy().
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { lastSavedServicesRef.current = study?.services ?? []; }, [study?.id]);
 
   // Move o foco para o resumo executivo somente quando a troca para "result" foi
   // consequência direta de um cálculo bem-sucedido (não em navegação manual de aba).
@@ -217,9 +236,17 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
     if (!next) return undefined;
     setSaveStatus("saving");
     try {
-      const saved = await studyRepo.save(next);
+      // Diff da composição contra a última versão efetivamente salva (não contra o que estava
+      // em memória antes deste patch) — só decisões relevantes (HON-002C item 12), calculadas
+      // uma vez por salvamento, nunca por tecla digitada.
+      const withHistory: FeeCalculationStudy = {
+        ...next,
+        compositionHistory: appendCompositionHistory(next.compositionHistory, lastSavedServicesRef.current, next.services, new Date().toISOString()),
+      };
+      const saved = await studyRepo.save(withHistory);
       setStudy(saved); setStudies((items) => [saved, ...items.filter((item) => item.id !== saved.id)]);
       setLastSavedSignature(computeSaveSignature(saved));
+      lastSavedServicesRef.current = saved.services;
       setSaveStatus("idle"); showNotice("Estudo salvo neste dispositivo.", "success");
       return saved;
     } catch (reason) {
@@ -295,7 +322,12 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
   }
   function exportInternal() { if (study) download(`${study.code.toLowerCase()}-memoria-interna.json`, JSON.stringify(study, null, 2)); }
   function exportCommercial() { if (study?.results) download(`${study.code.toLowerCase()}-resumo-cliente.json`, JSON.stringify(createProposalPricingSnapshot(study, scenarios[0]?.id ?? null), null, 2)); }
-  function exportCsv() { if (study) download(`${study.code.toLowerCase()}-servicos.csv`, `servico;etapa;horas;incluido\n${study.services.map((item) => `"${item.name}";"${item.stage}";${String(item.estimatedHours).replace(".", ",")};${item.included ? "sim" : "nao"}`).join("\n")}`, "text/csv;charset=utf-8"); }
+  function exportCsv() {
+    if (!study) return;
+    const header = "servico;categoria;etapa;horas;quantidade;estado;desconto;observacoes";
+    const rows = study.services.map((item) => `"${item.name}";"${serviceCategoryLabels[item.category]}";"${item.stage}";${String(item.estimatedHours).replace(".", ",")};${item.quantity};"${serviceCommercialStateLabels[item.commercialState]}";${inputMoney(item.individualDiscountCents)};"${item.notes}"`);
+    download(`${study.code.toLowerCase()}-servicos.csv`, `${header}\n${rows.join("\n")}`, "text/csv;charset=utf-8");
+  }
 
   if (loading) return <main className="hon-loading"><Spinner label="Carregando Calculadora de Honorários" /><span>Carregando Calculadora de Honorários…</span></main>;
   return <main className="hon-shell">
@@ -328,10 +360,11 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
         <h3>Investimentos</h3><div className="hon-table-wrap"><table><thead><tr><th>Item</th><th>Valor</th><th>Recuperação</th><th>Revisão</th></tr></thead><tbody>{profile.investments.map((item) => <tr key={item.id}><td>{item.name}</td><td>{money(item.amountCents)}</td><td>{item.recoverySuspended ? "Suspensa" : `${item.recoveryMonths} meses`}</td><td>{item.recoverableDeposit ? "Caução recuperável" : item.possibleOverlapWith.length ? "Possível sobreposição" : "—"}</td></tr>)}</tbody></table></div>
         {hourly.warnings.length > 0 && <Warnings items={hourly.warnings} />}</>}
 
-      {tab === "services" && study && <><PanelTitle title="Serviços e estimativa manual de horas" help="A estimativa assistida permanece identificada como sugestão; nenhuma hora foi inventada pelo sistema." />
-        <div className="hon-table-wrap"><table><thead><tr><th>Inclui</th><th>Serviço</th><th>Etapa</th><th>Horas estimadas</th><th>Observações</th></tr></thead><tbody>{study.services.map((service) => <tr key={service.id}><td><input aria-label={`Incluir ${service.name}`} type="checkbox" checked={service.included} onChange={(event) => mutate({ services: study.services.map((item) => item.id === service.id ? { ...item, included: event.target.checked } : item) })} /></td><td>{service.name}</td><td>{service.stage}</td><td><input aria-label={`Horas de ${service.name}`} type="number" min="0" step="0.5" value={service.estimatedHours} onChange={(event) => mutate({ services: study.services.map((item) => item.id === service.id ? { ...item, estimatedHours: Number(event.target.value) } : item) })} /></td><td><input aria-label={`Observações de ${service.name}`} value={service.notes} onChange={(event) => mutate({ services: study.services.map((item) => item.id === service.id ? { ...item, notes: event.target.value } : item) })} /></td></tr>)}</tbody></table></div><Button variant="secondary" icon={Save} onClick={() => void saveStudy()}>Salvar horas</Button>
-        <PanelTitle title="Catálogo de serviços" help="Consulte o catálogo completo do escritório para entender cada serviço antes de ajustar o escopo acima." />
-        <HonServiceCatalogPanel catalog={catalog} study={study} />
+      {tab === "services" && study && <><PanelTitle title="Serviços e estimativa manual de horas" help="Monte a composição com o cliente: inclua, marque como opcional ou cortesia, ajuste quantidade e desconto por serviço. A estimativa de horas permanece identificada como sugestão; nenhuma hora foi inventada pelo sistema." />
+        <HonServiceCompositionPanel services={study.services} catalog={catalog} hourlyCents={hourly?.sustainableHourlyCostCents ?? 0} onChange={(services) => mutate({ services })} />
+        <Button variant="secondary" icon={Save} onClick={() => void saveStudy()}>Salvar composição</Button>
+        <PanelTitle title="Catálogo de serviços" help="Consulte o catálogo completo do escritório e adicione novos serviços à composição acima." />
+        <HonServiceCatalogPanel catalog={catalog} study={study} onAdd={(item) => mutate({ services: [...study.services, createServiceFromCatalogItem(item)] })} />
       </>}
 
       {tab === "complexity" && study && <><PanelTitle title="Complexidade" help="O ajuste manual divergente da sugestão exige justificativa." /><div className="hon-form-grid"><Field label="Nível sugerido"><input readOnly value={study.inputs.complexitySuggestedLevel} /></Field><Field label="Pontuação"><input type="number" min="0" value={study.inputs.complexityScore} onChange={(e) => inputs({ complexityScore: Number(e.target.value) })} /></Field><Field label="Nível escolhido"><select value={study.inputs.complexityLevel} onChange={(e) => inputs({ complexityLevel: e.target.value as FeeCalculationStudy["inputs"]["complexityLevel"] })}>{[["very_simple", "Muito simples · 0,85"], ["simple", "Simples · 1,00"], ["medium", "Médio · 1,20"], ["complex", "Complexo · 1,45"], ["very_complex", "Muito complexo · 1,80"]].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field><Field label="Justificativa"><textarea value={study.inputs.complexityJustification} onChange={(e) => inputs({ complexityJustification: e.target.value })} /></Field></div><p className="hon-help">Avalie construção existente, levantamento, pavimentos, terreno, legislação, condomínio, ocupação, ambientes, disciplinas, detalhamento, decisores, prazo, BIM, risco e incerteza de escopo.</p></>}
@@ -357,7 +390,12 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
 
       {tab === "payments" && study && <><PanelTitle title="Cronograma de pagamentos" help="A soma é validada em percentual e centavos, inclusive o arredondamento da última parcela." /><div className="hon-actions"><button disabled={!study.results} onClick={() => void generatePlan("upfront")}>100% antecipado</button><button disabled={!study.results} onClick={() => void generatePlan("thirty_installments")}>30% + etapas</button><button disabled={!study.results} onClick={() => void generatePlan("fifty_milestones")}>50% + entregas</button></div>{study.paymentPlan && <><Warnings items={study.paymentPlan.warnings} /><div className="hon-table-wrap"><table><thead><tr><th>Parcela</th><th>Percentual</th><th>Valor</th><th>Vencimento</th><th>Marco</th></tr></thead><tbody>{study.paymentPlan.installments.map((item, index) => <tr key={item.id}><td>{index + 1}</td><td>{item.percentage}%</td><td>{money(item.amountCents)}</td><td>{item.dueDate || "No marco"}</td><td>{item.milestone}</td></tr>)}</tbody></table></div></>}</>}
 
-      {tab === "history" && study && <><PanelTitle title="Histórico e snapshots" help="Cálculos aprovados são imutáveis; alterações futuras exigem nova versão." /><div className="hon-summary"><Metric label="Versão do estudo" value={String(study.version)} /><Metric label="Status" value={study.status} /><Metric label="Snapshots" value={String(snapshotCount)} /><Metric label="Atualizado" value={new Date(study.updatedAt).toLocaleString("pt-BR")} /></div><Button icon={CheckCircle2} disabled={!study.results || study.status === "approved"} onClick={() => void approve()}>Aprovar snapshot imutável</Button></>}
+      {tab === "history" && study && <><PanelTitle title="Histórico e snapshots" help="Cálculos aprovados são imutáveis; alterações futuras exigem nova versão." /><div className="hon-summary"><Metric label="Versão do estudo" value={String(study.version)} /><Metric label="Status" value={study.status} /><Metric label="Snapshots" value={String(snapshotCount)} /><Metric label="Atualizado" value={new Date(study.updatedAt).toLocaleString("pt-BR")} /></div><Button icon={CheckCircle2} disabled={!study.results || study.status === "approved"} onClick={() => void approve()}>Aprovar snapshot imutável</Button>
+        <h3>Decisões da composição</h3>
+        {study.compositionHistory.length === 0
+          ? <EmptyState title="Nenhuma decisão registrada ainda" description="Inclusões, opcionais, cortesias e descontos aplicados na composição de serviços aparecem aqui a cada salvamento." />
+          : <ul className="hon-composition-history">{[...study.compositionHistory].reverse().map((entry) => <li key={entry.id}><time dateTime={entry.at}>{new Date(entry.at).toLocaleString("pt-BR")}</time><span>{entry.detail}</span></li>)}</ul>}
+      </>}
 
       {tab === "settings" && study && <><PanelTitle title="Configurações e referências" help="Sem tabela técnica formal importada, a referência CAU permanece uma entrada manual identificada pelo arquiteto." /><div className="hon-form-grid"><Field label="Método principal"><select value={study.calculationMethod} onChange={(e) => mutate({ calculationMethod: e.target.value as FeeCalculationStudy["calculationMethod"] })}><option value="service_cost">Custo do serviço</option><option value="cau_reference">Referência CAU/custo da obra</option><option value="commercial_reference">Referência comercial</option></select></Field><Field label="Custo estimado da obra"><input value={inputMoney(study.inputs.constructionCostReferenceCents ?? 0)} onChange={(e) => inputs({ constructionCostReferenceCents: parseMoney(e.target.value) })} /></Field><Field label="Percentual comparativo informado"><input type="number" min="0" value={study.inputs.cauReferencePercentage ?? ""} onChange={(e) => inputs({ cauReferencePercentage: e.target.value ? Number(e.target.value) : null })} /></Field><Field label="Fonte e versão"><input value={study.inputs.cauReferenceSource} onChange={(e) => inputs({ cauReferenceSource: e.target.value })} /></Field><Field label="Área de referência (não define preço)"><input type="number" min="0" value={study.inputs.areaReferenceM2 ?? ""} onChange={(e) => inputs({ areaReferenceM2: e.target.value ? Number(e.target.value) : null })} /></Field><Field label="Notas comerciais"><textarea value={study.inputs.commercialReferenceNotes} onChange={(e) => inputs({ commercialReferenceNotes: e.target.value })} /></Field></div><Button variant="secondary" icon={Save} onClick={() => void saveStudy()}>Salvar configurações</Button></>}
 

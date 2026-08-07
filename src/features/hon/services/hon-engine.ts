@@ -1,3 +1,4 @@
+import { serviceLineHours, serviceLineNetCents } from "../domain/hon-service-composition";
 import {
   BimInput, ComplexityLevel, FeeCalculationResult, FeeCalculationStudy, HourlyCostBreakdown,
   PaymentPlan, RevisionInput, StructureProfile, UrgencyLevel,
@@ -66,9 +67,16 @@ export function calculateFeeStudy(study: FeeCalculationStudy, profile: Structure
   const hourly = calculateHourlyCost(profile, study.inputs.calculationDate);
   const hourlyCents = hourly.sustainableHourlyCostCents;
   const warnings = [...hourly.warnings];
+  // Só serviços "included" entram no custo interno (mesmo filtro de sempre — `included` é
+  // mantido em sincronia com `commercialState` por construção, ver hon-service-composition.ts).
+  // Opcional, cortesia e não contratado ficam fora do preço: opcional/não contratado porque
+  // ainda não são compromisso comercial; cortesia porque HON-002C trata "cortesia não soma
+  // valor" como fora da precificação (não só do preço final, mas do próprio custo interno que
+  // alimenta a cascata de complexidade/urgência/lucro) — não há acompanhamento de custo
+  // absorvido de cortesias nesta fase.
   const services = study.services.filter((service) => service.included);
-  const totalServiceHours = services.reduce((sum, service) => sum + service.estimatedHours, 0);
-  const rawLabor = services.reduce((sum, service) => sum + round(service.estimatedHours * (service.hourlyCostCents ?? hourlyCents)) + service.fixedCostCents, 0);
+  const totalServiceHours = services.reduce((sum, service) => sum + serviceLineHours(service), 0);
+  const rawLabor = services.reduce((sum, service) => sum + serviceLineNetCents(service, hourlyCents), 0);
   if (!services.length || totalServiceHours <= 0) warnings.push("Horas internas ainda não estimadas.");
   const factor = complexityFactors[study.inputs.complexityLevel];
   const complexityAdjustment = round(rawLabor * (factor - 1));
