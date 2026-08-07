@@ -1,6 +1,6 @@
 import {
   FEE_CALIBRATION_STORE_NAME, FEE_SCENARIO_STORE_NAME, FEE_SNAPSHOT_STORE_NAME,
-  FEE_STUDY_STORE_NAME, PAYMENT_PLAN_STORE_NAME, SERVICE_CATALOG_STORE_NAME,
+  FEE_STUDY_STORE_NAME, PAYMENT_PLAN_STORE_NAME, PROPOSAL_DRAFT_STORE_NAME, SERVICE_CATALOG_STORE_NAME,
   STRUCTURE_PROFILE_STORE_NAME, openThOsDatabase, requestResult, transactionDone,
 } from "../../../data/th-os-database";
 import {
@@ -8,10 +8,10 @@ import {
 } from "../domain/hon-migrations";
 import {
   feeCalibrationSchema, feeScenarioSchema, feeSnapshotSchema, feeStudySchema,
-  paymentPlanSchema, serviceCatalogItemSchema, structureProfileSchema,
+  paymentPlanSchema, proposalDraftSchema, serviceCatalogItemSchema, structureProfileSchema,
 } from "../domain/hon-schemas";
 import {
-  FeeCalculationStudy, FeeCalibrationRecord, FeeScenario, FeeSnapshot, PaymentPlan,
+  FeeCalculationStudy, FeeCalibrationRecord, FeeScenario, FeeSnapshot, PaymentPlan, ProposalDraft,
   ServiceCatalogItem, StructureProfile,
 } from "../domain/hon-types";
 import { defaultServiceCatalog, defaultStructureProfiles } from "../services/hon-presets";
@@ -74,18 +74,27 @@ export class PaymentPlanRepository extends IndexedDbEntityRepository<PaymentPlan
 export class FeeCalibrationRepository extends IndexedDbEntityRepository<FeeCalibrationRecord> {
   constructor() { super(FEE_CALIBRATION_STORE_NAME, (value) => feeCalibrationSchema.parse(value)); }
 }
+export class ProposalDraftRepository extends IndexedDbEntityRepository<ProposalDraft> {
+  constructor() { super(PROPOSAL_DRAFT_STORE_NAME, (value) => proposalDraftSchema.parse(value)); }
+  async listByProject(projectId: string) { return (await this.list()).filter((item) => item.projectId === projectId).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)); }
+  // Idempotência (HON-003): uma proposta por studyId, aplicada na camada de aplicação — não há
+  // índice único no IndexedDB para isso. "Incorporar à proposta" repetido deve sempre passar
+  // pelo resultado desta consulta antes de decidir entre criar e atualizar.
+  async findByStudyId(studyId: string) { return (await this.list()).find((item) => item.studyId === studyId); }
+}
 
 export interface HonBackupData {
   feeStudies: FeeCalculationStudy[]; feeScenarios: FeeScenario[]; structureProfiles: StructureProfile[];
   serviceCatalog: ServiceCatalogItem[]; feeSnapshots: FeeSnapshot[]; paymentPlans: PaymentPlan[];
-  feeCalibrationRecords: FeeCalibrationRecord[];
+  feeCalibrationRecords: FeeCalibrationRecord[]; proposalDrafts: ProposalDraft[];
 }
 export async function readHonBackupData(): Promise<HonBackupData> {
-  const [feeStudies, feeScenarios, structureProfiles, serviceCatalog, feeSnapshots, paymentPlans, feeCalibrationRecords] = await Promise.all([
+  const [feeStudies, feeScenarios, structureProfiles, serviceCatalog, feeSnapshots, paymentPlans, feeCalibrationRecords, proposalDrafts] = await Promise.all([
     new FeeStudyRepository().list(), new FeeScenarioRepository().list(), new StructureProfileRepository().list(),
-    new ServiceCatalogRepository().list(), new FeeSnapshotRepository().list(), new PaymentPlanRepository().list(), new FeeCalibrationRepository().list(),
+    new ServiceCatalogRepository().list(), new FeeSnapshotRepository().list(), new PaymentPlanRepository().list(),
+    new FeeCalibrationRepository().list(), new ProposalDraftRepository().list(),
   ]);
-  return { feeStudies, feeScenarios, structureProfiles, serviceCatalog, feeSnapshots, paymentPlans, feeCalibrationRecords };
+  return { feeStudies, feeScenarios, structureProfiles, serviceCatalog, feeSnapshots, paymentPlans, feeCalibrationRecords, proposalDrafts };
 }
 
 // serviceCatalog chega solto (unknown), não pré-tipado: pode vir de um backup honSchemaVersion 1
@@ -100,6 +109,7 @@ export function parseHonBackupData(input: HonBackupInput, projectIds: Set<string
     feeSnapshots: input.feeSnapshots.map((item) => feeSnapshotSchema.parse(migrateFeeSnapshot(item))),
     paymentPlans: input.paymentPlans.map((item) => paymentPlanSchema.parse(item)),
     feeCalibrationRecords: input.feeCalibrationRecords.map((item) => feeCalibrationSchema.parse(item)),
+    proposalDrafts: input.proposalDrafts.map((item) => proposalDraftSchema.parse(item)),
   };
   for (const [name, items] of Object.entries(parsed)) {
     const ids = new Set<string>();
@@ -109,6 +119,14 @@ export function parseHonBackupData(input: HonBackupInput, projectIds: Set<string
   const studyIds = new Set(parsed.feeStudies.map((item) => item.id));
   if (parsed.feeScenarios.some((item) => !studyIds.has(item.studyId)) || parsed.feeSnapshots.some((item) => !studyIds.has(item.studyId)) || parsed.paymentPlans.some((item) => !studyIds.has(item.studyId))) {
     throw new Error("O backup HON contém cenário, snapshot ou pagamento sem estudo correspondente.");
+  }
+  if (parsed.proposalDrafts.some((item) => !studyIds.has(item.studyId) || !projectIds.has(item.projectId))) {
+    throw new Error("O backup HON contém proposta sem estudo ou projeto correspondente.");
+  }
+  const proposalsByStudy = new Set<string>();
+  for (const draft of parsed.proposalDrafts) {
+    if (proposalsByStudy.has(draft.studyId)) throw new Error("O backup HON contém mais de uma proposta para o mesmo estudo.");
+    proposalsByStudy.add(draft.studyId);
   }
   return parsed;
 }

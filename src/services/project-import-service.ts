@@ -13,7 +13,7 @@ export interface ExportEnvelope {
   project: ProjectMasterRecord; parametricStudies: ParametricEnvironmentStudy[];
 }
 export interface ConsolidatedBackupEnvelope {
-  kind: "consolidated-backup"; backupSchemaVersion: 4; honSchemaVersion: 1 | 2 | 3; schemaVersion: number; exportedAt: string;
+  kind: "consolidated-backup"; backupSchemaVersion: 4; honSchemaVersion: 1 | 2 | 3 | 4; schemaVersion: number; exportedAt: string;
   application: typeof APPLICATION_ID; projectRecords: ProjectMasterRecord[];
   parametricStudies: ParametricEnvironmentStudy[];
   referenceCatalogOptions: CatalogOption[];
@@ -21,7 +21,7 @@ export interface ConsolidatedBackupEnvelope {
   feeStudies: HonBackupData["feeStudies"]; feeScenarios: HonBackupData["feeScenarios"];
   structureProfiles: HonBackupData["structureProfiles"]; serviceCatalog: HonBackupData["serviceCatalog"];
   feeSnapshots: HonBackupData["feeSnapshots"]; paymentPlans: HonBackupData["paymentPlans"];
-  feeCalibrationRecords: HonBackupData["feeCalibrationRecords"];
+  feeCalibrationRecords: HonBackupData["feeCalibrationRecords"]; proposalDrafts: HonBackupData["proposalDrafts"];
 }
 export type ImportConflict = "none" | "id" | "code" | "both";
 export function exportProject(project: ProjectMasterRecord, studies: ParametricEnvironmentStudy[] = []): ExportEnvelope {
@@ -32,7 +32,7 @@ export function exportProject(project: ProjectMasterRecord, studies: ParametricE
     parametricStudies: studies.filter((study) => study.projectId === project.id),
   };
 }
-const emptyHonBackup = (): HonBackupData => ({ feeStudies: [], feeScenarios: [], structureProfiles: [], serviceCatalog: [], feeSnapshots: [], paymentPlans: [], feeCalibrationRecords: [] });
+const emptyHonBackup = (): HonBackupData => ({ feeStudies: [], feeScenarios: [], structureProfiles: [], serviceCatalog: [], feeSnapshots: [], paymentPlans: [], feeCalibrationRecords: [], proposalDrafts: [] });
 export function exportConsolidatedBackup(projects: ProjectMasterRecord[], studies: ParametricEnvironmentStudy[] = [], catalogs: CatalogOption[] = [], hon: HonBackupData = emptyHonBackup()): ConsolidatedBackupEnvelope {
   return {
     kind: "consolidated-backup", backupSchemaVersion: 4, honSchemaVersion: HON_SCHEMA_VERSION, schemaVersion: PROJECT_SCHEMA_VERSION,
@@ -83,7 +83,7 @@ export function parseConsolidatedBackup(input: unknown): { projects: ProjectMast
   const catalogIds = new Set(catalogs.map((option) => option.id));
   if (catalogs.some((option) => option.parentId && !catalogIds.has(option.parentId))) throw new Error("O backup contém cidade sem estado correspondente.");
   const hon = !legacy && envelope.backupSchemaVersion === 4
-    ? parseHonBackupData({ feeStudies: envelope.feeStudies, feeScenarios: envelope.feeScenarios, structureProfiles: envelope.structureProfiles, serviceCatalog: envelope.serviceCatalog, feeSnapshots: envelope.feeSnapshots, paymentPlans: envelope.paymentPlans, feeCalibrationRecords: envelope.feeCalibrationRecords }, projectIds)
+    ? parseHonBackupData({ feeStudies: envelope.feeStudies, feeScenarios: envelope.feeScenarios, structureProfiles: envelope.structureProfiles, serviceCatalog: envelope.serviceCatalog, feeSnapshots: envelope.feeSnapshots, paymentPlans: envelope.paymentPlans, feeCalibrationRecords: envelope.feeCalibrationRecords, proposalDrafts: envelope.proposalDrafts }, projectIds)
     : emptyHonBackup();
   return { projects, studies, catalogs, hon };
 }
