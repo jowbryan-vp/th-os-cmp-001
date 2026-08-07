@@ -6,7 +6,7 @@ import { parametricEnvironmentStudySchema } from "../features/cap/domain/cap-lib
 import { catalogOptionSchema } from "../features/catalogs/domain/reference-catalog";
 import {
   feeCalibrationSchema, feeScenarioSchema, feeSnapshotSchema, feeStudySchema, paymentPlanSchema,
-  structureProfileSchema,
+  proposalDraftSchema, structureProfileSchema,
 } from "../features/hon/domain/hon-schemas";
 
 const nullableNumber = z.number().finite().nonnegative().nullable();
@@ -157,11 +157,12 @@ const backupV4EnvelopeSchema = z.object({
   kind: z.literal("consolidated-backup"), backupSchemaVersion: z.literal(4),
   // honSchemaVersion 1 é o formato anterior ao HON-002B (catálogo sem os campos descritivos);
   // 2 é o formato do HON-002B; 3 (HON-002C) acrescenta composição comercial por serviço
-  // (estado, quantidade, desconto individual) e histórico de decisões. A validação estrita do
-  // catálogo e dos estudos (com migração) fica a cargo de parseHonBackupData/feeStudySchema —
-  // aqui os itens permanecem records soltos ou passam por schemas com defaults, do mesmo jeito
-  // que os demais tipos aninhados do HON.
-  honSchemaVersion: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  // (estado, quantidade, desconto individual) e histórico de decisões; 4 (HON-003) acrescenta
+  // propostas comerciais (ProposalDraft). A validação estrita do catálogo e dos estudos (com
+  // migração) fica a cargo de parseHonBackupData/feeStudySchema — aqui os itens permanecem
+  // records soltos ou passam por schemas com defaults, do mesmo jeito que os demais tipos
+  // aninhados do HON.
+  honSchemaVersion: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
   schemaVersion: z.number().int().positive(), exportedAt: z.string(), application: z.literal("TH-OS-CMP-001"),
   projectRecords: z.array(z.unknown()), parametricStudies: z.array(parametricEnvironmentStudySchema),
   referenceCatalogOptions: z.array(catalogOptionSchema), capLibraryReferences: z.array(capLibraryReferenceSchema),
@@ -169,6 +170,9 @@ const backupV4EnvelopeSchema = z.object({
   structureProfiles: z.array(structureProfileSchema), serviceCatalog: z.array(z.record(z.string(), z.unknown())),
   feeSnapshots: z.array(feeSnapshotSchema), paymentPlans: z.array(paymentPlanSchema),
   feeCalibrationRecords: z.array(feeCalibrationSchema),
+  // Backups gravados antes do HON-003 (honSchemaVersion 1-3) não têm este campo — default []
+  // preserva a leitura sem exigir migração manual, mesmo padrão já usado para compositionHistory.
+  proposalDrafts: z.array(proposalDraftSchema).optional().default([]),
 }).strict();
 export const backupEnvelopeSchema = z.union([backupV4EnvelopeSchema, backupV3EnvelopeSchema, backupV2EnvelopeSchema, legacyBackupEnvelopeSchema]);
 export const readinessSchema = z.enum(readinessLevels);

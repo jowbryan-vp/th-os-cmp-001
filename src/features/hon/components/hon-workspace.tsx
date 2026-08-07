@@ -2,19 +2,20 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Calculator, CheckCircle2, Copy, Plus, Save } from "../../../design-system/icons";
-import { Badge, Button, EmptyState, Field as DsField, PageActionBar, Spinner, Tabs, Toast } from "../../../design-system";
+import { Badge, Button, ConfirmDialog, EmptyState, Field as DsField, PageActionBar, Spinner, Tabs, Toast } from "../../../design-system";
 import { ProjectMasterRecord, createId } from "../../../domain/project-master-record";
 import { getParametricStudyRepository } from "../../cap/repositories/parametric-study-repository";
 import { appendCompositionHistory, createServiceFromCatalogItem, serviceCommercialStateLabels } from "../domain/hon-service-composition";
 import {
-  FeeCalculationStudy, FeeScenario, PaymentPlan, ServiceCatalogItem, StructureProfile,
+  FeeCalculationStudy, FeeScenario, PaymentPlan, ProposalDraft, ServiceCatalogItem, StructureProfile,
 } from "../domain/hon-types";
 import {
   FeeScenarioRepository, FeeSnapshotRepository, FeeStudyRepository, PaymentPlanRepository,
-  ServiceCatalogRepository, StructureProfileRepository,
+  ProposalDraftRepository, ServiceCatalogRepository, StructureProfileRepository,
 } from "../repositories/hon-repositories";
 import { calculateHourlyCost, createPaymentPlan } from "../services/hon-engine";
 import { serviceCategoryLabels } from "../services/hon-catalog-content";
+import { incorporateStudyIntoProposal, isProposalStale, nextProposalCode } from "../services/hon-proposal-service";
 import {
   approveStudy, assessCapacity, calculateAndVersionStudy, createFeeStudy, createProposalPricingSnapshot, createScenario,
 } from "../services/hon-study-service";
@@ -22,6 +23,7 @@ import { HonServiceCatalogPanel } from "./catalog/hon-service-catalog-panel";
 import { HonServiceCompositionPanel } from "./composition/hon-service-composition-panel";
 import { domainErrorMessage, inputMoney, money, parseMoney } from "./hon-formatters";
 import { Metric } from "./hon-metric";
+import { HonProposalPanel } from "./proposal/hon-proposal-panel";
 import { Warnings } from "./hon-warnings";
 import { HonResultPanel } from "./results/hon-result-panel";
 
@@ -29,7 +31,7 @@ const tabs = [
   ["overview", "Visão geral"], ["structure", "Estrutura do escritório"], ["services", "Serviços e horas"],
   ["complexity", "Complexidade"], ["risk", "Urgência e riscos"], ["bim", "BIM e revisões"],
   ["partners", "Parceiros"], ["travel", "Deslocamentos e visitas"], ["construction", "Obra e gerenciamento"],
-  ["result", "Resultado"], ["scenarios", "Cenários"], ["payments", "Pagamentos"],
+  ["result", "Resultado"], ["proposal", "Proposta comercial"], ["scenarios", "Cenários"], ["payments", "Pagamentos"],
   ["history", "Histórico e snapshots"], ["settings", "Configurações"],
 ] as const;
 type Tab = (typeof tabs)[number][0];
@@ -57,6 +59,9 @@ function stableSignature(value: unknown): string {
 }
 function computeSaveSignature(study: FeeCalculationStudy) {
   return stableSignature({ ...study, updatedAt: undefined });
+}
+function computeProposalSignature(draft: ProposalDraft) {
+  return stableSignature({ ...draft, updatedAt: undefined });
 }
 const pick = <T extends object, K extends keyof T>(source: T, keys: readonly K[]): Pick<T, K> =>
   Object.fromEntries(keys.map((key) => [key, source[key]])) as Pick<T, K>;
@@ -118,6 +123,10 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
   const [study, setStudy] = useState<FeeCalculationStudy | null>(null);
   const [scenarios, setScenarios] = useState<FeeScenario[]>([]);
   const [snapshotCount, setSnapshotCount] = useState(0);
+  const [proposalDraft, setProposalDraft] = useState<ProposalDraft | null>(null);
+  const [proposalSaveStatus, setProposalSaveStatus] = useState<"idle" | "saving" | "error">("idle");
+  const [lastSavedProposalSignature, setLastSavedProposalSignature] = useState<string | null>(null);
+  const [pendingProposalSync, setPendingProposalSync] = useState(false);
   const [notice, setNoticeState] = useState<{ text: string; variant: NoticeVariant } | null>(null);
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "error">("idle");
@@ -128,6 +137,7 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
   const scenarioRepo = useMemo(() => new FeeScenarioRepository(), []);
   const snapshotRepo = useMemo(() => new FeeSnapshotRepository(), []);
   const paymentRepo = useMemo(() => new PaymentPlanRepository(), []);
+  const proposalRepo = useMemo(() => new ProposalDraftRepository(), []);
   const resultHeadingRef = useRef<HTMLHeadingElement>(null);
   const pricingFormRef = useRef<HTMLDivElement>(null);
   const justCalculatedRef = useRef(false);
@@ -147,10 +157,15 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
       const loadedProfiles = await profileRepo.ensureDefaults(); const loadedCatalog = await catalogRepo.ensureDefaults();
       const loadedStudies = await studyRepo.list(); setProfiles(loadedProfiles); setCatalog(loadedCatalog); setStudies(loadedStudies);
       const selected = loadedStudies.find((item) => item.projectId === projectId) ?? null;
-      setStudy(selected); if (selected) { setScenarios(await scenarioRepo.listByStudy(selected.id)); setSnapshotCount((await snapshotRepo.listByStudy(selected.id)).length); }
+      setStudy(selected);
+      if (selected) {
+        setScenarios(await scenarioRepo.listByStudy(selected.id)); setSnapshotCount((await snapshotRepo.listByStudy(selected.id)).length);
+        const draft = (await proposalRepo.findByStudyId(selected.id)) ?? null;
+        setProposalDraft(draft); setLastSavedProposalSignature(draft ? computeProposalSignature(draft) : null);
+      }
     } catch (reason) { showNotice(reason instanceof Error ? reason.message : "Falha ao abrir HON-001.", "error"); }
     finally { setLoading(false); }
-  })(); }, [catalogRepo, profileRepo, projectId, scenarioRepo, snapshotRepo, studyRepo]);
+  })(); }, [catalogRepo, profileRepo, projectId, proposalRepo, scenarioRepo, snapshotRepo, studyRepo]);
 
   const profile = profiles.find((item) => item.id === study?.structureProfileId) ?? profiles[0];
   const selectedProject = projects.find((item) => item.id === projectId);
@@ -224,13 +239,19 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
     : calcSignatureNow !== null && calcSignatureNow === lastCalculatedSignature ? "updated" : "stale";
   const resultLabel = resultState === "not_calculated" ? "Resultado não calculado" : resultState === "updated" ? "Resultado atualizado" : "Resultado desatualizado";
   const resultTone = resultState === "not_calculated" ? "neutral" : resultState === "updated" ? "success" : "warning";
+  const proposalDirty = proposalDraft ? computeProposalSignature(proposalDraft) !== lastSavedProposalSignature : false;
+  const proposalSaveLabel = !proposalDraft ? null : proposalSaveStatus === "saving" ? "Salvando…" : proposalSaveStatus === "error" ? "Erro ao salvar" : proposalDirty ? "Alterações não salvas" : "Salvo";
+  const proposalSaveTone = proposalSaveStatus === "error" ? "error" : proposalSaveStatus === "saving" ? "info" : proposalDirty ? "warning" : "success";
+  const proposalStale = proposalDraft && study ? isProposalStale(proposalDraft, study) : false;
 
   async function newStudy() {
     if (!selectedProject || !profiles.length) return;
     const capStudies = await getParametricStudyRepository().listByProject(selectedProject.id);
     const catalog = await catalogRepo.list();
     const created = createFeeStudy(selectedProject, capStudies, profiles[0], catalog, studies.filter((item) => item.projectId === selectedProject.id).length + 1);
-    await studyRepo.save(created); setStudies((items) => [created, ...items]); setStudy(created); setScenarios([]); setSnapshotCount(0); showNotice("Estudo criado com cópia de trabalho CMP/CAP rastreável.", "success"); setTab("services");
+    await studyRepo.save(created); setStudies((items) => [created, ...items]); setStudy(created); setScenarios([]); setSnapshotCount(0);
+    setProposalDraft(null); setLastSavedProposalSignature(null);
+    showNotice("Estudo criado com cópia de trabalho CMP/CAP rastreável.", "success"); setTab("services");
   }
   async function saveStudy(next = study) {
     if (!next) return undefined;
@@ -312,6 +333,46 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
     const plan = createPaymentPlan(priced.id, label, preset, priced.results!.finalPrice, new Date().toISOString().slice(0, 10));
     await paymentRepo.save(plan); const updated = { ...priced, paymentPlan: plan }; await saveStudy(updated);
   }
+  // Ponto único de entrada para "Incorporar à proposta" (Resultado) e "Atualizar a partir do
+  // HON" (Proposta comercial): sem proposta existente para o estudo, incorpora direto; com
+  // proposta existente e sem mudança de cálculo desde a última incorporação, só navega (nada a
+  // sobrescrever); com mudança de cálculo, confirma antes de sobrescrever os campos derivados
+  // (HON-003 item de idempotência + confirmação) — os campos manuais nunca são tocados aqui.
+  function requestProposalSync() {
+    if (!study?.results) { showNotice("Calcule o estudo antes de incorporar à proposta.", "error"); return; }
+    if (proposalDraft && !isProposalStale(proposalDraft, study)) { setTab("proposal"); return; }
+    if (proposalDraft) { setPendingProposalSync(true); return; }
+    void runProposalSync();
+  }
+  async function runProposalSync() {
+    setPendingProposalSync(false);
+    if (!study?.results) return;
+    try {
+      const code = proposalDraft ? proposalDraft.code : nextProposalCode(await proposalRepo.list());
+      const incorporated = incorporateStudyIntoProposal(study, catalog, hourly?.sustainableHourlyCostCents ?? 0, proposalDraft, code);
+      const saved = await proposalRepo.save(incorporated);
+      setProposalDraft(saved); setLastSavedProposalSignature(computeProposalSignature(saved));
+      showNotice(proposalDraft ? "Proposta atualizada a partir do HON." : "Proposta incorporada a partir do HON.", "success");
+      setTab("proposal");
+    } catch (reason) {
+      showNotice(domainErrorMessage(reason, [], "Não foi possível incorporar a proposta a partir do HON."), "error");
+    }
+  }
+  function mutateProposal(patch: Partial<Pick<ProposalDraft, "title" | "introduction" | "observations" | "validUntil" | "commercialConditions" | "additionalExclusions" | "additionalAssumptions" | "status">>) {
+    setProposalDraft((current) => current ? { ...current, ...patch, updatedAt: new Date().toISOString() } : current);
+  }
+  async function saveProposalDraft() {
+    if (!proposalDraft) return;
+    setProposalSaveStatus("saving");
+    try {
+      const saved = await proposalRepo.save(proposalDraft);
+      setProposalDraft(saved); setLastSavedProposalSignature(computeProposalSignature(saved));
+      setProposalSaveStatus("idle"); showNotice("Proposta salva neste dispositivo.", "success");
+    } catch (reason) {
+      setProposalSaveStatus("error");
+      showNotice(domainErrorMessage(reason, [], "Não foi possível salvar a proposta neste dispositivo. Tente novamente."), "error");
+    }
+  }
   async function duplicateProfile() {
     if (!profile) return; const duplicated = await profileRepo.duplicate(profile.id, `${profile.name} — personalizado`);
     setProfiles((items) => [...items, duplicated]); if (study) mutate({ structureProfileId: duplicated.id }); showNotice("Perfil duplicado para edição personalizada.", "success");
@@ -347,7 +408,12 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
     <section className="hon-panel" role="tabpanel" aria-label={tabs.find(([id]) => id === tab)?.[1]} tabIndex={-1}>
       {tab === "overview" && <><PanelTitle title="Selecionar projeto e estudo" help="Os dados CMP/CAP são lidos para uma cópia de trabalho; o cadastro mestre não é alterado." />
         <div className="hon-form-grid"><Field label="Projeto CMP-001"><select value={projectId} onChange={(event) => { setProjectId(event.target.value); setStudy(null); }}><option value="">Selecione</option>{projects.map((item) => <option key={item.id} value={item.id}>{item.code} · {item.internalName}</option>)}</select></Field>
-          <Field label="Estudo HON-001"><select value={study?.id ?? ""} onChange={async (event) => { const selected = studies.find((item) => item.id === event.target.value) ?? null; setStudy(selected); setScenarios(selected ? await scenarioRepo.listByStudy(selected.id) : []); }}><option value="">Novo estudo</option>{studies.filter((item) => item.projectId === projectId).map((item) => <option key={item.id} value={item.id}>{item.code} · v{item.version} · {item.status}</option>)}</select></Field></div>
+          <Field label="Estudo HON-001"><select value={study?.id ?? ""} onChange={async (event) => {
+            const selected = studies.find((item) => item.id === event.target.value) ?? null;
+            setStudy(selected); setScenarios(selected ? await scenarioRepo.listByStudy(selected.id) : []);
+            const draft = selected ? (await proposalRepo.findByStudyId(selected.id)) ?? null : null;
+            setProposalDraft(draft); setLastSavedProposalSignature(draft ? computeProposalSignature(draft) : null);
+          }}><option value="">Novo estudo</option>{studies.filter((item) => item.projectId === projectId).map((item) => <option key={item.id} value={item.id}>{item.code} · v{item.version} · {item.status}</option>)}</select></Field></div>
         {!study && <Button icon={Plus} disabled={!selectedProject} onClick={() => void newStudy()}>Criar estudo e importar escopo</Button>}
         {study && <div className="hon-summary"><Metric label="Projeto" value={study.projectSnapshot.projectCode} /><Metric label="Cidade" value={`${study.projectSnapshot.city}/${study.projectSnapshot.state}`} /><Metric label="Área CAP aplicada" value={`${study.projectSnapshot.areas.capApplied.toLocaleString("pt-BR")} m²`} /><Metric label="Status" value={study.status} /></div>}
         {study && <details><summary>Rastreabilidade CMP/CAP</summary><pre>{JSON.stringify(study.projectSnapshot, null, 2)}</pre></details>}</>}
@@ -383,7 +449,13 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
         <div className="hon-form-grid" ref={pricingFormRef}><Field label="Lucro sobre custo (%)"><input type="number" min="0" value={study.inputs.profitMarkup} onChange={(e) => inputs({ profitMarkup: Number(e.target.value) })} /></Field><Field label="Imposto (%)"><input type="number" min="0" max="99" value={study.inputs.taxPercentage} onChange={(e) => inputs({ taxPercentage: Number(e.target.value) })} /></Field><Field label="Valor comercial manual"><input placeholder="vazio = recomendado" value={study.inputs.commercialPriceCents === null ? "" : inputMoney(study.inputs.commercialPriceCents)} onChange={(e) => inputs({ commercialPriceCents: e.target.value ? parseMoney(e.target.value) : null })} /></Field><Field label="Desconto"><input value={inputMoney(study.inputs.discountCents)} onChange={(e) => inputs({ discountCents: parseMoney(e.target.value) })} /></Field><Field label="Doação"><input value={inputMoney(study.inputs.donationCents)} onChange={(e) => inputs({ donationCents: parseMoney(e.target.value) })} /></Field></div>
         <HonResultPanel study={study} resultHeadingRef={resultHeadingRef}
           onAdjustParameters={adjustParameters} onGoToServices={() => setTab("services")} onGoToScenarios={() => setTab("scenarios")}
-          onGoToPayments={() => setTab("payments")} onExportInternal={exportInternal} onExportCommercial={exportCommercial} onExportCsv={exportCsv} />
+          onGoToPayments={() => setTab("payments")} onExportInternal={exportInternal} onExportCommercial={exportCommercial} onExportCsv={exportCsv}
+          onIncorporateToProposal={requestProposalSync} />
+      </>}
+
+      {tab === "proposal" && study && <><PanelTitle title="Proposta comercial" help="Monte a proposta a partir do HON: escopo, opcionais, condições de pagamento e totais são sempre copiados — nunca recalculados aqui." />
+        <HonProposalPanel draft={proposalDraft} study={study} stale={proposalStale} saveLabel={proposalSaveLabel} saveTone={proposalSaveTone}
+          onUpdateFromHon={requestProposalSync} onChangeField={mutateProposal} onSave={() => void saveProposalDraft()} />
       </>}
 
       {tab === "scenarios" && study && <><PanelTitle title="Comparador de cenários" help="Compare até quatro combinações sem substituir o cálculo técnico por média simples." /><Button variant="secondary" icon={Plus} disabled={!study.results || scenarios.length >= 4} onClick={() => void addScenario()}>Salvar cenário atual</Button>{scenarios.length > 0 && <div className="hon-scenario-grid">{scenarios.map((scenario) => <article key={scenario.id}><h3>{scenario.name}</h3><strong>{money(scenario.result.finalPrice)}</strong><p>{scenario.complexity} · {scenario.urgency}</p><small>{scenario.paymentCondition}</small></article>)}</div>}</>}
@@ -401,6 +473,9 @@ export function HonWorkspace({ projects, initialProjectId, onBack }: { projects:
 
       {!study && tab !== "overview" && <EmptyState title="Crie ou selecione um estudo" description="Comece na Visão geral para vincular um projeto CMP-001." action={{ children: "Ir para Visão geral", onClick: () => setTab("overview") }} />}
     </section>
+    <ConfirmDialog open={pendingProposalSync} title="Atualizar proposta a partir do HON?"
+      description="Esta proposta já existe para este estudo. Escopo, opcionais, condições de pagamento e totais serão substituídos pelos dados atuais do HON — os campos manuais (título, introdução, condições comerciais, observações, exclusões e premissas adicionais) serão mantidos."
+      confirmLabel="Atualizar proposta" onClose={() => setPendingProposalSync(false)} onConfirm={() => void runProposalSync()} />
   </main>;
 }
 

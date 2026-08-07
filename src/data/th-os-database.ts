@@ -9,7 +9,8 @@ export const SERVICE_CATALOG_STORE_NAME = "service-catalog";
 export const FEE_SNAPSHOT_STORE_NAME = "fee-snapshots";
 export const PAYMENT_PLAN_STORE_NAME = "payment-plans";
 export const FEE_CALIBRATION_STORE_NAME = "fee-calibration-records";
-export const DB_VERSION = 5;
+export const PROPOSAL_DRAFT_STORE_NAME = "proposal-drafts";
+export const DB_VERSION = 6;
 
 let databasePromise: Promise<IDBDatabase> | null = null;
 export const requestResult = <T>(request: IDBRequest<T>) => new Promise<T>((resolve, reject) => {
@@ -54,6 +55,7 @@ export function openThOsDatabase() {
       ensureStore(FEE_SNAPSHOT_STORE_NAME, [["studyId", "studyId"], ["projectId", "projectId"]]);
       ensureStore(PAYMENT_PLAN_STORE_NAME, [["studyId", "studyId"]]);
       ensureStore(FEE_CALIBRATION_STORE_NAME, [["studyId", "studyId"], ["projectId", "projectId"]]);
+      ensureStore(PROPOSAL_DRAFT_STORE_NAME, [["projectId", "projectId"], ["studyId", "studyId"], ["status", "status"]]);
     };
     request.onsuccess = () => {
       const database = request.result;

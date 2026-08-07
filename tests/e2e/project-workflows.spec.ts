@@ -8,7 +8,7 @@ async function resetDatabase(page: import("@playwright/test").Page) {
       new Promise<void>((resolve, reject) => {
         const request = indexedDB.open("th-os");
         request.onsuccess = () => {
-          const stores = ["project-master-records", "parametric-studies", "reference-catalog-options", "fee-studies", "fee-scenarios", "structure-profiles", "service-catalog", "fee-snapshots", "payment-plans", "fee-calibration-records"].filter((name) => request.result.objectStoreNames.contains(name));
+          const stores = ["project-master-records", "parametric-studies", "reference-catalog-options", "fee-studies", "fee-scenarios", "structure-profiles", "service-catalog", "fee-snapshots", "payment-plans", "fee-calibration-records", "proposal-drafts"].filter((name) => request.result.objectStoreNames.contains(name));
           const transaction = request.result.transaction(stores, "readwrite");
           for (const store of stores) transaction.objectStore(store).clear();
           transaction.oncomplete = () => resolve();
@@ -160,9 +160,10 @@ test("exports and restores a complete browser backup", async ({ page }) => {
   const envelope = JSON.parse(buffer.toString());
   expect(envelope.kind).toBe("consolidated-backup");
   expect(envelope.backupSchemaVersion).toBe(4);
-  // honSchemaVersion 3 desde o HON-002C (composição comercial por serviço e histórico de decisões).
-  expect(envelope.honSchemaVersion).toBe(3);
+  // honSchemaVersion 4 desde o HON-003 (propostas comerciais incorporadas a partir do estudo).
+  expect(envelope.honSchemaVersion).toBe(4);
   expect(envelope.feeStudies).toEqual([]);
+  expect(envelope.proposalDrafts).toEqual([]);
   expect(envelope.referenceCatalogOptions.length).toBeGreaterThan(0);
   expect(envelope.projectRecords).toHaveLength(2);
   expect(envelope.parametricStudies).toEqual([]);
@@ -919,6 +920,90 @@ test("HON-002C: composição de serviços — incluir, opcional, cortesia, quant
   await page.getByRole("tab", { name: "Histórico e snapshots" }).click();
   await expect(page.getByText(/Levantamento cadastral marcado como opcional/)).toBeVisible();
   await expect(page.getByText(/Coordenação BIM marcado como cortesia/)).toBeVisible();
+});
+
+test("HON-003: incorpora à proposta, edita campos manuais, detecta desatualização com confirmação e nunca duplica", async ({ page }) => {
+  await page.getByRole("button", { name: "HON-001" }).click();
+  await page.getByRole("button", { name: "Criar estudo e importar escopo" }).click();
+  await expect(page.getByRole("heading", { name: "Serviços e estimativa manual de horas" })).toBeVisible();
+  await page.getByLabel(/Horas de Levantamento cadastral/).fill("40");
+
+  // Sem cálculo, a proposta não pode ser montada.
+  await page.getByRole("tab", { name: "Proposta comercial" }).click();
+  await expect(page.getByText("Calcule o estudo antes de montar a proposta")).toBeVisible();
+
+  await page.getByRole("tab", { name: "Resultado" }).click();
+  await page.getByRole("button", { name: "Calcular honorários" }).click();
+  await expect(page.getByRole("tab", { name: "Resultado" })).toHaveAttribute("aria-selected", "true");
+
+  // 1ª incorporação: sem proposta prévia, incorpora direto (sem confirmação) e navega para a aba.
+  await page.locator(".hon-actions").getByRole("button", { name: "Incorporar à proposta" }).click();
+  await expect(page.getByRole("tab", { name: "Proposta comercial" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByText(/Proposta incorporada a partir do HON\./)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "PROP-2026-0001" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Levantamento cadastral" })).toBeVisible();
+  const firstFinalValue = await page.locator(".hon-summary").getByText("Valor final").locator("xpath=following-sibling::strong").innerText();
+
+  // Campos manuais são livres e nunca recalculados.
+  await page.getByLabel("Título").fill("Proposta — Reforma Residencial");
+  await page.getByLabel("Introdução").fill("Prezados, segue nossa proposta.");
+  await page.getByLabel("Condições comerciais").fill("50% na assinatura, 50% na entrega do anteprojeto.");
+  await page.getByRole("button", { name: "Salvar proposta" }).click();
+  await expect(page.getByLabel("Proposta comercial").getByText("Salvo", { exact: true })).toBeVisible();
+
+  // "Atualizar a partir do HON" fica desabilitado enquanto não há cálculo mais recente.
+  await expect(page.getByRole("button", { name: "Atualizar a partir do HON" })).toBeDisabled();
+
+  // Recalcular com um lucro diferente muda o resultado do HON sem tocar a proposta — a proposta
+  // deve acusar "cálculo mais recente disponível", nunca se atualizar sozinha.
+  await page.getByRole("tab", { name: "Resultado" }).click();
+  await page.getByLabel("Lucro sobre custo (%)").fill("35");
+  await page.getByRole("button", { name: "Calcular honorários" }).click();
+  await expect(page.getByRole("tab", { name: "Resultado" })).toHaveAttribute("aria-selected", "true");
+
+  // Incorporar de novo (mesmo estudo) pede confirmação antes de sobrescrever os campos derivados.
+  await page.locator(".hon-actions").getByRole("button", { name: "Incorporar à proposta" }).click();
+  const confirmDialog = page.getByRole("dialog", { name: "Atualizar proposta a partir do HON?" });
+  await expect(confirmDialog).toBeVisible();
+  await expect(confirmDialog).toContainText("campos manuais");
+  await confirmDialog.getByRole("button", { name: "Atualizar proposta" }).click();
+  await expect(confirmDialog).toBeHidden();
+
+  await expect(page.getByRole("tab", { name: "Proposta comercial" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByText(/Proposta atualizada a partir do HON\./)).toBeVisible();
+  // Código nunca muda numa atualização (idempotência: uma proposta por estudo).
+  await expect(page.getByRole("heading", { name: "PROP-2026-0001" })).toBeVisible();
+  // Campos manuais preservados através da atualização.
+  await expect(page.getByLabel("Título")).toHaveValue("Proposta — Reforma Residencial");
+  await expect(page.getByLabel("Condições comerciais")).toHaveValue("50% na assinatura, 50% na entrega do anteprojeto.");
+  const updatedFinalValue = await page.locator(".hon-summary").getByText("Valor final").locator("xpath=following-sibling::strong").innerText();
+  expect(updatedFinalValue).not.toBe(firstFinalValue);
+
+  // Sem mudança de cálculo desde a última incorporação: clicar de novo só navega, sem
+  // confirmação e sem criar uma segunda proposta.
+  await page.getByRole("tab", { name: "Resultado" }).click();
+  await page.locator(".hon-actions").getByRole("button", { name: "Incorporar à proposta" }).click();
+  await expect(page.getByRole("dialog", { name: "Atualizar proposta a partir do HON?" })).toBeHidden();
+  await expect(page.getByRole("tab", { name: "Proposta comercial" })).toHaveAttribute("aria-selected", "true");
+
+  // Prévia interna: leitura consolidada do que foi preenchido.
+  await page.getByText("Visualizar prévia interna").click();
+  await expect(page.locator(".hon-proposal-preview")).toContainText("Proposta — Reforma Residencial");
+  await expect(page.locator(".hon-proposal-preview")).toContainText("Prezados, segue nossa proposta.");
+
+  // Status exposto nesta fase: só draft/ready, alternável e persistido.
+  await expect(page.getByText("Rascunho", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Marcar como pronta" }).click();
+  await expect(page.getByText("Pronta", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Salvar proposta" }).click();
+
+  // Persistência: reload mantém código, status, campos manuais e o mesmo estudo vinculado (sem duplicar).
+  await page.reload();
+  await page.getByRole("button", { name: "HON-001" }).click();
+  await page.getByRole("tab", { name: "Proposta comercial" }).click();
+  await expect(page.getByRole("heading", { name: "PROP-2026-0001" })).toBeVisible();
+  await expect(page.getByLabel("Título")).toHaveValue("Proposta — Reforma Residencial");
+  await expect(page.getByText("Pronta", { exact: true })).toBeVisible();
 });
 
 // 15) mobile sem overflow horizontal com a composição populada (item do catálogo adicionado,

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-  FeeCalculationStudy, FeeCalibrationRecord, FeeScenario, FeeSnapshot, PaymentPlan,
+  FeeCalculationStudy, FeeCalibrationRecord, FeeScenario, FeeSnapshot, PaymentPlan, ProposalDraft,
   ServiceCatalogItem, ServiceCategory, ServiceCompositionHistoryEntry, StructureProfile,
 } from "./hon-types";
 
@@ -94,6 +94,33 @@ export const paymentPlanSchema = typed<PaymentPlan>(z.object({
 export const feeSnapshotSchema = typed<FeeSnapshot>(z.object({
   id, studyId: id, projectId: id, studyVersion: z.number().int().positive(), engineVersion: z.string(),
   approvedAt: dateTime, payload: studyCore, checksum: z.string().min(8),
+}).strict());
+
+const proposalServiceSnapshotSchema = z.object({
+  id, catalogItemId: z.string().nullable(), code: z.string().min(1), name: z.string().min(1), stage: z.string(),
+  category: serviceCategorySchema, clientDescription: z.string(), technicalDescription: z.string(),
+  deliverables: z.array(z.string()), exclusions: z.array(z.string()), assumptions: z.array(z.string()),
+  quantity: z.number().positive(), commercialState: z.enum(["included", "optional", "complimentary", "not_contracted"]),
+  netCents: cents,
+}).strict();
+
+export const proposalDraftSchema = typed<ProposalDraft>(z.object({
+  id, schemaVersion: z.number().int().positive(), code: z.string().min(1), projectId: id, studyId: id,
+  status: z.enum(["draft", "ready", "sent", "accepted", "rejected", "expired", "superseded"]),
+  projectSnapshot: z.record(z.string(), z.unknown()),
+  scopeItems: z.array(proposalServiceSnapshotSchema), optionalItems: z.array(proposalServiceSnapshotSchema),
+  totals: z.object({
+    profitMarkupCents: z.number().int(), taxesCents: z.number().int(), discountCents: z.number().int(),
+    donationCents: z.number().int(), minimumAdjustmentCents: z.number().int(), commercialPriceCents: z.number().int(),
+    finalPriceCents: z.number().int(), includedCents: cents, optionalCents: cents, complimentaryCents: cents,
+  }).strict(),
+  paymentPlan: paymentPlanSchema.nullable(),
+  sourceCalculation: z.object({
+    studyId: id, studyVersion: z.number().int().positive(), checksum: z.string().min(8), incorporatedAt: dateTime,
+  }).strict(),
+  title: z.string(), introduction: z.string(), observations: z.string(), validUntil: z.string().nullable(),
+  commercialConditions: z.string(), additionalExclusions: z.array(z.string()), additionalAssumptions: z.array(z.string()),
+  createdAt: dateTime, updatedAt: dateTime,
 }).strict());
 
 export const feeCalibrationSchema = typed<FeeCalibrationRecord>(z.object({

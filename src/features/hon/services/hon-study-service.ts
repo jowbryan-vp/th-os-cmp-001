@@ -104,7 +104,7 @@ function stableStringify(value: unknown): string {
   if (value && typeof value === "object") return `{${Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([key, item]) => `${JSON.stringify(key)}:${stableStringify(item)}`).join(",")}}`;
   return JSON.stringify(value);
 }
-function checksum(value: unknown) {
+export function checksum(value: unknown) {
   let hash = 0x811c9dc5;
   for (const character of stableStringify(value)) { hash ^= character.charCodeAt(0); hash = Math.imul(hash, 0x01000193); }
   return `fnv1a-${(hash >>> 0).toString(16).padStart(8, "0")}`;

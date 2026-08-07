@@ -2,7 +2,7 @@
 
 import { RefObject } from "react";
 import { Button, EmptyState } from "../../../../design-system";
-import { ClipboardCheck, Download, Eye, Pencil } from "../../../../design-system/icons";
+import { ClipboardCheck, Download, Eye, FileText, Pencil } from "../../../../design-system/icons";
 import { serviceLineNetCents } from "../../domain/hon-service-composition";
 import { FeeCalculationStudy, FeeServiceInput } from "../../domain/hon-types";
 import { money } from "../hon-formatters";
@@ -19,6 +19,7 @@ export interface HonResultPanelProps {
   onExportInternal: () => void;
   onExportCommercial: () => void;
   onExportCsv: () => void;
+  onIncorporateToProposal: () => void;
 }
 
 const compositionRows = (result: NonNullable<FeeCalculationStudy["results"]>) => [
@@ -42,7 +43,7 @@ function ServiceScopeTable({ title, services, hourlyCents }: { title: string; se
 
 export function HonResultPanel({
   study, resultHeadingRef, onAdjustParameters, onGoToServices, onGoToScenarios,
-  onGoToPayments, onExportInternal, onExportCommercial, onExportCsv,
+  onGoToPayments, onExportInternal, onExportCommercial, onExportCsv, onIncorporateToProposal,
 }: HonResultPanelProps) {
   const result = study.results;
   if (!result) {
@@ -100,6 +101,7 @@ export function HonResultPanel({
       <Button variant="secondary" icon={Eye} onClick={onGoToServices}>Ver serviços e horas</Button>
       <Button variant="secondary" icon={ClipboardCheck} onClick={onGoToScenarios}>Comparar cenários</Button>
       <Button variant="secondary" onClick={onGoToPayments}>Configurar pagamentos</Button>
+      <Button variant="primary" icon={FileText} onClick={onIncorporateToProposal}>Incorporar à proposta</Button>
       <Button variant="secondary" icon={Download} onClick={onExportCommercial}>Exportar comercial</Button>
       <Button variant="secondary" icon={Download} onClick={onExportInternal}>Memória interna JSON</Button>
       <Button variant="secondary" icon={Download} onClick={onExportCsv}>Serviços CSV</Button>

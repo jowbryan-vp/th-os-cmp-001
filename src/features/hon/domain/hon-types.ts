@@ -1,4 +1,4 @@
-export const HON_SCHEMA_VERSION = 3;
+export const HON_SCHEMA_VERSION = 4;
 export const HON_ENGINE_VERSION = "HON-001/1.0.0";
 
 export type FeeStudyStatus = "draft" | "calculated" | "under_review" | "approved" | "used_in_proposal" | "superseded" | "archived";
@@ -359,4 +359,48 @@ export interface ProposalPricingSnapshot {
   scope: Array<{ name: string; stage: string; notes: string }>;
   commercialPriceCents: number; finalPriceCents: number; paymentPlan: PaymentPlan | null;
   exclusions: string[]; revisionPolicy: string; visitPolicy: string; createdAt: string;
+}
+
+// Status do ciclo comercial da proposta (HON-003). A UI desta fase só expõe draft/ready — os
+// demais existem no modelo para não exigir migração quando o fluxo de envio for implementado.
+export type ProposalDraftStatus = "draft" | "ready" | "sent" | "accepted" | "rejected" | "expired" | "superseded";
+
+// Cópia IMUTÁVEL do conteúdo comercial de um serviço no momento da incorporação — nunca muda
+// se o catálogo (ServiceCatalogItem) mudar depois. `netCents` também é congelado (calculado uma
+// vez com serviceLineNetCents/serviceLineGrossCents no momento da incorporação), nunca
+// recalculado dentro da proposta.
+export interface ProposalServiceSnapshot {
+  id: string; catalogItemId: string | null; code: string; name: string; stage: string;
+  category: ServiceCategory; clientDescription: string; technicalDescription: string;
+  deliverables: string[]; exclusions: string[]; assumptions: string[];
+  quantity: number; commercialState: ServiceCommercialState; netCents: number;
+}
+
+// Cópia dos campos de FeeCalculationResult relevantes para a proposta, mais os totais de
+// composição (hon-service-composition.ts) — nunca recalculados dentro da proposta.
+export interface ProposalTotalsSnapshot {
+  profitMarkupCents: number; taxesCents: number; discountCents: number; donationCents: number;
+  minimumAdjustmentCents: number; commercialPriceCents: number; finalPriceCents: number;
+  includedCents: number; optionalCents: number; complimentaryCents: number;
+}
+
+// Referência ao cálculo do HON que originou/atualizou a proposta pela última vez — usada só
+// para detectar "cálculo mais recente disponível" (comparação de checksum), nunca para
+// recalcular nada dentro da proposta.
+export interface ProposalSourceCalculation {
+  studyId: string; studyVersion: number; checksum: string; incorporatedAt: string;
+}
+
+export interface ProposalDraft {
+  id: string; schemaVersion: number; code: string; projectId: string; studyId: string;
+  status: ProposalDraftStatus;
+  projectSnapshot: ProjectDataSnapshot;
+  scopeItems: ProposalServiceSnapshot[]; optionalItems: ProposalServiceSnapshot[];
+  totals: ProposalTotalsSnapshot; paymentPlan: PaymentPlan | null;
+  sourceCalculation: ProposalSourceCalculation;
+  // Campos manuais — nunca sobrescritos por uma atualização a partir do HON (só os campos
+  // acima, sempre derivados, são substituídos).
+  title: string; introduction: string; observations: string; validUntil: string | null;
+  commercialConditions: string; additionalExclusions: string[]; additionalAssumptions: string[];
+  createdAt: string; updatedAt: string;
 }

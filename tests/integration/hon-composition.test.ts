@@ -137,7 +137,7 @@ test("backup/restore honSchemaVersion 2 (pré-HON-002C): estudo com serviço no 
   const projectIds = new Set(["project-restore"]);
   const parsed = parseHonBackupData({
     feeStudies: [legacy as never], feeScenarios: [], structureProfiles: [], feeSnapshots: [], paymentPlans: [],
-    feeCalibrationRecords: [], serviceCatalog: [],
+    feeCalibrationRecords: [], proposalDrafts: [], serviceCatalog: [],
   }, projectIds);
   assert.equal(parsed.feeStudies.length, 1);
   const [study] = parsed.feeStudies;
