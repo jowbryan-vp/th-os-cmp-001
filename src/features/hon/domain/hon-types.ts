@@ -1,4 +1,4 @@
-export const HON_SCHEMA_VERSION = 2;
+export const HON_SCHEMA_VERSION = 3;
 export const HON_ENGINE_VERSION = "HON-001/1.0.0";
 
 export type FeeStudyStatus = "draft" | "calculated" | "under_review" | "approved" | "used_in_proposal" | "superseded" | "archived";
@@ -122,18 +122,63 @@ export interface ServiceCatalogItem {
   notes: string;
 }
 
+// Estado comercial do serviço na composição (HON-002C): as 4 combinações possíveis de
+// "conta no preço" x "está no escopo apresentado" são mutuamente exclusivas — por isso um
+// enum, não três booleanos independentes que poderiam contradizer um ao outro (ex.: opcional
+// E cortesia ao mesmo tempo). `included`/`optional`/`complimentary` em FeeServiceInput
+// continuam existindo como projeção derivada de `commercialState` (compatibilidade com o
+// motor e com código existente que já lê `service.included`), mas só `withCommercialState`
+// (hon-service-composition.ts) deve escrevê-los — sempre os três juntos, nunca isolados.
+export type ServiceCommercialState = "included" | "optional" | "complimentary" | "not_contracted";
+
+// Enriquecimento manual de um item PERSONALIZADO (catalogItemId null) da composição — nunca
+// preenchido para um item padrão do catálogo, cujo conteúdo vem sempre de ServiceCatalogItem
+// via catalogItemId. Mesmo formato de conteúdo do catálogo (HON-002B) para reusar o mesmo
+// modal "Entenda este serviço".
+export interface ServiceCustomDescription {
+  clientDescription: string;
+  technicalDescription: string;
+  deliverables: string[];
+  exclusions: string[];
+  assumptions: string[];
+}
+
 export interface FeeServiceInput {
   id: string;
   catalogItemId: string | null;
   code: string;
   name: string;
   stage: string;
+  category: ServiceCategory;
+  displayOrder: number;
   estimatedHours: number;
   hourlyCostCents: number | null;
   fixedCostCents: number;
   minimumValueCents: number;
+  commercialState: ServiceCommercialState;
   included: boolean;
+  optional: boolean;
+  complimentary: boolean;
+  quantity: number;
+  individualDiscountCents: number;
+  customDescription: ServiceCustomDescription | null;
   notes: string;
+}
+
+// Registro de uma decisão relevante da composição (HON-002C) — não um log de edição de campo
+// a campo; só as ações listadas em serviceCompositionHistoryActions viram entrada. Escrito
+// apenas ao salvar (diff entre a última composição salva e a atual), nunca por tecla digitada.
+export type ServiceCompositionHistoryAction =
+  | "service_included" | "service_removed" | "marked_optional" | "marked_complimentary"
+  | "discount_applied" | "composition_saved";
+
+export interface ServiceCompositionHistoryEntry {
+  id: string;
+  at: string;
+  action: ServiceCompositionHistoryAction;
+  serviceId: string | null;
+  serviceName: string | null;
+  detail: string;
 }
 
 export interface PartnerInput {
@@ -293,6 +338,7 @@ export interface FeeCalculationStudy {
   bim: BimInput; construction: ConstructionServiceInput; discounts: Array<{ id: string; amountCents: number; reason: string }>;
   donations: Array<{ id: string; technicalValueCents: number; percentage: number; amountCents: number; justification: string; beneficiary: string; approvedBy: string; date: string; notes: string }>;
   paymentPlan: PaymentPlan | null; results: FeeCalculationResult | null; snapshots: string[];
+  compositionHistory: ServiceCompositionHistoryEntry[];
   createdAt: string; updatedAt: string; approvedAt: string | null; notes: string;
 }
 

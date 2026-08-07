@@ -1,7 +1,7 @@
 import { ProjectMasterRecord, createId } from "../../../domain/project-master-record";
 import { ParametricEnvironmentStudy } from "../../cap/domain/cap-library-types";
 import {
-  ComplexityLevel, FeeCalculationStudy, FeeScenario, FeeSnapshot, HON_ENGINE_VERSION,
+  ComplexityLevel, FeeCalculationStudy, FeeScenario, FeeServiceInput, FeeSnapshot, HON_ENGINE_VERSION,
   HON_SCHEMA_VERSION, ProposalPricingSnapshot, ServiceCatalogItem, StructureProfile,
 } from "../domain/hon-types";
 import { calculateFeeStudy } from "./hon-engine";
@@ -44,15 +44,33 @@ export function createProjectSnapshot(project: ProjectMasterRecord, capStudies: 
   };
 }
 
+// Mapeia o status de escopo do CMP (PreliminaryScopeItem.status) para o estado comercial
+// inicial da composição HON-002C. "required"/"under_review" viram "included" — preserva
+// exatamente o comportamento anterior ao HON-002C (`included: status === "required" ||
+// status === "under_review"`). "optional" agora mapeia direto para o estado comercial
+// "optional" (antes virava included=false sem distinção de "não contratado" — melhoria, não
+// regressão: o CMP já distingue os dois conceitos, a composição HON só passou a refletir
+// isso). "not_defined" vira "not_contracted". "excluded" nem chega aqui (filtrado antes).
+function initialCommercialState(status: ProjectMasterRecord["preliminaryScope"][number]["status"]): FeeServiceInput["commercialState"] {
+  if (status === "required" || status === "under_review") return "included";
+  if (status === "optional") return "optional";
+  return "not_contracted";
+}
+
 export function createFeeStudy(project: ProjectMasterRecord, capStudies: ParametricEnvironmentStudy[], profile: StructureProfile, catalog: ServiceCatalogItem[], sequence: number): FeeCalculationStudy {
   const now = new Date().toISOString();
-  const mappedServices = project.preliminaryScope.filter((item) => item.status !== "excluded").map((scope) => {
+  const mappedServices: FeeServiceInput[] = project.preliminaryScope.filter((item) => item.status !== "excluded").map((scope) => {
     const definition = catalog.find((item) => item.code === scope.serviceCode);
+    const commercialState = initialCommercialState(scope.status);
     return {
       id: createId("fee-service"), catalogItemId: definition?.id ?? null, code: scope.serviceCode,
-      name: definition?.name ?? scope.name, stage: definition?.stage ?? "projeto", estimatedHours: definition?.baseHours ?? 0,
-      hourlyCostCents: null, fixedCostCents: 0, minimumValueCents: definition?.minimumValueCents ?? 0,
-      included: scope.status === "required" || scope.status === "under_review", notes: scope.notes,
+      name: definition?.name ?? scope.name, stage: definition?.stage ?? "projeto",
+      category: definition?.category ?? "complementary", displayOrder: definition?.displayOrder ?? 9999,
+      estimatedHours: definition?.baseHours ?? 0, hourlyCostCents: null, fixedCostCents: 0,
+      minimumValueCents: definition?.minimumValueCents ?? 0, commercialState,
+      included: commercialState === "included", optional: commercialState === "optional",
+      complimentary: commercialState === "complimentary", quantity: 1, individualDiscountCents: 0,
+      customDescription: null, notes: scope.notes,
     };
   });
   return {
@@ -72,7 +90,8 @@ export function createFeeStudy(project: ProjectMasterRecord, capStudies: Paramet
     services: mappedServices, partners: [], travel: [], revisions: [], risks: [],
     bim: { mode: "internal_method", percentage: 0, affectedBaseCents: 0, additionalHours: 0, nativeFile: false, ifc: false, federatedModel: false, lod: "", loi: "", disciplines: 0, cycles: 0, notes: "" },
     construction: { monitoringWeeks: 0, visitsPerWeek: 0, hoursPerVisit: 0, managementWeeklyHours: 0, managementWeeks: 0, dedicatedTeamCostCents: 0, notes: "" },
-    discounts: [], donations: [], paymentPlan: null, results: null, snapshots: [], createdAt: now, updatedAt: now, approvedAt: null, notes: "",
+    discounts: [], donations: [], paymentPlan: null, results: null, snapshots: [], compositionHistory: [],
+    createdAt: now, updatedAt: now, approvedAt: null, notes: "",
   };
 }
 
@@ -110,7 +129,11 @@ export function createProposalPricingSnapshot(study: FeeCalculationStudy, scenar
   return { studyId: study.id, scenarioId, projectCode: study.projectSnapshot.projectCode, projectName: study.projectSnapshot.projectName,
     scope: study.services.filter((item) => item.included).map(({ name, stage, notes }) => ({ name, stage, notes })),
     commercialPriceCents: study.results.commercialPrice, finalPriceCents: study.results.finalPrice,
-    paymentPlan: study.paymentPlan, exclusions: study.services.filter((item) => !item.included).map((item) => item.name),
+    // "Não contratado" é de fato exclusão de escopo; opcional e cortesia têm tratamento
+    // comercial próprio (HON-002C) e não deveriam aparecer misturados a "isto não está no
+    // projeto" — ficam de fora até o HON-002C ter uma seção própria de resumo comercial
+    // (fora de escopo desta fase: ProposalDraft/PDF).
+    paymentPlan: study.paymentPlan, exclusions: study.services.filter((item) => item.commercialState === "not_contracted").map((item) => item.name),
     revisionPolicy: "Revisões incluídas conforme etapa; alterações de programa são serviço adicional.",
     visitPolicy: "Visitas e deslocamentos apenas quando expressamente incluídos.", createdAt: new Date().toISOString() };
 }

@@ -21,11 +21,17 @@ function study(patch: Partial<FeeCalculationStudy> = {}): FeeCalculationStudy {
     status: "draft", structureProfileId: simpleProfile.id, calculationMethod: "service_cost",
     projectSnapshot: { readAt: now, projectUpdatedAt: now, projectCode: "TH-001", projectName: "Teste", clientName: "", city: "Cacoal", state: "RO", propertyType: "", areas: { existing: null, expansion: null, demolition: null, capApplied: 0 }, floors: null, scopeCodes: [], capStudyIds: [], capLibraryVersions: [], manualChanges: [], divergences: [] },
     inputs: { calculationDate: "2026-08-04", complexityLevel: "simple", complexitySuggestedLevel: "simple", complexityScore: 0, complexityJustification: "", urgencyLevel: "normal", riskPercentage: 0, profitMarkup: 0, taxPercentage: 0, taxMode: "included", discountCents: 0, donationCents: 0, commercialPriceCents: null, minimumContractCents: 0, directExpensesCents: 0, areaReferenceM2: null, constructionCostReferenceCents: null, cauReferencePercentage: null, cauReferenceSource: "", commercialReferenceNotes: "" },
-    services: [{ id: "service-1", catalogItemId: null, code: "architecture", name: "Arquitetura", stage: "projeto", estimatedHours: 10, hourlyCostCents: null, fixedCostCents: 0, minimumValueCents: 0, included: true, notes: "" }],
+    services: [{
+      id: "service-1", catalogItemId: null, code: "architecture", name: "Arquitetura", stage: "projeto",
+      category: "design", displayOrder: 100, estimatedHours: 10, hourlyCostCents: null, fixedCostCents: 0,
+      minimumValueCents: 0, commercialState: "included", included: true, optional: false, complimentary: false,
+      quantity: 1, individualDiscountCents: 0, customDescription: null, notes: "",
+    }],
     partners: [], travel: [], revisions: [], risks: [],
     bim: { mode: "internal_method", percentage: 0, affectedBaseCents: 0, additionalHours: 0, nativeFile: false, ifc: false, federatedModel: false, lod: "", loi: "", disciplines: 0, cycles: 0, notes: "" },
     construction: { monitoringWeeks: 0, visitsPerWeek: 0, hoursPerVisit: 0, managementWeeklyHours: 0, managementWeeks: 0, dedicatedTeamCostCents: 0, notes: "" },
-    discounts: [], donations: [], paymentPlan: null, results: null, snapshots: [], createdAt: now, updatedAt: now, approvedAt: null, notes: "",
+    discounts: [], donations: [], paymentPlan: null, results: null, snapshots: [], compositionHistory: [],
+    createdAt: now, updatedAt: now, approvedAt: null, notes: "",
   };
   return { ...base, ...patch, inputs: { ...base.inputs, ...patch.inputs }, bim: { ...base.bim, ...patch.bim }, construction: { ...base.construction, ...patch.construction } };
 }
