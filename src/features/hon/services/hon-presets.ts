@@ -1,4 +1,5 @@
 import { HON_SCHEMA_VERSION, ServiceCatalogItem, StructureProfile } from "../domain/hon-types";
+import { fallbackServiceCatalogContent, serviceCatalogContent } from "./hon-catalog-content";
 
 const at = "2026-08-04T12:00:00.000Z";
 const cost = (id: string, name: string, amountCents: number, periodicity: "monthly" | "annual" | "one_time" = "monthly", extra: Partial<StructureProfile["costs"][number]> = {}): StructureProfile["costs"][number] => ({
@@ -91,11 +92,18 @@ const serviceNames: Array<[string, string, string, number]> = [
   ["technical_visit", "Visita técnica avulsa", "visita", 0], ["consulting", "Consultoria", "consultoria", 0], ["other", "Outros", "outros", 0],
 ];
 
-export const defaultServiceCatalog: ServiceCatalogItem[] = serviceNames.map(([code, name, stage, includedRevisionRounds]) => ({
-  id: `service-${code}`, version: "1.0.0", code, name, stage, calculationMethod: "hours",
-  baseHours: 0, minimumHours: code === "technical_visit" ? 2 : 0, unit: "hora", responsible: "Arquiteto responsável",
-  execution: code === "rendering" || code === "complementary" ? "partner" : "internal",
-  defaultComplexity: "simple", includedRevisionRounds, includedVisits: 0,
-  bim: code.includes("bim"), risk: "low", minimumValueCents: 0, active: true,
-  source: "Preset inicial HON-001", confidence: "unvalidated", notes: "Horas devem ser informadas ou calibradas; não há coeficiente técnico definitivo.",
-}));
+export const defaultServiceCatalog: ServiceCatalogItem[] = serviceNames.map(([code, name, stage, includedRevisionRounds]) => {
+  const content = serviceCatalogContent[code] ?? fallbackServiceCatalogContent;
+  return {
+    id: `service-${code}`, version: "1.0.0", code, name, stage,
+    category: content.category, clientDescription: content.clientDescription,
+    technicalDescription: content.technicalDescription, deliverables: content.deliverables,
+    exclusions: content.exclusions, assumptions: content.assumptions, displayOrder: content.displayOrder,
+    calculationMethod: "hours",
+    baseHours: 0, minimumHours: code === "technical_visit" ? 2 : 0, unit: "hora", responsible: "Arquiteto responsável",
+    execution: code === "rendering" || code === "complementary" ? "partner" : "internal",
+    defaultComplexity: "simple", includedRevisionRounds, includedVisits: 0,
+    bim: code.includes("bim"), risk: "low", minimumValueCents: 0, active: true,
+    source: "Preset inicial HON-001", confidence: "unvalidated", notes: "Horas devem ser informadas ou calibradas; não há coeficiente técnico definitivo.",
+  };
+});

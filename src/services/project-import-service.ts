@@ -13,7 +13,7 @@ export interface ExportEnvelope {
   project: ProjectMasterRecord; parametricStudies: ParametricEnvironmentStudy[];
 }
 export interface ConsolidatedBackupEnvelope {
-  kind: "consolidated-backup"; backupSchemaVersion: 4; honSchemaVersion: 1; schemaVersion: number; exportedAt: string;
+  kind: "consolidated-backup"; backupSchemaVersion: 4; honSchemaVersion: 1 | 2; schemaVersion: number; exportedAt: string;
   application: typeof APPLICATION_ID; projectRecords: ProjectMasterRecord[];
   parametricStudies: ParametricEnvironmentStudy[];
   referenceCatalogOptions: CatalogOption[];

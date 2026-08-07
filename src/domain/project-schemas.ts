@@ -6,7 +6,7 @@ import { parametricEnvironmentStudySchema } from "../features/cap/domain/cap-lib
 import { catalogOptionSchema } from "../features/catalogs/domain/reference-catalog";
 import {
   feeCalibrationSchema, feeScenarioSchema, feeSnapshotSchema, feeStudySchema, paymentPlanSchema,
-  serviceCatalogItemSchema, structureProfileSchema,
+  structureProfileSchema,
 } from "../features/hon/domain/hon-schemas";
 
 const nullableNumber = z.number().finite().nonnegative().nullable();
@@ -154,12 +154,16 @@ const backupV3EnvelopeSchema = z.object({
   referenceCatalogOptions: z.array(catalogOptionSchema), capLibraryReferences: z.array(capLibraryReferenceSchema),
 }).strict();
 const backupV4EnvelopeSchema = z.object({
-  kind: z.literal("consolidated-backup"), backupSchemaVersion: z.literal(4), honSchemaVersion: z.literal(1),
+  kind: z.literal("consolidated-backup"), backupSchemaVersion: z.literal(4),
+  // honSchemaVersion 1 é o formato anterior ao HON-002B (catálogo sem os campos descritivos).
+  // A validação estrita do catálogo (com migração) fica a cargo de parseHonBackupData — aqui o
+  // item permanece um record solto, do mesmo jeito que os demais tipos aninhados do HON.
+  honSchemaVersion: z.union([z.literal(1), z.literal(2)]),
   schemaVersion: z.number().int().positive(), exportedAt: z.string(), application: z.literal("TH-OS-CMP-001"),
   projectRecords: z.array(z.unknown()), parametricStudies: z.array(parametricEnvironmentStudySchema),
   referenceCatalogOptions: z.array(catalogOptionSchema), capLibraryReferences: z.array(capLibraryReferenceSchema),
   feeStudies: z.array(feeStudySchema), feeScenarios: z.array(feeScenarioSchema),
-  structureProfiles: z.array(structureProfileSchema), serviceCatalog: z.array(serviceCatalogItemSchema),
+  structureProfiles: z.array(structureProfileSchema), serviceCatalog: z.array(z.record(z.string(), z.unknown())),
   feeSnapshots: z.array(feeSnapshotSchema), paymentPlans: z.array(paymentPlanSchema),
   feeCalibrationRecords: z.array(feeCalibrationSchema),
 }).strict();

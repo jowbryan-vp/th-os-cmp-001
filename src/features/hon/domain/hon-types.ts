@@ -1,4 +1,4 @@
-export const HON_SCHEMA_VERSION = 1;
+export const HON_SCHEMA_VERSION = 2;
 export const HON_ENGINE_VERSION = "HON-001/1.0.0";
 
 export type FeeStudyStatus = "draft" | "calculated" | "under_review" | "approved" | "used_in_proposal" | "superseded" | "archived";
@@ -84,12 +84,26 @@ export interface HourlyCostBreakdown {
   warnings: string[];
 }
 
+// Categoria comercial do serviço (agrupamento para consulta/composição). Distinta de `stage`,
+// que é a etapa de projeto (levantamento, anteprojeto, executivo...). Estável: HON-002C e a
+// composição personalizada dependerão desses valores para agrupar/filtrar.
+export type ServiceCategory =
+  | "diagnosis" | "design" | "interiors_specialties" | "bim" | "sustainability"
+  | "legal" | "construction" | "management" | "visualization" | "complementary";
+
 export interface ServiceCatalogItem {
   id: string;
   version: string;
   code: string;
   name: string;
   stage: string;
+  category: ServiceCategory;
+  clientDescription: string;
+  technicalDescription: string;
+  deliverables: string[];
+  exclusions: string[];
+  assumptions: string[];
+  displayOrder: number;
   calculationMethod: "hours" | "fixed" | "percentage" | "custom";
   baseHours: number;
   minimumHours: number;

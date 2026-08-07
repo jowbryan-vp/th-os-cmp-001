@@ -1,8 +1,13 @@
 import { z } from "zod";
 import {
   FeeCalculationStudy, FeeCalibrationRecord, FeeScenario, FeeSnapshot, PaymentPlan,
-  ServiceCatalogItem, StructureProfile,
+  ServiceCatalogItem, ServiceCategory, StructureProfile,
 } from "./hon-types";
+
+export const serviceCategorySchema = z.enum([
+  "diagnosis", "design", "interiors_specialties", "bim", "sustainability",
+  "legal", "construction", "management", "visualization", "complementary",
+]) satisfies z.ZodType<ServiceCategory>;
 
 const id = z.string().min(3);
 const cents = z.number().int().nonnegative();
@@ -33,6 +38,9 @@ export const structureProfileSchema = typed<StructureProfile>(z.object({
 
 export const serviceCatalogItemSchema = typed<ServiceCatalogItem>(z.object({
   id, version: z.string(), code: z.string().min(1), name: z.string().min(1), stage: z.string(),
+  category: serviceCategorySchema, clientDescription: z.string(), technicalDescription: z.string(),
+  deliverables: z.array(z.string()), exclusions: z.array(z.string()), assumptions: z.array(z.string()),
+  displayOrder: z.number().int(),
   calculationMethod: z.enum(["hours", "fixed", "percentage", "custom"]), baseHours: z.number().nonnegative(),
   minimumHours: z.number().nonnegative(), unit: z.string(), responsible: z.string(),
   execution: z.enum(["internal", "partner"]), defaultComplexity: z.enum(["very_simple", "simple", "medium", "complex", "very_complex"]),
