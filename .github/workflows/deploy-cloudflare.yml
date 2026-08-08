@@ -1,0 +1,35 @@
+name: Deploy Cloudflare
+
+# Fase 1 (segura): somente workflow_dispatch — mergear este workflow em main NÃO publica
+# nada sozinho. O gatilho automático em push para main só é adicionado depois que um deploy
+# manual for validado em produção (ver docs/hon/../DEPLOYMENT.md).
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-cloudflare-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test:unit
+      - run: pnpm test:integration
+      - run: pnpm build
+      - name: Deploy to Cloudflare Workers (th-os-cmp-001-pilot)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm deploy

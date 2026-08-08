@@ -6,6 +6,26 @@ Este guia publica o CMP-001 como Worker `th-os-cmp-001-pilot`. A aplicação
 continua local-first: os projetos permanecem exclusivamente no IndexedDB do
 navegador e não são enviados ao Cloudflare, GitHub ou outro serviço.
 
+## 0. Deploy via GitHub Actions (recomendado)
+
+O workflow `.github/workflows/deploy-cloudflare.yml` roda a mesma pipeline de
+`pnpm verify` e então `pnpm deploy` (Wrangler, via `wrangler.jsonc`) num runner
+do GitHub, sem depender de rede/credenciais locais. Requer dois secrets do
+repositório (**Settings → Secrets and variables → Actions → New repository
+secret**), nunca commitados: `CLOUDFLARE_API_TOKEN` (token com permissão
+mínima `Account · Workers Scripts · Edit` + `Account · Account Settings · Read`
++ `User · User Details · Read`, escopado à conta do piloto) e
+`CLOUDFLARE_ACCOUNT_ID`.
+
+Fase atual: o workflow só dispara manualmente (`workflow_dispatch`, aba
+Actions → Deploy Cloudflare → Run workflow). O gatilho automático em push para
+`main` só é habilitado depois que um deploy manual for validado em produção —
+mergear o workflow em si nunca publica nada sozinho.
+
+O deploy manual local (`wrangler login` + `pnpm deploy`) descrito abaixo
+continua válido como alternativa/fallback quando o GitHub Actions não estiver
+disponível.
+
 ## 1. Pré-requisitos
 
 - conta Cloudflare com o subdomínio `workers.dev` habilitado;
